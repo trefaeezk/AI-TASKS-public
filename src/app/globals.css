@@ -1,0 +1,213 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Cairo', sans-serif; /* Using a font that supports Arabic */
+}
+
+@layer base {
+  :root {
+    --primary: 239 84% 67%; /* Indigo 500 (#6366F1) */
+    --primary-foreground: 0 0% 100%; /* White */
+
+    --secondary: 262 83% 68%; /* Violet 500 (#8B5CF6) */
+    --secondary-foreground: 0 0% 100%; /* White */
+
+    /* Background & Foreground */
+    --background: 220 20% 96%; /* Gray 50 (#F9FAFB) */
+    --foreground: 220 30% 12%; /* Gray 800 (#1F2937) */
+
+    /* Card */
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 220 30% 12%; /* Gray 800 (#1F2937) */
+
+    /* Popover */
+    --popover: 0 0% 100%; /* White */
+    --popover-foreground: 220 30% 12%; /* Gray 800 (#1F2937) */
+
+    /* Muted */
+    --muted: 220 13% 90%; /* Gray 200 (#E5E7EB) */
+    --muted-foreground: 215 14% 53%; /* Gray 500 (#6B7280) */
+
+    /* Accent */
+    --accent: 239 84% 96%; /* Light Indigo for hover/active bg */
+    --accent-foreground: 239 84% 50%; /* Darker Indigo for hover/active text */
+
+    /* Destructive (Uses Urgent Task Color) */
+    --destructive: 0 84% 60%; /* Red 500 (#EF4444) */
+    --destructive-foreground: 0 0% 100%; /* White */
+
+    /* Border & Input & Ring */
+    --border: 220 13% 90%; /* Gray 200 (#E5E7EB) - Used for Light Shadows/Borders */
+    --input: 220 13% 95%; /* Gray 100 (#F3F4F6) - Slightly different from border for contrast */
+    --ring: 239 84% 67%; /* Indigo 500 (#6366F1) */
+
+    /* Radius */
+    --radius: 0.5rem;
+
+    /* Status Colors */
+    --status-completed: 158 73% 41%; /* Emerald 500 (#10B981) */
+    --status-urgent: 0 84% 60%; /* Red 500 (#EF4444) - Also Priority 1 */
+    --status-in-progress: 39 91% 51%; /* Amber 500 (#F59E0B) - Also Priority 2 */
+    --status-normal: 262 83% 68%; /* Violet 500 (#8B5CF6) */
+
+    /* Priority Colors (1: Highest -> 5: Lowest) */
+    --priority-1: 0 84% 60%;   /* Red 500 */
+    --priority-2: 39 91% 51%;   /* Amber 500 */
+    --priority-3: 48 96% 58%;   /* Yellow 500 */
+    --priority-4: 211 78% 56%;  /* Blue 500 */
+    --priority-5: 215 14% 53%;  /* Gray 500 (Muted Foreground) */
+
+    /* Helper Colors */
+    --helper-shadow: 220 13% 90%; /* Gray 200 (#E5E7EB) */
+    --helper-secondary-bg: 220 14% 95%; /* Gray 100 (#F3F4F6) */
+    --helper-hover: 239 84% 67% / 0.5; /* Indigo 500 with 50% opacity (#6366F180) */
+
+    /* Chart Colors - Using Status & Primary/Secondary or adjust as needed */
+    --chart-1: 239 84% 67%; /* Primary */
+    --chart-2: 262 83% 68%; /* Secondary */
+    --chart-3: 211 78% 56%; /* Blue 500 (#3B82F6) - Link Text */
+    --chart-4: 158 73% 41%; /* Emerald 500 (Completed) */
+    --chart-5: 39 91% 51%; /* Amber 500 (In Progress) */
+
+    /* Sidebar colors - Adjust based on desired sidebar theme */
+    --sidebar-background: 0 0% 100%; /* White */
+    --sidebar-foreground: 220 30% 12%; /* Gray 800 */
+    --sidebar-primary: 239 84% 67%; /* Indigo 500 */
+    --sidebar-primary-foreground: 0 0% 100%; /* White */
+    --sidebar-accent: 239 84% 96%; /* Lighter Indigo for hover/active bg */
+    --sidebar-accent-foreground: 239 84% 50%; /* Darker Indigo for hover/active text */
+    --sidebar-border: 220 13% 90%; /* Gray 200 */
+    --sidebar-ring: 239 84% 67%; /* Indigo 500 */
+  }
+
+  .dark {
+    /* Primary Colors */
+    --primary: 239 77% 75%; /* Lighter Indigo */
+    --primary-foreground: 220 30% 12%; /* Gray 800 */
+
+    --secondary: 262 75% 78%; /* Lighter Violet */
+    --secondary-foreground: 220 30% 12%; /* Gray 800 */
+
+    /* Background & Foreground */
+    --background: 220 14% 10%; /* Dark Gray (similar to Gray 900) */
+    --foreground: 220 20% 96%; /* Gray 50 */
+
+    /* Card */
+    --card: 220 30% 12%; /* Gray 800 */
+    --card-foreground: 220 20% 96%; /* Gray 50 */
+
+    /* Popover */
+    --popover: 220 30% 12%; /* Gray 800 */
+    --popover-foreground: 220 20% 96%; /* Gray 50 */
+
+    /* Muted */
+    --muted: 215 14% 24%; /* Darker Gray (similar to Gray 700) */
+    --muted-foreground: 215 14% 53%; /* Gray 500 */
+
+    /* Accent */
+    --accent: 215 14% 24%; /* Use Muted for dark accent */
+    --accent-foreground: 220 20% 96%; /* Gray 50 for accent text */
+
+    /* Destructive */
+    --destructive: 0 72% 60%; /* Lighter Red */
+    --destructive-foreground: 0 0% 100%; /* White */
+
+    /* Border & Input & Ring */
+    --border: 215 14% 24%; /* Darker Gray (similar to Gray 700) */
+    --input: 215 14% 18%; /* Darker Gray (slightly different from border) */
+    --ring: 239 77% 75%; /* Lighter Indigo */
+
+    /* Status Colors (Adjusted for Dark Mode) */
+    --status-completed: 158 60% 55%; /* Lighter Emerald */
+    --status-urgent: 0 72% 60%; /* Lighter Red */
+    --status-in-progress: 39 85% 65%; /* Lighter Amber */
+    --status-normal: 262 75% 78%; /* Lighter Violet */
+
+    /* Priority Colors (Adjusted for Dark Mode) */
+    --priority-1: 0 72% 60%;   /* Lighter Red */
+    --priority-2: 39 85% 65%;   /* Lighter Amber */
+    --priority-3: 48 90% 68%;   /* Lighter Yellow */
+    --priority-4: 211 85% 65%;  /* Lighter Blue */
+    --priority-5: 215 14% 70%;  /* Lighter Gray */
+
+    /* Helper Colors (Adjusted for Dark Mode) */
+    --helper-shadow: 220 14% 10%; /* Dark Gray */
+    --helper-secondary-bg: 220 14% 15%; /* Slightly Lighter Dark Gray */
+    --helper-hover: 239 77% 75% / 0.5; /* Lighter Indigo with 50% opacity */
+
+    /* Chart Colors (Adjusted for Dark Mode) */
+    --chart-1: 239 77% 75%; /* Lighter Indigo */
+    --chart-2: 262 75% 78%; /* Lighter Violet */
+    --chart-3: 211 85% 65%; /* Lighter Blue */
+    --chart-4: 158 60% 55%; /* Lighter Emerald */
+    --chart-5: 39 85% 65%; /* Lighter Amber */
+
+    /* Sidebar dark theme - Adjust based on desired sidebar theme */
+    --sidebar-background: 220 14% 10%; /* Dark Gray */
+    --sidebar-foreground: 220 20% 96%; /* Gray 50 */
+    --sidebar-primary: 239 77% 75%; /* Lighter Indigo */
+    --sidebar-primary-foreground: 220 30% 12%; /* Gray 800 */
+    --sidebar-accent: 239 77% 25%; /* Darker Indigo for hover/active bg */
+    --sidebar-accent-foreground: 239 77% 85%; /* Lighter Indigo for hover/active text */
+    --sidebar-border: 215 14% 24%; /* Darker Gray */
+    --sidebar-ring: 239 77% 75%; /* Lighter Indigo */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Sidebar specific styles integrated into tailwind layers */
+@layer components {
+    /* Ensure sidebar colors defined in :root/.dark apply correctly */
+    [data-sidebar="sidebar"] {
+        @apply bg-sidebar text-sidebar-foreground border-sidebar-border;
+    }
+    [data-sidebar="menu-button"] {
+         /* Default state uses sidebar-foreground */
+         @apply text-sidebar-foreground;
+    }
+
+    [data-sidebar="menu-button"]:hover,
+    [data-sidebar="menu-button"][data-state="open"] {
+         @apply bg-sidebar-accent text-sidebar-accent-foreground;
+    }
+     [data-sidebar="menu-button"][data-active="true"] {
+        @apply bg-sidebar-primary text-sidebar-primary-foreground; /* Use primary for active */
+     }
+     [data-sidebar="menu-button"][data-active="true"]:hover {
+        @apply bg-sidebar-primary/90; /* Slightly darker primary on hover */
+     }
+
+    [data-sidebar="menu-sub-button"] {
+        @apply text-sidebar-foreground;
+    }
+    [data-sidebar="menu-sub-button"]:hover {
+         @apply bg-sidebar-accent text-sidebar-accent-foreground;
+    }
+    [data-sidebar="menu-sub-button"][data-active="true"] {
+         @apply bg-sidebar-accent text-sidebar-accent-foreground font-medium; /* Use accent for active sub-items */
+    }
+
+    /* Priority Badge Base Styles */
+    .priority-badge {
+        @apply inline-block h-2.5 w-2.5 rounded-full shrink-0; /* Increased size */
+    }
+
+    /* Priority Colors */
+    .priority-1 { @apply bg-[hsl(var(--priority-1))]; }
+    .priority-2 { @apply bg-[hsl(var(--priority-2))]; }
+    .priority-3 { @apply bg-[hsl(var(--priority-3))]; }
+    .priority-4 { @apply bg-[hsl(var(--priority-4))]; }
+    .priority-5 { @apply bg-[hsl(var(--priority-5))]; }
+}
+
+    

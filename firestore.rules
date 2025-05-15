@@ -1,0 +1,94 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // قواعد للمستخدمين الفرديين
+    match /individuals/{userId}/{document=**} {
+      // يمكن للمستخدم قراءة وكتابة بياناته الخاصة فقط
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // قواعد للمؤسسات
+    match /organizations/{orgId} {
+      // يمكن للمستخدمين المصرح لهم قراءة معلومات المؤسسة
+      allow read: if request.auth != null && 
+                   exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
+      
+      // يمكن للمديرين فقط تعديل معلومات المؤسسة
+      allow write: if request.auth != null && 
+                    get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == 'admin';
+      
+      // قواعد لأعضاء المؤسسة
+      match /members/{memberId} {
+        // يمكن للأعضاء قراءة معلومات الأعضاء
+        allow read: if request.auth != null && 
+                     exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
+        
+        // يمكن للمديرين فقط إضافة أو إزالة أعضاء
+        allow write: if request.auth != null && 
+                      get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == 'admin';
+      }
+      
+      // قواعد للمهام
+      match /tasks/{taskId} {
+        // يمكن للأعضاء قراءة المهام
+        allow read: if request.auth != null && 
+                     exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
+        
+        // يمكن للمديرين والمشرفين والمهندسين إنشاء وتعديل المهام
+        allow create, update: if request.auth != null && 
+                               (get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == 'admin' ||
+                                get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == 'supervisor' ||
+                                get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == 'engineer');
+        
+        // يمكن للمديرين فقط حذف المهام
+        allow delete: if request.auth != null && 
+                       get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == 'admin';
+      }
+      
+      // قواعد للتقارير
+      match /reports/{reportId} {
+        // يمكن للأعضاء قراءة التقارير
+        allow read: if request.auth != null && 
+                     exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
+        
+        // يمكن للأعضاء إنشاء التقارير
+        allow create: if request.auth != null && 
+                       exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
+        
+        // يمكن للمستخدم تعديل التقارير التي أنشأها
+        allow update: if request.auth != null && 
+                       (request.resource.data.createdBy == request.auth.uid ||
+                        get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == 'admin' ||
+                        get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == 'supervisor');
+        
+        // يمكن للمديرين فقط حذف التقارير
+        allow delete: if request.auth != null && 
+                       get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == 'admin';
+      }
+    }
+    
+    // قواعد للمستخدمين
+    match /users/{userId} {
+      // يمكن للمستخدم قراءة معلوماته الخاصة
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // يمكن للمديرين قراءة معلومات جميع المستخدمين
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      
+      // يمكن للمستخدم تعديل معلوماته الخاصة
+      allow update: if request.auth != null && request.auth.uid == userId;
+      
+      // يمكن للمديرين تعديل معلومات جميع المستخدمين
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+    
+    // قواعد لإعدادات النظام
+    match /system/{document=**} {
+      // يمكن للمستخدمين قراءة إعدادات النظام
+      allow read: if request.auth != null;
+      
+      // يمكن للمديرين فقط تعديل إعدادات النظام
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+  }
+}

@@ -1,0 +1,13 @@
+/**
+ * ملف انتقالي لإعادة تصدير وظيفة generateSmartSuggestions من خدمة src/services/ai.ts
+ * 
+ * هذا الملف يسمح للمكونات الحالية بالاستمرار في العمل دون تغيير، بينما نستخدم الوظائف الجديدة في الخادم الخلفي.
+ * 
+ * ملاحظة: هذا ملف مؤقت وسيتم إزالته بعد تحديث جميع المكونات لاستخدام خدمة src/services/ai.ts مباشرة.
+ */
+
+// استيراد الوظيفة والأنواع من الملف الانتقالي
+import { generateSmartSuggestions, type GenerateSmartSuggestionsInput, type GenerateSmartSuggestionsOutput } from './index';
+
+// إعادة تصدير الوظيفة والأنواع
+export { generateSmartSuggestions, type GenerateSmartSuggestionsInput, type GenerateSmartSuggestionsOutput };

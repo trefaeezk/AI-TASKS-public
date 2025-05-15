@@ -1,0 +1,44 @@
+{
+  "hosting": {
+    "public": "out",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(js|css|html|json|webmanifest)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      }
+    ],
+    "env": {
+      "NEXT_PUBLIC_FIREBASE_API_KEY": "AIzaSyBIJrQX5HBBnP7LKzgsUNdWCX7aqhVG3wA",
+      "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN": "tasks-intelligence.firebaseapp.com",
+      "NEXT_PUBLIC_FIREBASE_PROJECT_ID": "tasks-intelligence",
+      "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET": "tasks-intelligence.appspot.com",
+      "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "770714758504",
+      "NEXT_PUBLIC_FIREBASE_APP_ID": "1:770714758504:web:aea98ba39a726df1ba3add"
+    }
+  },
+  "functions": {
+    "source": "functions",
+    "ignore": [
+      "node_modules",
+      ".git",
+      "firebase-debug.log",
+      "firebase-debug.*.log"
+    ]
+  }
+}
