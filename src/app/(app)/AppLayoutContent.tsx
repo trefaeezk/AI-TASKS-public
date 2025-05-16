@@ -362,6 +362,15 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                   />
                 </AccountTypeGuard>
 
+                <AccountTypeGuard requiredType="individual">
+                  <PermissionSidebarItem
+                    href="/suggestions"
+                    icon={Wand2}
+                    label="الاقتراحات الذكية"
+                    tooltip="اقتراحات ذكية لتحسين إدارة المهام"
+                    requiredPermission={{ area: 'tools', action: 'view' }}
+                  />
+                </AccountTypeGuard>
 
 
                 {/* عناصر قائمة الإدارة */}
