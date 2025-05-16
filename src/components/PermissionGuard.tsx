@@ -67,7 +67,7 @@ export function PermissionGuard({
 
   // التحقق من الصلاحية إذا كانت مطلوبة
   if (area && action) {
-    hasAccess = hasAccess && checkPermission(area, action);
+    hasAccess = hasAccess && checkPermission(`${area}.${action}`);
   }
 
   // عرض المحتوى أو البديل

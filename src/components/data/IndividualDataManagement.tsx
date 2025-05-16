@@ -9,7 +9,7 @@ import { Loader2, Download, Upload, AlertTriangle, CheckCircle } from 'lucide-re
 import { db } from '@/config/firebase';
 import { collection, query, where, getDocs, doc, setDoc, writeBatch, orderBy } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
-import { hasPermission } from '@/types/roles';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useToast } from '@/hooks/use-toast';
 
 /**
@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
  */
 export default function IndividualDataManagement() {
   const { user, userClaims } = useAuth();
+  const { hasPermission } = usePermissions();
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -25,7 +26,7 @@ export default function IndividualDataManagement() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // التحقق من صلاحيات المستخدم
-  const canManageData = userClaims?.role === 'independent' || hasPermission(['data:view'], { area: 'data', action: 'view' });
+  const canManageData = userClaims?.role === 'independent' || hasPermission('data.view');
 
   if (!canManageData) {
     return (

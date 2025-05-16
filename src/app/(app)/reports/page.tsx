@@ -3,11 +3,12 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 // Removed CalendarWarning, will use AlertTriangle which is already imported
-import { Loader2, Wand2, BarChart3, AlertTriangle, ListChecks, Info } from 'lucide-react';
+import { Loader2, Wand2, BarChart3, AlertTriangle, ListChecks, Info, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { db } from '@/config/firebase';
 import { collection, query, where, getDocs, writeBatch, doc, Timestamp, orderBy } from 'firebase/firestore';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';

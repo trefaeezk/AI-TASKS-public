@@ -109,16 +109,16 @@ export function usePermissions() {
   // التحقق مما إذا كان المستخدم يملك صلاحية معينة
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
-    
+
     // تحويل النص إلى مفتاح الصلاحية
     const [area, action] = permission.split('.');
     if (!area || !action) return false;
-    
+
     const allPermissions = getAllPermissions();
-    
-    return checkPermission(allPermissions, { 
-      area: area as PermissionArea, 
-      action: action as PermissionAction 
+
+    return checkPermission(allPermissions, {
+      area: area as PermissionArea,
+      action: action as PermissionAction
     });
   };
 
@@ -135,6 +135,7 @@ export function usePermissions() {
     loading,
     error,
     hasPermission,
+    checkPermission: hasPermission, // إضافة checkPermission كاسم بديل لـ hasPermission
     checkRole,
     isAuthenticated: !!user
   };

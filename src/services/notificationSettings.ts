@@ -1,6 +1,6 @@
 /**
  * خدمة إدارة إعدادات الإشعارات
- * 
+ *
  * توفر هذه الخدمة وظائف للتعامل مع إعدادات الإشعارات، بما في ذلك إنشاء إعدادات افتراضية
  * إذا لم تكن موجودة.
  */
@@ -32,7 +32,7 @@ export interface NotificationSettings {
 
 /**
  * إنشاء إعدادات إشعارات افتراضية للمستخدم
- * 
+ *
  * @param userId معرف المستخدم
  * @param organizationId معرف المؤسسة (اختياري)
  * @param departmentId معرف القسم (اختياري)
@@ -44,7 +44,8 @@ export async function createDefaultNotificationSettings(
   departmentId?: string
 ): Promise<NotificationSettings> {
   const now = new Date();
-  
+
+  // إنشاء الإعدادات الافتراضية مع التحقق من القيم غير المحددة
   const defaultSettings: NotificationSettings = {
     userId,
     email: true,
@@ -55,21 +56,29 @@ export async function createDefaultNotificationSettings(
     taskReminders: true,
     taskAssignments: true,
     taskUpdates: true,
-    organizationId,
-    departmentId,
     createdAt: now,
     updatedAt: now
   };
-  
+
+  // إضافة organizationId فقط إذا كان محدداً
+  if (organizationId) {
+    defaultSettings.organizationId = organizationId;
+  }
+
+  // إضافة departmentId فقط إذا كان محدداً
+  if (departmentId) {
+    defaultSettings.departmentId = departmentId;
+  }
+
   // إنشاء وثيقة إعدادات الإشعارات
   await setDoc(doc(db, 'notificationSettings', userId), defaultSettings);
-  
+
   return defaultSettings;
 }
 
 /**
  * الحصول على إعدادات الإشعارات للمستخدم
- * 
+ *
  * @param userId معرف المستخدم
  * @returns وعد بإعدادات الإشعارات
  */
@@ -77,11 +86,11 @@ export async function getNotificationSettings(userId: string): Promise<Notificat
   try {
     const docRef = doc(db, 'notificationSettings', userId);
     const docSnap = await getDoc(docRef);
-    
+
     if (docSnap.exists()) {
       return docSnap.data() as NotificationSettings;
     }
-    
+
     // إذا لم تكن إعدادات الإشعارات موجودة، قم بإنشاء إعدادات افتراضية
     return await createDefaultNotificationSettings(userId);
   } catch (error) {
@@ -92,7 +101,7 @@ export async function getNotificationSettings(userId: string): Promise<Notificat
 
 /**
  * تحديث إعدادات الإشعارات للمستخدم
- * 
+ *
  * @param userId معرف المستخدم
  * @param settings إعدادات الإشعارات الجديدة
  * @returns وعد بنجاح التحديث
@@ -104,18 +113,18 @@ export async function updateNotificationSettings(
   try {
     const docRef = doc(db, 'notificationSettings', userId);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       // إذا لم تكن إعدادات الإشعارات موجودة، قم بإنشاء إعدادات افتراضية أولاً
       await createDefaultNotificationSettings(userId, settings.organizationId, settings.departmentId);
     }
-    
+
     // تحديث إعدادات الإشعارات
     await updateDoc(docRef, {
       ...settings,
       updatedAt: new Date()
     });
-    
+
     return true;
   } catch (error) {
     console.error('Error updating notification settings:', error);
@@ -129,29 +138,37 @@ export async function updateNotificationSettings(
 export function useEnsureNotificationSettings() {
   const { user } = useAuth();
   const { accountType, organizationId, departmentId } = useAccountType();
-  
+
   useEffect(() => {
     if (!user || accountType === 'loading') return;
-    
+
     const ensureSettings = async () => {
       try {
         const docRef = doc(db, 'notificationSettings', user.uid);
         const docSnap = await getDoc(docRef);
-        
+
         if (!docSnap.exists()) {
           // إذا لم تكن إعدادات الإشعارات موجودة، قم بإنشاء إعدادات افتراضية
-          await createDefaultNotificationSettings(
-            user.uid,
-            accountType === 'organization' ? organizationId : undefined,
-            accountType === 'organization' ? departmentId : undefined
-          );
+          if (accountType === 'organization' && organizationId) {
+            // إذا كان المستخدم ينتمي لمؤسسة وتم تحديد معرف المؤسسة
+            await createDefaultNotificationSettings(
+              user.uid,
+              organizationId,
+              departmentId
+            );
+          } else {
+            // إذا كان المستخدم فردياً أو لم يتم تحديد معرف المؤسسة
+            await createDefaultNotificationSettings(
+              user.uid
+            );
+          }
           console.log('Created default notification settings for user:', user.uid);
         }
       } catch (error) {
         console.error('Error ensuring notification settings:', error);
       }
     };
-    
+
     ensureSettings();
   }, [user, accountType, organizationId, departmentId]);
 }
