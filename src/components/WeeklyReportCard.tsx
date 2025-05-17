@@ -364,22 +364,22 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
               <TabsList className="grid grid-cols-5 mb-4">
                 <TabsTrigger value="summary">الملخص</TabsTrigger>
                 <TabsTrigger value="completed">
-                  المكتملة ({report.completedTasks.length})
+                  المكتملة ({report?.completedTasks?.length || 0})
                 </TabsTrigger>
                 <TabsTrigger value="inProgress">
-                  قيد التنفيذ ({report.inProgressTasks.length})
+                  قيد التنفيذ ({report?.inProgressTasks?.length || 0})
                 </TabsTrigger>
                 <TabsTrigger value="upcoming">
-                  القادمة ({report.upcomingTasks.length})
+                  القادمة ({report?.upcomingTasks?.length || 0})
                 </TabsTrigger>
                 <TabsTrigger value="blocked">
-                  المعلقة ({report.blockedTasks.length})
+                  المعلقة ({report?.blockedTasks?.length || 0})
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="summary" className="space-y-4">
                 <div className="bg-muted/30 p-4 rounded-lg">
-                  <p className="whitespace-pre-line">{report.summary}</p>
+                  <p className="whitespace-pre-line">{report?.summary || ''}</p>
                 </div>
 
                 <h3 className="text-lg font-semibold flex items-center mt-4">
@@ -390,7 +390,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                   <Card>
                     <CardContent className="pt-6">
                       <div className="text-center">
-                        <div className="text-2xl font-bold">{report.keyMetrics.completionRate}%</div>
+                        <div className="text-2xl font-bold">{report?.keyMetrics?.completionRate || 0}%</div>
                         <p className="text-sm text-muted-foreground">نسبة إكمال المهام</p>
                       </div>
                     </CardContent>
@@ -398,7 +398,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                   <Card>
                     <CardContent className="pt-6">
                       <div className="text-center">
-                        <div className="text-2xl font-bold">{report.keyMetrics.onTimeCompletionRate}%</div>
+                        <div className="text-2xl font-bold">{report?.keyMetrics?.onTimeCompletionRate || 0}%</div>
                         <p className="text-sm text-muted-foreground">نسبة الإكمال في الوقت المحدد</p>
                       </div>
                     </CardContent>
@@ -406,7 +406,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                   <Card>
                     <CardContent className="pt-6">
                       <div className="text-center">
-                        <div className="text-2xl font-bold">{report.keyMetrics.averageProgress}%</div>
+                        <div className="text-2xl font-bold">{report?.keyMetrics?.averageProgress || 0}%</div>
                         <p className="text-sm text-muted-foreground">متوسط التقدم</p>
                       </div>
                     </CardContent>
@@ -415,17 +415,17 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
 
                 <h3 className="text-lg font-semibold mt-4">التوصيات</h3>
                 <ul className="space-y-2">
-                  {report.recommendations.map((recommendation, index) => (
+                  {report?.recommendations?.map((recommendation, index) => (
                     <li key={index} className="flex items-start">
                       <span className="ml-2 text-primary">•</span>
                       <span>{recommendation}</span>
                     </li>
-                  ))}
+                  )) || <li>لا توجد توصيات</li>}
                 </ul>
               </TabsContent>
 
               <TabsContent value="completed" className="space-y-4">
-                {report.completedTasks.length === 0 ? (
+                {!report?.completedTasks?.length ? (
                   <p className="text-center text-muted-foreground py-4">
                     لا توجد مهام مكتملة خلال هذه الفترة.
                   </p>
@@ -439,7 +439,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
               </TabsContent>
 
               <TabsContent value="inProgress" className="space-y-4">
-                {report.inProgressTasks.length === 0 ? (
+                {!report?.inProgressTasks?.length ? (
                   <p className="text-center text-muted-foreground py-4">
                     لا توجد مهام قيد التنفيذ.
                   </p>
@@ -453,7 +453,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
               </TabsContent>
 
               <TabsContent value="upcoming" className="space-y-4">
-                {report.upcomingTasks.length === 0 ? (
+                {!report?.upcomingTasks?.length ? (
                   <p className="text-center text-muted-foreground py-4">
                     لا توجد مهام قادمة.
                   </p>
@@ -467,7 +467,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
               </TabsContent>
 
               <TabsContent value="blocked" className="space-y-4">
-                {report.blockedTasks.length === 0 ? (
+                {!report?.blockedTasks?.length ? (
                   <p className="text-center text-muted-foreground py-4">
                     لا توجد مهام معلقة.
                   </p>
