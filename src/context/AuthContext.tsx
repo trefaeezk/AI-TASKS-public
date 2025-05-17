@@ -71,9 +71,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLastRefreshTime(now);
       console.log("[AuthContext] Last refresh time updated to:", now);
 
-      // تسجيل الخروج من الجلسة الحالية وإعادة تسجيل الدخول
-      console.log("[AuthContext] Signing out and refreshing token");
-
       // الحصول على بيانات المستخدم الحالي
       const currentUser = auth.currentUser;
       if (!currentUser) {
@@ -85,6 +82,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log("[AuthContext] Reloading user");
       await currentUser.reload();
       console.log("[AuthContext] User reloaded");
+
+      // إلغاء جميع الـ tokens الحالية وإجبار إصدار token جديد
+      console.log("[AuthContext] Forcing token refresh");
+      await currentUser.getIdToken(true);
 
       // الحصول على custom claims مع إجبار التحديث
       console.log("[AuthContext] Getting ID token result with force refresh");
@@ -562,6 +563,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (currentUser) {
         try {
           // الحصول على custom claims عند تسجيل الدخول
+          // إجبار تحديث الـ token أولاً
+          console.log("[AuthContext] Forcing token refresh on auth state change");
+          await currentUser.getIdToken(true);
+
+          // ثم الحصول على الـ token المحدث
           const tokenResult = await getIdTokenResult(currentUser);
           const claims = tokenResult.claims as UserClaims;
           setUserClaims(claims);
@@ -583,8 +589,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 if (success) {
                   console.log("[AuthContext] Application initialized successfully");
 
+                  // إجبار تحديث الـ token مرة أخرى
+                  console.log("[AuthContext] Forcing token refresh after account type check");
+                  await currentUser.getIdToken(true);
+
                   // توجيه المستخدم حسب نوع الحساب
-                  const updatedClaims = (await getIdTokenResult(currentUser)).claims as UserClaims;
+                  const updatedClaims = (await getIdTokenResult(currentUser, true)).claims as UserClaims;
 
                   // تحديث claims في الحالة
                   setUserClaims(updatedClaims);
@@ -661,7 +671,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // إنشاء مستمع جديد لوثيقة المستخدم
       const unsubscribe = onSnapshot(
         docRef,
-        (docSnapshot) => {
+        async (docSnapshot) => {
           if (docSnapshot.exists()) {
             console.log("[AuthContext] User document updated in Firestore:", docSnapshot.data());
 
@@ -682,20 +692,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             // تحديث معلومات المستخدم عند تغيير وثيقة المستخدم، ولكن بتأخير لتجنب التحديثات المتكررة
             const now = Date.now();
-            const minRefreshInterval = 10000; // 10 ثوان كحد أدنى بين التحديثات
+            const minRefreshInterval = 5000; // 5 ثوان كحد أدنى بين التحديثات
 
             if (now - lastRefreshTime >= minRefreshInterval) {
               console.log("[AuthContext] Refreshing token after document update");
+
               // استخدام getIdTokenResult مباشرة بدلاً من refreshUserData لتجنب الحلقة اللانهائية
               if (user) {
-                user.getIdTokenResult(true)
-                  .then(tokenResult => {
-                    setLastRefreshTime(Date.now());
-                    console.log("[AuthContext] Token refreshed successfully:", tokenResult.claims);
-                  })
-                  .catch(error => {
-                    console.error("[AuthContext] Error refreshing token:", error);
-                  });
+                try {
+                  // إجبار تحديث الـ token
+                  const tokenResult = await user.getIdTokenResult(true);
+                  setLastRefreshTime(Date.now());
+                  console.log("[AuthContext] Token refreshed successfully:", tokenResult.claims);
+
+                  // تحديث userClaims مباشرة من الـ token الجديد
+                  setUserClaims(tokenResult.claims as UserClaims);
+                } catch (error) {
+                  console.error("[AuthContext] Error refreshing token:", error);
+                }
               }
             } else {
               console.log("[AuthContext] Skipping token refresh after document update, too soon since last refresh");

@@ -8,6 +8,7 @@ import { db } from './shared/utils';
 import { isIndividualUser } from './individual/utils';
 import { isOrganizationMember } from './shared/utils';
 import { createCallableFunction } from './shared/function-utils';
+import { addTokenRefreshTimestamp } from './auth/tokenRefresh';
 
 // تكوين CORS (يستخدم في وظائف HTTP)
 // const corsHandler = cors({ origin: true });
@@ -289,9 +290,19 @@ export const updateAccountType = createCallableFunction<UpdateAccountTypeRequest
         // تحديث custom claims
         await admin.auth().setCustomUserClaims(uid, newClaims);
 
+        // إضافة طابع زمني لإجبار تحديث الـ token
+        try {
+            await addTokenRefreshTimestamp(uid);
+            console.log(`[${functionName}] Added timestamp to force token refresh for user ${uid}`);
+        } catch (refreshError) {
+            console.error(`[${functionName}] Error forcing token refresh:`, refreshError);
+            // نستمر حتى لو فشل إجبار تحديث الـ token
+        }
+
         return {
             success: true,
             accountType,
+            tokenRefreshed: true,
             ...(accountType === 'organization' && {
                 organizationId: organizationId || customClaims.organizationId,
                 departmentId: departmentId || customClaims.departmentId

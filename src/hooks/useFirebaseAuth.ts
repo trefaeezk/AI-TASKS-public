@@ -13,11 +13,25 @@ import {
 import { httpsCallable } from 'firebase/functions';
 import { auth, googleProvider, functions } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
 export function useFirebaseAuth() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const { refreshUserData } = useAuth();
+
+  // وظيفة مساعدة لتحديث token المستخدم
+  const refreshUserToken = async (): Promise<boolean> => {
+    try {
+      // تحديث معلومات المستخدم
+      await refreshUserData();
+      return true;
+    } catch (error) {
+      console.error("[useFirebaseAuth] Error refreshing user token:", error);
+      return false;
+    }
+  };
 
   const handleAuthError = (err: unknown) => {
     const authError = err as AuthError;
@@ -61,7 +75,7 @@ export function useFirebaseAuth() {
     setError(null);
     try {
       // إنشاء المستخدم باستخدام Firebase Authentication
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await createUserWithEmailAndPassword(auth, email, password);
 
       // تعيين نوع الحساب كمستقل (individual) والدور كمستخدم مستقل (independent)
       try {
@@ -81,6 +95,16 @@ export function useFirebaseAuth() {
         description: 'تم تسجيلك كمستخدم مستقل.', // You have been registered as an independent user.
       });
 
+      // تحديث token المستخدم لتحميل الصلاحيات الجديدة
+      console.log("[useFirebaseAuth] Refreshing user token after signup");
+
+      // إضافة تأخير قبل تحديث الـ token
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      if (await refreshUserToken()) {
+        console.log("[useFirebaseAuth] User token refreshed successfully");
+      }
+
       setLoading(false);
       return true;
     } catch (err) {
@@ -94,9 +118,17 @@ export function useFirebaseAuth() {
     setError(null);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-       toast({
-            title: 'تم تسجيل الدخول بنجاح!', // Signed in successfully!
-        });
+
+      // تحديث token المستخدم لضمان تحميل الصلاحيات الصحيحة
+      console.log("[useFirebaseAuth] Refreshing user token after signin");
+      if (await refreshUserToken()) {
+        console.log("[useFirebaseAuth] User token refreshed successfully after signin");
+      }
+
+      toast({
+        title: 'تم تسجيل الدخول بنجاح!', // Signed in successfully!
+      });
+
       setLoading(false);
       return true;
     } catch (err) {
@@ -166,6 +198,16 @@ export function useFirebaseAuth() {
             title: 'تم إنشاء الحساب بنجاح!',
             description: 'تم تسجيلك كمستخدم مستقل باستخدام حساب جوجل.',
           });
+
+          // تحديث token المستخدم لتحميل الصلاحيات الجديدة للمستخدم الجديد
+          console.log("[useFirebaseAuth] Refreshing user token after Google signup");
+
+          // إضافة تأخير قبل تحديث الـ token
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          if (await refreshUserToken()) {
+            console.log("[useFirebaseAuth] User token refreshed successfully after Google signup");
+          }
         } catch (updateError) {
           console.error("[useFirebaseAuth] Error setting account type for Google user:", updateError);
           // نستمر حتى لو فشل تعيين نوع الحساب، سيتم التعامل معه لاحقًا في AuthContext

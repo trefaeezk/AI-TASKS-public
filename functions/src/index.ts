@@ -18,6 +18,9 @@ import { createCallableFunction, createHttpFunction, LegacyCallableContext } fro
 // تصدير وظائف الذكاء الاصطناعي
 export * from './ai';
 
+// تصدير وظائف المصادقة
+export * from './auth';
+
 // Initialize CORS middleware with options
 const corsHandler = cors({ origin: true });
 
