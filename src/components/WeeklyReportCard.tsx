@@ -34,7 +34,7 @@ import {
   type TaskSummary
 } from '@/services/ai';
 import { TaskType, TaskFirestoreData } from '@/types/task';
-import { format, startOfWeek, endOfWeek, subWeeks, isWithinInterval } from 'date-fns';
+import { format, startOfWeek, endOfWeek, subWeeks, isWithinInterval, isBefore, isAfter } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -58,6 +58,61 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [activeTab, setActiveTab] = useState<'summary' | 'completed' | 'inProgress' | 'upcoming' | 'blocked'>('summary');
   const [error, setError] = useState<string | null>(null);
+
+  // دالة لحساب نسبة إكمال المهام في حالة عدم توفرها من الخدمة
+  const calculateCompletionRate = (report: GenerateWeeklyReportOutput | null): number => {
+    if (!report) return 0;
+
+    const totalTasks = (report.completedTasks?.length || 0) +
+                       (report.inProgressTasks?.length || 0) +
+                       (report.upcomingTasks?.length || 0) +
+                       (report.blockedTasks?.length || 0);
+
+    if (totalTasks === 0) return 0;
+
+    return Math.round((report.completedTasks?.length || 0) / totalTasks * 100);
+  };
+
+  // دالة لحساب متوسط التقدم في حالة عدم توفره من الخدمة
+  const calculateAverageProgress = (report: GenerateWeeklyReportOutput | null): number => {
+    if (!report) return 0;
+
+    let totalProgress = 0;
+    let taskCount = 0;
+
+    // جمع التقدم من جميع المهام
+    if (report.completedTasks) {
+      report.completedTasks.forEach(task => {
+        totalProgress += task.progress || 0;
+        taskCount++;
+      });
+    }
+
+    if (report.inProgressTasks) {
+      report.inProgressTasks.forEach(task => {
+        totalProgress += task.progress || 0;
+        taskCount++;
+      });
+    }
+
+    if (report.upcomingTasks) {
+      report.upcomingTasks.forEach(task => {
+        totalProgress += task.progress || 0;
+        taskCount++;
+      });
+    }
+
+    if (report.blockedTasks) {
+      report.blockedTasks.forEach(task => {
+        totalProgress += task.progress || 0;
+        taskCount++;
+      });
+    }
+
+    if (taskCount === 0) return 0;
+
+    return Math.round(totalProgress / taskCount);
+  };
   const [reportPeriod, setReportPeriod] = useState<{startDate: Date, endDate: Date}>(() => {
     // استخدام فترة التقرير المُمررة إذا كانت متوفرة، وإلا استخدام الأسبوع الحالي كافتراضي
     if (propReportPeriod) {
@@ -201,15 +256,57 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
       // تحضير المهام للذكاء الاصطناعي
       const tasksForAI: TaskInput[] = tasks
         .filter(task => {
-          // تضمين المهام التي تم إنشاؤها أو تحديثها أو إكمالها خلال فترة التقرير
-          // أو المهام التي لها تاريخ استحقاق أو بدء خلال فترة التقرير
-          const taskDate = task.completedDate || task.dueDate || task.startDate;
-          if (!taskDate) return true; // تضمين المهام بدون تواريخ
+          // تضمين المهام المكتملة خلال فترة التقرير
+          if (task.status === 'completed' && task.completedDate) {
+            return isWithinInterval(task.completedDate, {
+              start: reportPeriod.startDate,
+              end: reportPeriod.endDate
+            });
+          }
 
-          return isWithinInterval(taskDate, {
-            start: reportPeriod.startDate,
-            end: reportPeriod.endDate
-          });
+          // تضمين المهام قيد التنفيذ التي لها تاريخ بدء قبل أو خلال فترة التقرير
+          if (task.status === 'in-progress' && task.startDate) {
+            return (
+              isBefore(task.startDate, reportPeriod.endDate) ||
+              isWithinInterval(task.startDate, {
+                start: reportPeriod.startDate,
+                end: reportPeriod.endDate
+              })
+            );
+          }
+
+          // تضمين المهام القادمة التي لها تاريخ استحقاق خلال أو بعد فترة التقرير
+          if (task.status === 'todo' && task.dueDate) {
+            return (
+              isAfter(task.dueDate, reportPeriod.startDate) ||
+              isWithinInterval(task.dueDate, {
+                start: reportPeriod.startDate,
+                end: reportPeriod.endDate
+              })
+            );
+          }
+
+          // تضمين المهام المعلقة بغض النظر عن التاريخ
+          if (task.status === 'blocked') {
+            return true;
+          }
+
+          // تضمين المهام بدون تواريخ
+          if (!task.completedDate && !task.dueDate && !task.startDate) {
+            return true;
+          }
+
+          // تضمين المهام التي لها تاريخ استحقاق أو بدء خلال فترة التقرير
+          return (
+            (task.dueDate && isWithinInterval(task.dueDate, {
+              start: reportPeriod.startDate,
+              end: reportPeriod.endDate
+            })) ||
+            (task.startDate && isWithinInterval(task.startDate, {
+              start: reportPeriod.startDate,
+              end: reportPeriod.endDate
+            }))
+          );
         })
         .map(task => ({
           id: task.id,
@@ -240,7 +337,33 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
         organizationName: organizationId ? 'مؤسسة' : undefined, // يمكن استبداله بالاسم الفعلي
       });
 
-      setReport(result);
+      // معالجة إضافية للتقرير بعد استلامه من الخدمة
+      const processedReport = {
+        ...result,
+        // التأكد من وجود جميع المصفوفات المطلوبة
+        completedTasks: result.completedTasks || [],
+        inProgressTasks: result.inProgressTasks || [],
+        upcomingTasks: result.upcomingTasks || [],
+        blockedTasks: result.blockedTasks || [],
+        // التأكد من وجود مؤشرات الأداء
+        keyMetrics: {
+          completionRate: result.keyMetrics?.completionRate !== undefined
+            ? result.keyMetrics.completionRate
+            : calculateCompletionRate(result),
+          onTimeCompletionRate: result.keyMetrics?.onTimeCompletionRate !== undefined
+            ? result.keyMetrics.onTimeCompletionRate
+            : 0,
+          averageProgress: result.keyMetrics?.averageProgress !== undefined
+            ? result.keyMetrics.averageProgress
+            : calculateAverageProgress(result)
+        },
+        // التأكد من وجود التوصيات
+        recommendations: result.recommendations || [],
+        // تحديث فترة التقرير لتتوافق مع الفترة المحددة
+        period: `${formatDate(reportPeriod.startDate)} إلى ${formatDate(reportPeriod.endDate)}`
+      };
+
+      setReport(processedReport);
       toast({
         title: 'تم إنشاء التقرير الأسبوعي',
         description: 'تم إنشاء التقرير الأسبوعي بنجاح.',
@@ -253,9 +376,10 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
     }
   };
 
-  // تنسيق التاريخ
+  // تنسيق التاريخ بشكل موحد (dd-MM-yyyy)
   const formatDate = (date: Date) => {
-    return format(date, 'dd MMMM yyyy', { locale: ar });
+    // استخدام تنسيق موحد للتاريخ في جميع أنحاء التطبيق
+    return format(date, 'dd-MM-yyyy', { locale: ar });
   };
 
   // تصدير التقرير كملف PDF
@@ -330,6 +454,11 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
         </CardTitle>
         <CardDescription>
           تقرير أسبوعي شامل عن المهام والإنجازات للفترة من {formatDate(reportPeriod.startDate)} إلى {formatDate(reportPeriod.endDate)}
+          {report?.period && report.period !== `${formatDate(reportPeriod.startDate)} إلى ${formatDate(reportPeriod.endDate)}` && (
+            <span className="text-yellow-500 mr-2 block mt-1">
+              (ملاحظة: فترة التقرير المعروضة قد تختلف عن الفترة المحددة)
+            </span>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -361,7 +490,9 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
         ) : (
           <>
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold">{report.title}</h2>
+              <h2 className="text-xl font-bold">
+                {report.title || `التقرير الأسبوعي للفترة من ${formatDate(reportPeriod.startDate)} إلى ${formatDate(reportPeriod.endDate)}`}
+              </h2>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={handleExportPDF}>
                   <Download className="ml-1 h-4 w-4" />
@@ -408,7 +539,11 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                   <Card>
                     <CardContent className="pt-6">
                       <div className="text-center">
-                        <div className="text-2xl font-bold">{report?.keyMetrics?.completionRate || 0}%</div>
+                        <div className="text-2xl font-bold">
+                          {report?.keyMetrics?.completionRate !== undefined
+                            ? Math.round(report.keyMetrics.completionRate)
+                            : calculateCompletionRate(report)}%
+                        </div>
                         <p className="text-sm text-muted-foreground">نسبة إكمال المهام</p>
                       </div>
                     </CardContent>
@@ -416,7 +551,11 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                   <Card>
                     <CardContent className="pt-6">
                       <div className="text-center">
-                        <div className="text-2xl font-bold">{report?.keyMetrics?.onTimeCompletionRate || 0}%</div>
+                        <div className="text-2xl font-bold">
+                          {report?.keyMetrics?.onTimeCompletionRate !== undefined
+                            ? Math.round(report.keyMetrics.onTimeCompletionRate)
+                            : 0}%
+                        </div>
                         <p className="text-sm text-muted-foreground">نسبة الإكمال في الوقت المحدد</p>
                       </div>
                     </CardContent>
@@ -424,7 +563,11 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                   <Card>
                     <CardContent className="pt-6">
                       <div className="text-center">
-                        <div className="text-2xl font-bold">{report?.keyMetrics?.averageProgress || 0}%</div>
+                        <div className="text-2xl font-bold">
+                          {report?.keyMetrics?.averageProgress !== undefined
+                            ? Math.round(report.keyMetrics.averageProgress)
+                            : calculateAverageProgress(report)}%
+                        </div>
                         <p className="text-sm text-muted-foreground">متوسط التقدم</p>
                       </div>
                     </CardContent>
@@ -433,12 +576,42 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
 
                 <h3 className="text-lg font-semibold mt-4">التوصيات</h3>
                 <ul className="space-y-2">
-                  {report?.recommendations?.map((recommendation, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="ml-2 text-primary">•</span>
-                      <span>{recommendation}</span>
-                    </li>
-                  )) || <li>لا توجد توصيات</li>}
+                  {report?.recommendations && report.recommendations.length > 0 ? (
+                    report.recommendations.map((recommendation, index) => (
+                      <li key={index} className="flex items-start">
+                        <span className="ml-2 text-primary">•</span>
+                        <span>{recommendation}</span>
+                      </li>
+                    ))
+                  ) : (
+                    // إنشاء توصيات افتراضية بناءً على بيانات التقرير
+                    <>
+                      {calculateCompletionRate(report) < 50 && (
+                        <li className="flex items-start">
+                          <span className="ml-2 text-primary">•</span>
+                          <span>مراجعة سير العمل ومعالجة أسباب التأخير في إكمال المهام.</span>
+                        </li>
+                      )}
+                      {report?.blockedTasks?.length > 0 && (
+                        <li className="flex items-start">
+                          <span className="ml-2 text-primary">•</span>
+                          <span>التركيز على حل المشاكل التي تعيق المهام المعلقة.</span>
+                        </li>
+                      )}
+                      {report?.upcomingTasks?.length > 0 && (
+                        <li className="flex items-start">
+                          <span className="ml-2 text-primary">•</span>
+                          <span>التخطيط المسبق للمهام القادمة لضمان إكمالها في الوقت المحدد.</span>
+                        </li>
+                      )}
+                      {!(calculateCompletionRate(report) < 50 || report?.blockedTasks?.length > 0 || report?.upcomingTasks?.length > 0) && (
+                        <li className="flex items-start">
+                          <span className="ml-2 text-primary">•</span>
+                          <span>الاستمرار في الأداء الجيد والحفاظ على مستوى الإنتاجية الحالي.</span>
+                        </li>
+                      )}
+                    </>
+                  )}
                 </ul>
               </TabsContent>
 
