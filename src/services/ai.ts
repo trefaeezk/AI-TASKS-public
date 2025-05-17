@@ -336,16 +336,60 @@ export async function generateWeeklyReport(input: GenerateWeeklyReportInput): Pr
  */
 export async function generateSmartSuggestions(input: GenerateSmartSuggestionsInput): Promise<GenerateSmartSuggestionsOutput> {
   try {
+    console.log('[AI Service] Generating smart suggestions with input:', {
+      userId: input.userId,
+      userName: input.userName,
+      suggestionType: input.suggestionType,
+      tasksCount: input.tasks.length,
+      upcomingTasksCount: input.upcomingTasks.length,
+      overdueTasksCount: input.overdueTasks.length,
+      performance: input.performance
+    });
+
+    // تسجيل المهام للتحقق
+    if (input.tasks.length > 0) {
+      console.log('[AI Service] First task in input:', input.tasks[0]);
+    } else {
+      console.log('[AI Service] No tasks provided in input!');
+      // إذا لم تكن هناك مهام، نقوم بإنشاء اقتراح بسيط
+      return {
+        suggestion: {
+          title: `اقتراح ${input.suggestionType}`,
+          description: 'لا توجد مهام كافية لإنشاء اقتراح مفصل. يرجى إضافة المزيد من المهام.',
+          content: 'لا توجد مهام كافية لإنشاء اقتراح مفصل. يرجى إضافة المزيد من المهام.',
+          priority: 'normal',
+          actionItems: []
+        }
+      };
+    }
+
     const generateSmartSuggestionsFn = httpsCallable<GenerateSmartSuggestionsInput, GenerateSmartSuggestionsOutput>(
       functions,
       'generateSmartSuggestions'
     );
 
+    console.log('[AI Service] Calling Firebase function generateSmartSuggestions...');
     const result = await generateSmartSuggestionsFn(input);
+    console.log('[AI Service] Firebase function result:', result.data);
+
     return result.data;
   } catch (error) {
     console.error('[AI Service] Error in generateSmartSuggestions:', error);
-    throw new Error('فشل في إنشاء اقتراح ذكي. يرجى المحاولة مرة أخرى.');
+
+    // إنشاء اقتراح بسيط في حالة الخطأ
+    return {
+      suggestion: {
+        title: `اقتراح ${input.suggestionType} (تم إنشاؤه محليًا)`,
+        description: 'حدث خطأ أثناء توليد الاقتراح. هذا اقتراح بسيط تم إنشاؤه محليًا.',
+        content: 'حدث خطأ أثناء توليد الاقتراح. يرجى المحاولة مرة أخرى لاحقًا.',
+        priority: 'normal',
+        actionItems: [
+          { description: 'التحقق من اتصال الإنترنت' },
+          { description: 'التحقق من وجود مهام كافية' },
+          { description: 'المحاولة مرة أخرى لاحقًا' }
+        ]
+      }
+    };
   }
 }
 

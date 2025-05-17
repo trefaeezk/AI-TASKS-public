@@ -1,27 +1,27 @@
 'use client';
 
 import { db } from '@/config/firebase';
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  getDoc, 
-  getDocs, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where, 
-  orderBy, 
-  limit, 
-  Timestamp, 
+import {
+  collection,
+  doc,
+  addDoc,
+  getDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  limit,
+  Timestamp,
   serverTimestamp,
   onSnapshot
 } from 'firebase/firestore';
-import { 
-  Notification, 
-  NotificationFirestore, 
-  NotificationType, 
-  NotificationPriority, 
+import {
+  Notification,
+  NotificationFirestore,
+  NotificationType,
+  NotificationPriority,
   NotificationStatus,
   NotificationSettings,
   NotificationSettingsFirestore,
@@ -33,17 +33,26 @@ import { v4 as uuidv4 } from 'uuid';
 export async function createNotification(notificationData: Omit<Notification, 'id' | 'status' | 'createdAt'>): Promise<string> {
   try {
     // تحويل البيانات إلى صيغة Firestore
-    const firestoreData: Omit<NotificationFirestore, 'id'> = {
+    const firestoreData: any = {
       ...notificationData,
       status: 'unread',
       createdAt: serverTimestamp() as Timestamp,
-      readAt: undefined,
-      expiresAt: notificationData.expiresAt ? Timestamp.fromDate(notificationData.expiresAt) : undefined,
+      // لا نضيف حقل readAt لأنه سيكون undefined في البداية
+      expiresAt: notificationData.expiresAt ? Timestamp.fromDate(notificationData.expiresAt) : null,
     };
+
+    // حذف الحقول التي قيمتها undefined لأن Firestore لا يدعمها
+    Object.keys(firestoreData).forEach(key => {
+      if (firestoreData[key] === undefined) {
+        delete firestoreData[key];
+      }
+    });
+
+    console.log('Creating notification with data:', firestoreData);
 
     // إضافة الإشعار إلى Firestore
     const docRef = await addDoc(collection(db, 'notifications'), firestoreData);
-    
+
     return docRef.id;
   } catch (error) {
     console.error('Error creating notification:', error);
@@ -67,7 +76,7 @@ export async function getUserNotifications(
       where('userId', '==', userId),
       orderBy('createdAt', 'desc')
     );
-    
+
     // إضافة فلتر الحالة إذا تم تحديده
     if (options?.status) {
       notificationsQuery = query(
@@ -75,7 +84,7 @@ export async function getUserNotifications(
         where('status', '==', options.status)
       );
     }
-    
+
     // إضافة فلتر المؤسسة إذا تم تحديده
     if (options?.organizationId) {
       notificationsQuery = query(
@@ -83,7 +92,7 @@ export async function getUserNotifications(
         where('organizationId', '==', options.organizationId)
       );
     }
-    
+
     // إضافة حد لعدد النتائج إذا تم تحديده
     if (options?.limit) {
       notificationsQuery = query(
@@ -91,37 +100,41 @@ export async function getUserNotifications(
         limit(options.limit)
       );
     }
-    
+
     // تنفيذ الاستعلام
     const snapshot = await getDocs(notificationsQuery);
-    
+
     // تحويل البيانات إلى صيغة Notification
     const notifications: Notification[] = [];
-    
+
     snapshot.forEach((doc) => {
       const data = doc.data() as NotificationFirestore;
-      
-      notifications.push({
-        id: doc.id,
-        userId: data.userId,
-        organizationId: data.organizationId,
-        departmentId: data.departmentId,
-        type: data.type,
-        title: data.title,
-        message: data.message,
-        priority: data.priority,
-        status: data.status,
-        createdAt: data.createdAt.toDate(),
-        readAt: data.readAt ? data.readAt.toDate() : undefined,
-        expiresAt: data.expiresAt ? data.expiresAt.toDate() : undefined,
-        actionLink: data.actionLink,
-        actionText: data.actionText,
-        relatedEntityId: data.relatedEntityId,
-        relatedEntityType: data.relatedEntityType,
-        metadata: data.metadata,
-      });
+
+      try {
+        notifications.push({
+          id: doc.id,
+          userId: data.userId,
+          organizationId: data.organizationId,
+          departmentId: data.departmentId,
+          type: data.type,
+          title: data.title,
+          message: data.message,
+          priority: data.priority,
+          status: data.status,
+          createdAt: data.createdAt && typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate() : new Date(),
+          readAt: data.readAt && typeof data.readAt.toDate === 'function' ? data.readAt.toDate() : undefined,
+          expiresAt: data.expiresAt && typeof data.expiresAt.toDate === 'function' ? data.expiresAt.toDate() : undefined,
+          actionLink: data.actionLink,
+          actionText: data.actionText,
+          relatedEntityId: data.relatedEntityId,
+          relatedEntityType: data.relatedEntityType,
+          metadata: data.metadata,
+        });
+      } catch (error) {
+        console.error(`Error processing notification ${doc.id}:`, error, data);
+      }
     });
-    
+
     return notifications;
   } catch (error) {
     console.error('Error getting user notifications:', error);
@@ -145,7 +158,7 @@ export function subscribeToUserNotifications(
     where('userId', '==', userId),
     orderBy('createdAt', 'desc')
   );
-  
+
   // إضافة فلتر الحالة إذا تم تحديده
   if (options?.status) {
     notificationsQuery = query(
@@ -153,7 +166,7 @@ export function subscribeToUserNotifications(
       where('status', '==', options.status)
     );
   }
-  
+
   // إضافة فلتر المؤسسة إذا تم تحديده
   if (options?.organizationId) {
     notificationsQuery = query(
@@ -161,7 +174,7 @@ export function subscribeToUserNotifications(
       where('organizationId', '==', options.organizationId)
     );
   }
-  
+
   // إضافة حد لعدد النتائج إذا تم تحديده
   if (options?.limit) {
     notificationsQuery = query(
@@ -169,44 +182,48 @@ export function subscribeToUserNotifications(
       limit(options.limit)
     );
   }
-  
+
   // الاستماع للتغييرات
   const unsubscribe = onSnapshot(
     notificationsQuery,
     (snapshot) => {
       const notifications: Notification[] = [];
-      
+
       snapshot.forEach((doc) => {
         const data = doc.data() as NotificationFirestore;
-        
-        notifications.push({
-          id: doc.id,
-          userId: data.userId,
-          organizationId: data.organizationId,
-          departmentId: data.departmentId,
-          type: data.type,
-          title: data.title,
-          message: data.message,
-          priority: data.priority,
-          status: data.status,
-          createdAt: data.createdAt.toDate(),
-          readAt: data.readAt ? data.readAt.toDate() : undefined,
-          expiresAt: data.expiresAt ? data.expiresAt.toDate() : undefined,
-          actionLink: data.actionLink,
-          actionText: data.actionText,
-          relatedEntityId: data.relatedEntityId,
-          relatedEntityType: data.relatedEntityType,
-          metadata: data.metadata,
-        });
+
+        try {
+          notifications.push({
+            id: doc.id,
+            userId: data.userId,
+            organizationId: data.organizationId,
+            departmentId: data.departmentId,
+            type: data.type,
+            title: data.title,
+            message: data.message,
+            priority: data.priority,
+            status: data.status,
+            createdAt: data.createdAt && typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate() : new Date(),
+            readAt: data.readAt && typeof data.readAt.toDate === 'function' ? data.readAt.toDate() : undefined,
+            expiresAt: data.expiresAt && typeof data.expiresAt.toDate === 'function' ? data.expiresAt.toDate() : undefined,
+            actionLink: data.actionLink,
+            actionText: data.actionText,
+            relatedEntityId: data.relatedEntityId,
+            relatedEntityType: data.relatedEntityType,
+            metadata: data.metadata,
+          });
+        } catch (error) {
+          console.error(`Error processing notification ${doc.id} in subscription:`, error, data);
+        }
       });
-      
+
       callback(notifications);
     },
     (error) => {
       console.error('Error subscribing to user notifications:', error);
     }
   );
-  
+
   return unsubscribe;
 }
 
@@ -217,16 +234,16 @@ export async function updateNotificationStatus(
 ): Promise<void> {
   try {
     const notificationRef = doc(db, 'notifications', notificationId);
-    
+
     const updateData: Partial<NotificationFirestore> = {
       status,
     };
-    
+
     // إذا كانت الحالة "read"، قم بتعيين وقت القراءة
     if (status === 'read') {
       updateData.readAt = serverTimestamp() as Timestamp;
     }
-    
+
     await updateDoc(notificationRef, updateData);
   } catch (error) {
     console.error('Error updating notification status:', error);
@@ -243,9 +260,9 @@ export async function markAllNotificationsAsRead(userId: string): Promise<void> 
       where('userId', '==', userId),
       where('status', '==', 'unread')
     );
-    
+
     const snapshot = await getDocs(unreadNotificationsQuery);
-    
+
     // تحديث كل إشعار
     const updatePromises = snapshot.docs.map((doc) => {
       return updateDoc(doc.ref, {
@@ -253,7 +270,7 @@ export async function markAllNotificationsAsRead(userId: string): Promise<void> 
         readAt: serverTimestamp(),
       });
     });
-    
+
     await Promise.all(updatePromises);
   } catch (error) {
     console.error('Error marking all notifications as read:', error);
@@ -275,7 +292,7 @@ export async function deleteNotification(notificationId: string): Promise<void> 
 export async function getUserNotificationSettings(userId: string): Promise<NotificationSettings> {
   try {
     const settingsDoc = await getDoc(doc(db, 'notificationSettings', userId));
-    
+
     if (!settingsDoc.exists()) {
       // إذا لم تكن الإعدادات موجودة، قم بإنشائها باستخدام الإعدادات الافتراضية
       const defaultSettings: NotificationSettingsFirestore = {
@@ -283,17 +300,17 @@ export async function getUserNotificationSettings(userId: string): Promise<Notif
         ...DEFAULT_NOTIFICATION_SETTINGS,
         updatedAt: serverTimestamp() as Timestamp,
       };
-      
+
       await updateDoc(doc(db, 'notificationSettings', userId), defaultSettings);
-      
+
       return {
         userId,
         ...DEFAULT_NOTIFICATION_SETTINGS,
       };
     }
-    
+
     const data = settingsDoc.data() as NotificationSettingsFirestore;
-    
+
     return {
       userId: data.userId,
       enableEmailNotifications: data.enableEmailNotifications,
@@ -320,12 +337,12 @@ export async function updateUserNotificationSettings(
 ): Promise<void> {
   try {
     const settingsRef = doc(db, 'notificationSettings', userId);
-    
+
     const updateData: Partial<NotificationSettingsFirestore> = {
       ...settings,
       updatedAt: serverTimestamp() as Timestamp,
     };
-    
+
     await updateDoc(settingsRef, updateData);
   } catch (error) {
     console.error('Error updating user notification settings:', error);
