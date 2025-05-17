@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import React, { useState, useEffect } from 'react';
 import {
-  Home, FileText, Settings, LogOut, PlusCircle, ListTodo,
+  Home, FileText, Settings, LogOut, PlusCircle, ListTodo, ListChecks,
   Edit3, ListPlus, TestTubeDiagonal, Menu, Shield, UserCircle,
   BarChart3, Filter, Users, Wrench, Database, Layers, Building,
   Bell, Wand2, Target
@@ -338,9 +338,17 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
 
                 <PermissionSidebarItem
                   href="/reports"
+                  icon={ListChecks}
+                  label="الخطة اليومية"
+                  tooltip="خطة اليوم المقترحة"
+                  requiredPermission={{ area: 'reports', action: 'view' }}
+                />
+
+                <PermissionSidebarItem
+                  href="/reports/weekly"
                   icon={FileText}
-                  label="التقارير"
-                  tooltip="التقارير الذكية"
+                  label="التقارير الأسبوعية"
+                  tooltip="التقارير الأسبوعية للمهام"
                   requiredPermission={{ area: 'reports', action: 'view' }}
                 />
 

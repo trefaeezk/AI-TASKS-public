@@ -22,7 +22,8 @@ import {
   Download,
   Printer,
   Share2,
-  Loader2
+  Loader2,
+  ListChecks
 } from 'lucide-react';
 import { db } from '@/config/firebase';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
@@ -37,6 +38,7 @@ import { TaskType, TaskFirestoreData } from '@/types/task';
 import { format, startOfWeek, endOfWeek, subWeeks, isWithinInterval, isBefore, isAfter } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { TaskCardTemp } from '@/components/TaskCardTemp';
 
 interface WeeklyReportCardProps {
   organizationId?: string;
@@ -333,19 +335,13 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
             });
           }
 
-          // تضمين المهام قيد التنفيذ التي لها تاريخ بدء قبل أو خلال فترة التقرير
-          if (task.status === 'in-progress' && task.startDate) {
-            return (
-              isBefore(task.startDate, reportPeriod.endDate) ||
-              isWithinInterval(task.startDate, {
-                start: reportPeriod.startDate,
-                end: reportPeriod.endDate
-              })
-            );
+          // تضمين جميع المهام قيد التنفيذ بغض النظر عن تاريخ البدء
+          if (task.status === 'in-progress') {
+            return true;
           }
 
           // تضمين المهام القادمة التي لها تاريخ استحقاق خلال أو بعد فترة التقرير
-          if (task.status === 'todo' && task.dueDate) {
+          if (task.status === 'pending' && task.dueDate) {
             return (
               isAfter(task.dueDate, reportPeriod.startDate) ||
               isWithinInterval(task.dueDate, {
@@ -356,7 +352,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
           }
 
           // تضمين المهام المعلقة بغض النظر عن التاريخ
-          if (task.status === 'blocked') {
+          if (task.status === 'blocked' || task.status === 'hold') {
             return true;
           }
 
@@ -407,18 +403,66 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
       });
 
       // معالجة إضافية للتقرير بعد استلامه من الخدمة
+      // تحديد المهام المعلقة والمهام قيد التنفيذ من قائمة المهام الأصلية
+      const blockedTasks = tasks.filter(task => task.status === 'blocked' || task.status === 'hold');
+      const inProgressTasks = tasks.filter(task => task.status === 'in-progress');
+
+      // استخدام المهام المتأخرة من الخدمة الخلفية أو إنشاؤها من المهام الأصلية
+      const overdueTasks = result.overdueTasks || tasks.filter(task =>
+        (task.status === 'pending' || task.status === 'in-progress') &&
+        task.dueDate &&
+        task.dueDate < new Date()
+      ).map(task => ({
+        id: task.id,
+        title: task.title || task.description,
+        description: task.description,
+        status: task.status,
+        progress: task.progress || 0,
+        priority: task.priority,
+        dueDate: task.dueDate ? format(task.dueDate, 'yyyy-MM-dd') : undefined,
+        comment: task.details || '',
+        notes: task.details || ''
+      }));
+
       const processedReport = {
         ...result,
         // التأكد من وجود جميع المصفوفات المطلوبة
         completedTasks: result.completedTasks || [],
-        inProgressTasks: result.inProgressTasks || [],
+        // استخدام المهام المتأخرة المعالجة
+        overdueTasks: overdueTasks,
         upcomingTasks: result.upcomingTasks || [],
-        blockedTasks: result.blockedTasks || [],
+        // إضافة المهام قيد التنفيذ من المهام الأصلية إذا لم تكن موجودة في النتيجة
+        inProgressTasks: result.inProgressTasks || inProgressTasks.map(task => ({
+          id: task.id,
+          title: task.title || task.description,
+          description: task.description,
+          status: task.status,
+          progress: task.progress || 50,
+          priority: task.priority,
+          dueDate: task.dueDate ? format(task.dueDate, 'yyyy-MM-dd') : undefined,
+          comment: task.details || '',
+          notes: task.details || ''
+        })),
+        // إضافة المهام المعلقة من المهام الأصلية
+        blockedTasks: blockedTasks.map(task => ({
+          id: task.id,
+          title: task.title || task.description,
+          description: task.description,
+          status: task.status,
+          progress: task.progress || 0,
+          priority: task.priority,
+          dueDate: task.dueDate ? format(task.dueDate, 'yyyy-MM-dd') : undefined,
+          comment: task.details || '',
+          notes: task.details || ''
+        })),
         // التأكد من وجود مؤشرات الأداء
         keyMetrics: {
-          completionRate: result.keyMetrics?.completionRate !== undefined
-            ? Math.max(1, Math.round(result.keyMetrics.completionRate))
-            : Math.max(1, calculateCompletionRate(result)),
+          // استخدام معدل الإكمال من stats إذا كان متوفرًا
+          completionRate: result.stats?.completionRate !== undefined
+            ? Math.max(1, Math.round(result.stats.completionRate))
+            : result.keyMetrics?.completionRate !== undefined
+              ? Math.max(1, Math.round(result.keyMetrics.completionRate))
+              : Math.max(1, calculateCompletionRate(result)),
           onTimeCompletionRate: result.keyMetrics?.onTimeCompletionRate !== undefined
             ? Math.max(1, Math.round(result.keyMetrics.onTimeCompletionRate))
             : Math.max(1, calculateOnTimeCompletionRate(tasks)), // استخدام الدالة الجديدة مع المهام الأصلية
@@ -430,10 +474,12 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
         summary: result.summary
           ? result.summary.replace(/\s+/g, ' ').trim() // إزالة المسافات الزائدة
           : undefined,
-        // التأكد من وجود التوصيات
+        // التأكد من وجود التوصيات - استخدام الملاحظات من الخدمة الخلفية إذا كانت متوفرة
         recommendations: result.recommendations && result.recommendations.length > 0
           ? result.recommendations
-          : generateDefaultRecommendations(result, tasksForAI), // إنشاء توصيات افتراضية
+          : result.observations && result.observations.length > 0
+            ? result.observations
+            : generateDefaultRecommendations(result, tasksForAI), // إنشاء توصيات افتراضية
         // تحديث فترة التقرير لتتوافق مع الفترة المحددة
         period: `${formatDate(reportPeriod.startDate)} إلى ${formatDate(reportPeriod.endDate)}`
       };
@@ -481,16 +527,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
   if (isLoadingTasks) {
     return (
       <Card className={cn("shadow-md", className)}>
-        <CardHeader>
-          <CardTitle className="text-xl flex items-center">
-            <FileText className="ml-2 h-5 w-5 text-primary" />
-            التقرير الأسبوعي
-          </CardTitle>
-          <CardDescription>
-            تقرير أسبوعي شامل عن المهام والإنجازات
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-8 w-3/4" />
@@ -503,13 +540,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
   if (error) {
     return (
       <Card className={cn("shadow-md", className)}>
-        <CardHeader>
-          <CardTitle className="text-xl flex items-center">
-            <FileText className="ml-2 h-5 w-5 text-primary" />
-            التقرير الأسبوعي
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>خطأ</AlertTitle>
@@ -522,21 +553,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
 
   return (
     <Card className={cn("shadow-md", className)}>
-      <CardHeader>
-        <CardTitle className="text-xl flex items-center">
-          <FileText className="ml-2 h-5 w-5 text-primary" />
-          التقرير الأسبوعي
-        </CardTitle>
-        <CardDescription>
-          تقرير أسبوعي شامل عن المهام والإنجازات للفترة من {formatDate(reportPeriod.startDate)} إلى {formatDate(reportPeriod.endDate)}
-          {report?.period && report.period !== `${formatDate(reportPeriod.startDate)} إلى ${formatDate(reportPeriod.endDate)}` && (
-            <span className="text-yellow-500 mr-2 block mt-1">
-              (ملاحظة: فترة التقرير المعروضة قد تختلف عن الفترة المحددة)
-            </span>
-          )}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 pt-6">
         {!report ? (
           <div className="text-center py-8">
             <Button
@@ -636,6 +653,108 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                   </p>
                 </div>
 
+                {/* قائمة مصغرة للمهام الأكثر أهمية */}
+                <div className="mt-4">
+                  <h3 className="text-lg font-semibold mb-3">المهام الأكثر أهمية</h3>
+                  <div className="space-y-2">
+                    {/* المهام المعلقة ذات الأولوية */}
+                    {report?.blockedTasks?.filter(task => task.priority === 'high').length > 0 && (
+                      <div className="border rounded-md p-3 bg-red-50">
+                        <h4 className="font-medium text-red-700 mb-2">مهام معلقة ذات أولوية عالية</h4>
+                        <ul className="space-y-1">
+                          {report.blockedTasks
+                            .filter(task => task.priority === 'high')
+                            .slice(0, 2)
+                            .map(task => (
+                              <li key={task.id} className="flex items-center text-sm">
+                                <PauseCircle className="h-4 w-4 text-red-500 ml-2 flex-shrink-0" />
+                                <span className="truncate">{task.description}</span>
+                              </li>
+                            ))}
+                          {report.blockedTasks.filter(task => task.priority === 'high').length > 2 && (
+                            <li className="text-xs text-muted-foreground text-center">
+                              + {report.blockedTasks.filter(task => task.priority === 'high').length - 2} مهام أخرى...
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* المهام قيد التنفيذ المتأخرة */}
+                    {report?.inProgressTasks?.filter(task =>
+                      task.dueDate && new Date(task.dueDate) < new Date()
+                    ).length > 0 && (
+                      <div className="border rounded-md p-3 bg-amber-50">
+                        <h4 className="font-medium text-amber-700 mb-2">مهام متأخرة قيد التنفيذ</h4>
+                        <ul className="space-y-1">
+                          {report.inProgressTasks
+                            .filter(task => task.dueDate && new Date(task.dueDate) < new Date())
+                            .slice(0, 2)
+                            .map(task => (
+                              <li key={task.id} className="flex items-center text-sm">
+                                <Clock className="h-4 w-4 text-amber-500 ml-2 flex-shrink-0" />
+                                <span className="truncate">{task.description}</span>
+                                {task.dueDate && (
+                                  <span className="text-xs text-amber-600 mr-auto">
+                                    تاريخ الاستحقاق: {formatDate(new Date(task.dueDate))}
+                                  </span>
+                                )}
+                              </li>
+                            ))}
+                          {report.inProgressTasks.filter(task =>
+                            task.dueDate && new Date(task.dueDate) < new Date()
+                          ).length > 2 && (
+                            <li className="text-xs text-muted-foreground text-center">
+                              + {report.inProgressTasks.filter(task =>
+                                task.dueDate && new Date(task.dueDate) < new Date()
+                              ).length - 2} مهام أخرى...
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* المهام القادمة ذات الأولوية العالية */}
+                    {report?.upcomingTasks?.filter(task => task.priority === 'high').length > 0 && (
+                      <div className="border rounded-md p-3 bg-blue-50">
+                        <h4 className="font-medium text-blue-700 mb-2">مهام قادمة ذات أولوية عالية</h4>
+                        <ul className="space-y-1">
+                          {report.upcomingTasks
+                            .filter(task => task.priority === 'high')
+                            .slice(0, 2)
+                            .map(task => (
+                              <li key={task.id} className="flex items-center text-sm">
+                                <Calendar className="h-4 w-4 text-blue-500 ml-2 flex-shrink-0" />
+                                <span className="truncate">{task.description}</span>
+                                {task.dueDate && (
+                                  <span className="text-xs text-blue-600 mr-auto">
+                                    تاريخ الاستحقاق: {formatDate(new Date(task.dueDate))}
+                                  </span>
+                                )}
+                              </li>
+                            ))}
+                          {report.upcomingTasks.filter(task => task.priority === 'high').length > 2 && (
+                            <li className="text-xs text-muted-foreground text-center">
+                              + {report.upcomingTasks.filter(task => task.priority === 'high').length - 2} مهام أخرى...
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* رسالة إذا لم تكن هناك مهام مهمة */}
+                    {(!report?.blockedTasks?.filter(task => task.priority === 'high').length &&
+                      !report?.inProgressTasks?.filter(task =>
+                        task.dueDate && new Date(task.dueDate) < new Date()
+                      ).length &&
+                      !report?.upcomingTasks?.filter(task => task.priority === 'high').length) && (
+                      <p className="text-center text-muted-foreground py-2">
+                        لا توجد مهام ذات أولوية عالية أو متأخرة في هذه الفترة.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
                 <h3 className="text-lg font-semibold flex items-center mt-4">
                   <BarChart className="ml-2 h-5 w-5 text-primary" />
                   مؤشرات الأداء الرئيسية
@@ -701,57 +820,259 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
               </TabsContent>
 
               <TabsContent value="completed" className="space-y-4">
+                <div className="flex items-center mb-4">
+                  <CheckCircle2 className="ml-2 h-5 w-5 text-green-500" />
+                  <h3 className="text-lg font-semibold">المهام المكتملة</h3>
+                  <Badge className="mr-2 bg-green-100 text-green-800 hover:bg-green-200 border-green-300">
+                    {report?.completedTasks?.length || 0}
+                  </Badge>
+                </div>
+
                 {!report?.completedTasks?.length ? (
-                  <p className="text-center text-muted-foreground py-4">
-                    لا توجد مهام مكتملة خلال هذه الفترة.
-                  </p>
+                  <div className="text-center py-4 space-y-2">
+                    <p className="text-muted-foreground">
+                      لا توجد مهام مكتملة خلال هذه الفترة.
+                    </p>
+                    <div className="bg-muted/20 p-3 rounded-md max-w-md mx-auto">
+                      <h4 className="text-sm font-medium mb-2 text-primary">اقتراحات لتحسين معدل إكمال المهام:</h4>
+                      <ul className="text-xs text-right space-y-1">
+                        <li className="flex items-start">
+                          <span className="ml-1 text-primary">•</span>
+                          <span>قم بتقسيم المهام الكبيرة إلى مهام أصغر يمكن إنجازها بسهولة.</span>
+                        </li>
+                        <li className="flex items-start">
+                          <span className="ml-1 text-primary">•</span>
+                          <span>حدد أوقاتًا محددة في اليوم للعمل على المهام ذات الأولوية.</span>
+                        </li>
+                        <li className="flex items-start">
+                          <span className="ml-1 text-primary">•</span>
+                          <span>استخدم تقنية بومودورو (25 دقيقة عمل، 5 دقائق راحة) لزيادة التركيز.</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
                 ) : (
                   <div className="space-y-3">
-                    {report.completedTasks.map((task) => (
-                      <TaskSummaryCard key={task.id} task={task} type="completed" />
-                    ))}
+                    {report.completedTasks.map((task) => {
+                      // تحويل TaskSummary إلى TaskType للتوافق مع TaskCardTemp
+                      const taskForCard: TaskType = {
+                        id: task.id,
+                        description: task.description || task.title || '', // استخدام title إذا كان description غير موجود
+                        details: task.comment || task.notes || '', // استخدام notes إذا كان comment غير موجود
+                        status: 'completed',
+                        progress: 100,
+                        priority: typeof task.priority === 'string' ?
+                          task.priority === 'high' ? 'high' :
+                          task.priority === 'medium' ? 'medium' :
+                          task.priority === 'low' ? 'low' : 'medium'
+                          : task.priority as any,
+                        dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+                        completedDate: task.completedDate ? new Date(task.completedDate) : undefined
+                      };
+
+                      return (
+                        <TaskCardTemp
+                          key={task.id}
+                          id={task.id}
+                          task={taskForCard}
+                          aiReasoning={`تم إكمال هذه المهمة في ${task.completedDate ? format(new Date(task.completedDate), 'dd/MM/yyyy', { locale: ar }) : 'هذا الأسبوع'}`}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </TabsContent>
 
               <TabsContent value="inProgress" className="space-y-4">
+                <div className="flex items-center mb-4">
+                  <Clock className="ml-2 h-5 w-5 text-blue-500" />
+                  <h3 className="text-lg font-semibold">المهام قيد التنفيذ</h3>
+                  <Badge className="mr-2 bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300">
+                    {report?.inProgressTasks?.length || 0}
+                  </Badge>
+                </div>
+
                 {!report?.inProgressTasks?.length ? (
-                  <p className="text-center text-muted-foreground py-4">
-                    لا توجد مهام قيد التنفيذ.
-                  </p>
+                  <div className="text-center py-4 space-y-2">
+                    <p className="text-muted-foreground">
+                      لا توجد مهام قيد التنفيذ.
+                    </p>
+                    <div className="bg-muted/20 p-3 rounded-md max-w-md mx-auto">
+                      <h4 className="text-sm font-medium mb-2 text-primary">نصائح لإدارة المهام قيد التنفيذ:</h4>
+                      <ul className="text-xs text-right space-y-1">
+                        <li className="flex items-start">
+                          <span className="ml-1 text-primary">•</span>
+                          <span>ابدأ بالمهام ذات الأولوية العالية أو المواعيد النهائية القريبة.</span>
+                        </li>
+                        <li className="flex items-start">
+                          <span className="ml-1 text-primary">•</span>
+                          <span>قم بتحديث نسبة التقدم بانتظام لتتبع الإنجاز.</span>
+                        </li>
+                        <li className="flex items-start">
+                          <span className="ml-1 text-primary">•</span>
+                          <span>حدد العقبات التي تواجهك مبكرًا وابحث عن حلول لها.</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
                 ) : (
                   <div className="space-y-3">
-                    {report.inProgressTasks.map((task) => (
-                      <TaskSummaryCard key={task.id} task={task} type="inProgress" />
-                    ))}
+                    {report.inProgressTasks.map((task) => {
+                      // تحويل TaskSummary إلى TaskType للتوافق مع TaskCardTemp
+                      const taskForCard: TaskType = {
+                        id: task.id,
+                        description: task.description || task.title || '', // استخدام title إذا كان description غير موجود
+                        details: task.comment || task.notes || '', // استخدام notes إذا كان comment غير موجود
+                        status: 'in-progress',
+                        progress: task.progress || 50,
+                        priority: typeof task.priority === 'string' ?
+                          task.priority === 'high' ? 'high' :
+                          task.priority === 'medium' ? 'medium' :
+                          task.priority === 'low' ? 'low' : 'medium'
+                          : task.priority as any,
+                        dueDate: task.dueDate ? new Date(task.dueDate) : undefined
+                      };
+
+                      const isOverdue = task.dueDate && new Date(task.dueDate) < new Date();
+                      const reasoning = isOverdue
+                        ? `مهمة متأخرة - تاريخ الاستحقاق: ${task.dueDate ? format(new Date(task.dueDate), 'dd/MM/yyyy', { locale: ar }) : 'غير محدد'}`
+                        : `نسبة التقدم: ${task.progress || 0}%`;
+
+                      return (
+                        <TaskCardTemp
+                          key={task.id}
+                          id={task.id}
+                          task={taskForCard}
+                          aiReasoning={reasoning}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </TabsContent>
 
               <TabsContent value="upcoming" className="space-y-4">
+                <div className="flex items-center mb-4">
+                  <Calendar className="ml-2 h-5 w-5 text-orange-500" />
+                  <h3 className="text-lg font-semibold">المهام القادمة</h3>
+                  <Badge className="mr-2 bg-orange-100 text-orange-800 hover:bg-orange-200 border-orange-300">
+                    {report?.upcomingTasks?.length || 0}
+                  </Badge>
+                </div>
+
                 {!report?.upcomingTasks?.length ? (
-                  <p className="text-center text-muted-foreground py-4">
-                    لا توجد مهام قادمة.
-                  </p>
+                  <div className="text-center py-4 space-y-2">
+                    <p className="text-muted-foreground">
+                      لا توجد مهام قادمة.
+                    </p>
+                    <div className="bg-muted/20 p-3 rounded-md max-w-md mx-auto">
+                      <h4 className="text-sm font-medium mb-2 text-primary">نصائح للتخطيط للمهام القادمة:</h4>
+                      <ul className="text-xs text-right space-y-1">
+                        <li className="flex items-start">
+                          <span className="ml-1 text-primary">•</span>
+                          <span>قم بتحديد أولويات المهام القادمة بناءً على أهميتها وتاريخ استحقاقها.</span>
+                        </li>
+                        <li className="flex items-start">
+                          <span className="ml-1 text-primary">•</span>
+                          <span>خطط للمهام الكبيرة مبكرًا وقسمها إلى مهام فرعية أصغر.</span>
+                        </li>
+                        <li className="flex items-start">
+                          <span className="ml-1 text-primary">•</span>
+                          <span>ضع تواريخ بدء للمهام القادمة لتجنب تراكمها قرب موعد الاستحقاق.</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
                 ) : (
                   <div className="space-y-3">
-                    {report.upcomingTasks.map((task) => (
-                      <TaskSummaryCard key={task.id} task={task} type="upcoming" />
-                    ))}
+                    {report.upcomingTasks.map((task) => {
+                      // تحويل TaskSummary إلى TaskType للتوافق مع TaskCardTemp
+                      const taskForCard: TaskType = {
+                        id: task.id,
+                        description: task.description || task.title || '', // استخدام title إذا كان description غير موجود
+                        details: task.comment || task.notes || '', // استخدام notes إذا كان comment غير موجود
+                        status: 'pending',
+                        progress: task.progress || 0,
+                        priority: typeof task.priority === 'string' ?
+                          task.priority === 'high' ? 'high' :
+                          task.priority === 'medium' ? 'medium' :
+                          task.priority === 'low' ? 'low' : 'medium'
+                          : task.priority as any,
+                        dueDate: task.dueDate ? new Date(task.dueDate) : undefined
+                      };
+
+                      return (
+                        <TaskCardTemp
+                          key={task.id}
+                          id={task.id}
+                          task={taskForCard}
+                          aiReasoning={`تاريخ الاستحقاق: ${task.dueDate ? format(new Date(task.dueDate), 'dd/MM/yyyy', { locale: ar }) : 'غير محدد'}`}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </TabsContent>
 
               <TabsContent value="blocked" className="space-y-4">
+                <div className="flex items-center mb-4">
+                  <PauseCircle className="ml-2 h-5 w-5 text-gray-500" />
+                  <h3 className="text-lg font-semibold">المهام المعلقة</h3>
+                  <Badge className="mr-2 bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300">
+                    {report?.blockedTasks?.length || 0}
+                  </Badge>
+                </div>
+
                 {!report?.blockedTasks?.length ? (
-                  <p className="text-center text-muted-foreground py-4">
-                    لا توجد مهام معلقة.
-                  </p>
+                  <div className="text-center py-4 space-y-2">
+                    <p className="text-muted-foreground">
+                      لا توجد مهام معلقة.
+                    </p>
+                    <div className="bg-muted/20 p-3 rounded-md max-w-md mx-auto">
+                      <h4 className="text-sm font-medium mb-2 text-primary">نصائح للتعامل مع المهام المعلقة:</h4>
+                      <ul className="text-xs text-right space-y-1">
+                        <li className="flex items-start">
+                          <span className="ml-1 text-primary">•</span>
+                          <span>حدد بوضوح سبب تعليق كل مهمة وما هي العقبات التي تواجهها.</span>
+                        </li>
+                        <li className="flex items-start">
+                          <span className="ml-1 text-primary">•</span>
+                          <span>ضع خطة عمل لإزالة العقبات وإعادة تنشيط المهام المعلقة.</span>
+                        </li>
+                        <li className="flex items-start">
+                          <span className="ml-1 text-primary">•</span>
+                          <span>راجع المهام المعلقة بانتظام لتحديد ما إذا كانت لا تزال ذات صلة أو يجب إلغاؤها.</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
                 ) : (
                   <div className="space-y-3">
-                    {report.blockedTasks.map((task) => (
-                      <TaskSummaryCard key={task.id} task={task} type="blocked" />
-                    ))}
+                    {report.blockedTasks.map((task) => {
+                      // تحويل TaskSummary إلى TaskType للتوافق مع TaskCardTemp
+                      const taskForCard: TaskType = {
+                        id: task.id,
+                        description: task.description || task.title || '', // استخدام title إذا كان description غير موجود
+                        details: task.comment || task.notes || '', // استخدام notes إذا كان comment غير موجود
+                        status: 'hold',
+                        progress: task.progress || 0,
+                        priority: typeof task.priority === 'string' ?
+                          task.priority === 'high' ? 'high' :
+                          task.priority === 'medium' ? 'medium' :
+                          task.priority === 'low' ? 'low' : 'medium'
+                          : task.priority as any,
+                        dueDate: task.dueDate ? new Date(task.dueDate) : undefined
+                      };
+
+                      return (
+                        <TaskCardTemp
+                          key={task.id}
+                          id={task.id}
+                          task={taskForCard}
+                          aiReasoning={task.comment || "هذه المهمة معلقة وتحتاج إلى مراجعة"}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </TabsContent>
@@ -763,78 +1084,4 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
   );
 }
 
-// مكون لعرض ملخص المهمة
-interface TaskSummaryCardProps {
-  task: TaskSummary;
-  type: 'completed' | 'inProgress' | 'upcoming' | 'blocked';
-}
 
-function TaskSummaryCard({ task, type }: TaskSummaryCardProps) {
-  const getStatusIcon = () => {
-    switch (type) {
-      case 'completed':
-        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
-      case 'inProgress':
-        return <Clock className="h-5 w-5 text-blue-500" />;
-      case 'upcoming':
-        return <Calendar className="h-5 w-5 text-orange-500" />;
-      case 'blocked':
-        return <PauseCircle className="h-5 w-5 text-gray-500" />;
-    }
-  };
-
-  const getStatusText = () => {
-    switch (type) {
-      case 'completed':
-        return 'مكتملة';
-      case 'inProgress':
-        return 'قيد التنفيذ';
-      case 'upcoming':
-        return 'قادمة';
-      case 'blocked':
-        return 'معلقة';
-    }
-  };
-
-  return (
-    <Card className={cn(
-      "border-r-4",
-      task.highlight && "bg-muted/20",
-      type === 'completed' && "border-r-green-500",
-      type === 'inProgress' && "border-r-blue-500",
-      type === 'upcoming' && "border-r-orange-500",
-      type === 'blocked' && "border-r-gray-500"
-    )}>
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start">
-          <div className="space-y-2">
-            <h4 className="font-medium flex items-center">
-              {getStatusIcon()}
-              <span className="mr-2">{task.description}</span>
-              {task.highlight && (
-                <Badge variant="outline" className="mr-2 bg-primary/10 text-primary border-primary">
-                  مهم
-                </Badge>
-              )}
-            </h4>
-            <div className="flex items-center text-sm text-muted-foreground">
-              <Badge variant="outline" className="ml-2">
-                {getStatusText()}
-              </Badge>
-              <div className="flex items-center ml-4">
-                <span className="ml-1">التقدم:</span>
-                <span className="font-medium">{task.progress}%</span>
-              </div>
-            </div>
-            {task.comment && (
-              <p className="text-sm mt-2">{task.comment}</p>
-            )}
-          </div>
-        </div>
-        {type !== 'completed' && (
-          <Progress value={task.progress} className="h-1.5 mt-2" />
-        )}
-      </CardContent>
-    </Card>
-  );
-}

@@ -291,51 +291,6 @@ type EnrichedTask = TaskType & { planReasoning?: string; warningReason?: string 
 
   return (
     <div dir="rtl">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <Card className="shadow-md">
-                <CardHeader>
-                    <CardTitle className="text-lg flex items-center">
-                        <ListChecks className="ml-2 h-5 w-5 text-primary" />
-                        خطة اليوم
-                    </CardTitle>
-                    <CardDescription>
-                        خطة مقترحة لمهام اليوم بناءً على الأولويات والمواعيد
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4">
-                        الحصول على خطة ذكية لمهام اليوم مع تنبيهات للمهام المتأخرة
-                    </p>
-                    <Button asChild className="w-full">
-                        <Link href="#daily-plan">
-                            عرض خطة اليوم
-                        </Link>
-                    </Button>
-                </CardContent>
-            </Card>
-
-            <Card className="shadow-md">
-                <CardHeader>
-                    <CardTitle className="text-lg flex items-center">
-                        <FileText className="ml-2 h-5 w-5 text-primary" />
-                        التقارير الأسبوعية
-                    </CardTitle>
-                    <CardDescription>
-                        تقارير أسبوعية شاملة عن المهام والإنجازات
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4">
-                        الحصول على تقارير تفصيلية عن المهام المكتملة والجارية والقادمة
-                    </p>
-                    <Button asChild className="w-full">
-                        <Link href="/reports/weekly">
-                            عرض التقارير الأسبوعية
-                        </Link>
-                    </Button>
-                </CardContent>
-            </Card>
-        </div>
 
         <Card id="daily-plan" className="mb-8 shadow-lg bg-card border-border rounded-lg">
           <CardHeader>

@@ -122,30 +122,44 @@ export interface GenerateWeeklyReportInput {
 
 export interface TaskSummary {
   id: string;
-  description: string;
+  description?: string;
+  title?: string; // بعض الخدمات الخلفية تستخدم title بدلاً من description
   status: string;
   progress: number;
   highlight?: boolean;
   comment?: string;
+  notes?: string; // بعض الخدمات الخلفية تستخدم notes بدلاً من comment
+  priority?: number | string; // يمكن أن يكون رقم أو نص (high, medium, low)
+  dueDate?: string;
+  completedDate?: string;
 }
 
 export interface GenerateWeeklyReportOutput {
-  title: string;
+  title?: string;
   period: {
     startDate: string;
     endDate: string;
   };
   summary: string;
-  keyMetrics: {
+  stats?: {
+    totalTasks: number;
+    completedTasks: number;
+    pendingTasks: number;
+    overdueTasks: number;
+    completionRate: number;
+  };
+  keyMetrics?: {
     completionRate: number;
     onTimeCompletionRate: number;
     averageProgress: number;
   };
   completedTasks: TaskSummary[];
-  inProgressTasks: TaskSummary[];
+  overdueTasks?: TaskSummary[];
   upcomingTasks: TaskSummary[];
-  blockedTasks: TaskSummary[];
-  recommendations: string[];
+  inProgressTasks?: TaskSummary[];
+  blockedTasks?: TaskSummary[];
+  observations?: string[];
+  recommendations?: string[];
 }
 
 // أنواع البيانات لوظيفة إنشاء اقتراحات ذكية

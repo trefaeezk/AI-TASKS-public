@@ -41,18 +41,7 @@ export default function WeeklyReportsPage() {
 
   return (
     <div className="container mx-auto p-4" dir="rtl">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold flex items-center">
-          <FileText className="ml-2 h-6 w-6" />
-          التقارير الأسبوعية
-        </h1>
-        <Button asChild variant="outline" size="sm">
-          <Link href="/reports">
-            <ArrowLeft className="ml-2 h-4 w-4" />
-            العودة إلى التقارير
-          </Link>
-        </Button>
-      </div>
+
 
       <Card className="mb-6">
         <CardHeader>
