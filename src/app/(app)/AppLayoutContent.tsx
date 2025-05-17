@@ -6,7 +6,7 @@ import {
   Home, FileText, Settings, LogOut, PlusCircle, ListTodo, ListChecks,
   Edit3, ListPlus, TestTubeDiagonal, Menu, Shield, UserCircle,
   BarChart3, Filter, Users, Wrench, Database, Layers, Building,
-  Bell, Wand2, Target
+  Bell, Wand2, Target, Bug
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -445,6 +445,15 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                   label="الإعدادات"
                   tooltip="إعدادات النظام"
                   requiredPermission={{ area: 'settings', action: 'view' }}
+                />
+
+                {/* رابط صفحة التشخيص - يظهر فقط للمالك */}
+                <PermissionSidebarItem
+                  href="/debug"
+                  icon={Bug}
+                  label="التشخيص"
+                  tooltip="صفحة التشخيص وإصلاح المشاكل"
+                  requiredRole="owner"
                 />
             </SidebarMenu>
             </SidebarContent>

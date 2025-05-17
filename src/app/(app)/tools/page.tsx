@@ -3,17 +3,26 @@
 import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useAccountType } from '@/hooks/useAccountType';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle, Wrench, Calculator, Calendar } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 
 export default function ToolsPage() {
-  const { user } = useAuth();
-  const { checkPermission, loading: permissionsLoading } = usePermissions();
+  const { user, userClaims } = useAuth();
+  const { checkPermission, loading: permissionsLoading, role, permissions } = usePermissions();
+  const { accountType, isLoading: accountTypeLoading } = useAccountType();
+
+  // تسجيل معلومات التشخيص
+  console.log('[ToolsPage] User Claims:', userClaims);
+  console.log('[ToolsPage] User Role:', role);
+  console.log('[ToolsPage] Account Type:', accountType);
+  console.log('[ToolsPage] Permissions:', permissions);
 
   // التحقق من صلاحيات المستخدم
-  const hasViewPermission = checkPermission('tools', 'view');
+  const hasViewPermission = checkPermission('tools.view');
+  console.log('[ToolsPage] Has View Permission:', hasViewPermission);
 
   // عرض حالة التحميل
   if (permissionsLoading) {

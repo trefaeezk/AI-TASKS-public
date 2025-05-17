@@ -64,15 +64,20 @@ export function PermissionsManager({
   // State for tracking if permissions are customized
   const [isCustomized, setIsCustomized] = useState(customPermissions.length > 0);
 
-  // State for active tab
-  const [activeTab, setActiveTab] = useState<PermissionArea>('users');
-
   // Update permissions when role changes
   useEffect(() => {
     if (!isCustomized) {
       setPermissions(DEFAULT_ROLE_PERMISSIONS[role] || []);
     }
   }, [role, isCustomized]);
+
+  // Update permissions when customPermissions prop changes
+  useEffect(() => {
+    if (customPermissions.length > 0) {
+      setPermissions(customPermissions);
+      setIsCustomized(true);
+    }
+  }, [customPermissions]);
 
   // Check if a permission is granted
   const hasPermission = (area: PermissionArea, action: PermissionAction): boolean => {
@@ -113,6 +118,9 @@ export function PermissionsManager({
   // All available actions
   const actions: PermissionAction[] = ['view', 'create', 'edit', 'delete', 'approve', 'assign'];
 
+  // All available areas
+  const areas: PermissionArea[] = ['users', 'tasks', 'reports', 'settings', 'tools', 'dashboard', 'data'];
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -149,38 +157,41 @@ export function PermissionsManager({
           </Alert>
         )}
 
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as PermissionArea)}>
-          <TabsList className="grid grid-cols-3 md:grid-cols-6 mb-4">
-            {Object.entries(areaLabels).map(([area, label]) => (
-              <TabsTrigger key={area} value={area} className="text-xs">
-                {label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        {/* عرض الصلاحيات في شكل شبكة */}
+        <div className="grid grid-cols-1 gap-4">
+          <Tabs defaultValue="users">
+            <TabsList className="grid grid-cols-7 mb-4">
+              {areas.map((area) => (
+                <TabsTrigger key={area} value={area} className="text-xs">
+                  {areaLabels[area]}
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-          {Object.entries(areaLabels).map(([area, label]) => (
-            <TabsContent key={area} value={area} className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {actions.map((action) => (
-                  <div key={`${area}-${action}`} className="flex items-center space-x-2 space-x-reverse">
-                    <Checkbox
-                      id={`${area}-${action}`}
-                      checked={hasPermission(area as PermissionArea, action)}
-                      onCheckedChange={() => togglePermission(area as PermissionArea, action)}
-                      disabled={readOnly}
-                    />
-                    <Label
-                      htmlFor={`${area}-${action}`}
-                      className={`text-sm ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
-                    >
-                      {actionLabels[action]}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+            {areas.map((area) => (
+              <TabsContent key={area} value={area}>
+                <div className="grid grid-cols-3 gap-2">
+                  {actions.map((action) => (
+                    <div key={`${area}-${action}`} className="flex items-center space-x-2 space-x-reverse">
+                      <Checkbox
+                        id={`${area}-${action}`}
+                        checked={hasPermission(area, action)}
+                        onCheckedChange={() => togglePermission(area, action)}
+                        disabled={readOnly}
+                      />
+                      <Label
+                        htmlFor={`${area}-${action}`}
+                        className={`text-sm ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
+                      >
+                        {actionLabels[action]}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+        </div>
       </CardContent>
     </Card>
   );

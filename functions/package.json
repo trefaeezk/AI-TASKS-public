@@ -18,6 +18,7 @@
   "main": "lib/index.js",
   "dependencies": {
     "@google/generative-ai": "^0.2.1",
+    "@sendgrid/mail": "^8.1.5",
     "@types/cors": "^2.8.17",
     "@types/node": "^20.17.32",
     "@types/uuid": "^9.0.8",

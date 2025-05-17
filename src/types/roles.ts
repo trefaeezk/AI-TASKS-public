@@ -149,6 +149,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
     // لوحة المعلومات - عرض فقط للمهام الخاصة به
     'dashboard:view',
 
+    // الأدوات - عرض واستخدام الأدوات
+    'tools:view', 'tools:create', 'tools:edit',
+
     // الإعدادات العددية - عرض وتعديل الإعدادات العددية فقط
     'settings:view', 'settings:edit',
 

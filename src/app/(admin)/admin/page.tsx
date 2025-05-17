@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import {
   Loader2, ShieldCheck, ShieldOff, UserCog, FileText,
   AlertTriangle, PlusCircle, UserCog2, Settings, Eye,
-  Building, X
+  Building, X, Bug
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CreateUserInput, ManagedUser } from '@/types/user';
@@ -798,6 +798,16 @@ export default function AdminDashboardPage() {
                      عرض السجلات
                  </Link>
             </Button>
+
+            {/* زر صفحة التشخيص - يظهر فقط للمالك */}
+            {(user as ExtendedUser)?.customClaims?.owner && (
+              <Button asChild variant="outline" size="sm">
+                <Link href="/debug">
+                  <Bug className="ml-2 h-4 w-4" />
+                  صفحة التشخيص
+                </Link>
+              </Button>
+            )}
          </div>
       </div>
 

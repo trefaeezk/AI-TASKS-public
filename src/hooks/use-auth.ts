@@ -17,9 +17,15 @@ export function useAuth() {
   const auth = useAuthFromContext();
   const { permissions, loading: permissionsLoading } = usePermissions();
 
-  // استخدام دور المستخدم من custom claims إذا كان متاحًا
-  // إذا كان نوع الحساب هو 'individual'، نستخدم 'independent' كقيمة افتراضية
-  const role = auth.userClaims?.role || (auth.userClaims?.accountType === 'individual' ? 'independent' : 'user');
+  // تحديد الدور بناءً على claims بالترتيب الصحيح
+  let role;
+  if (auth.userClaims?.owner) {
+    role = 'owner';
+  } else if (auth.userClaims?.admin) {
+    role = 'admin';
+  } else {
+    role = auth.userClaims?.role || (auth.userClaims?.accountType === 'individual' ? 'independent' : 'user');
+  }
 
   return {
     ...auth,

@@ -1,0 +1,274 @@
+'use client';
+
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { AlertCircle, Lock, ShieldAlert, RefreshCw, KeyRound, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+interface DebugAuthDialogProps {
+  isOpen: boolean;
+  onAuthenticated: () => void;
+}
+
+export function DebugAuthDialog({ isOpen, onAuthenticated }: DebugAuthDialogProps) {
+  const [otp, setOtp] = useState('');
+  const [error, setError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [attempts, setAttempts] = useState(0);
+  const [isGeneratingOTP, setIsGeneratingOTP] = useState(false);
+  const [isVerifyingOTP, setIsVerifyingOTP] = useState(false);
+  const [generatedOTP, setGeneratedOTP] = useState<string | null>(null);
+  const [otpExpiryTime, setOtpExpiryTime] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  // إنشاء رمز OTP جديد
+  const handleGenerateOTP = async () => {
+    setIsGeneratingOTP(true);
+    setError(false);
+
+    try {
+      const response = await fetch('/api/debug/generate-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setGeneratedOTP(data.otp);
+        setOtpExpiryTime(data.expiryTime);
+
+        toast({
+          title: 'تم إنشاء رمز التحقق',
+          description: data.message,
+        });
+      } else {
+        setError(true);
+        setErrorMessage(data.error || 'فشل إنشاء رمز التحقق');
+
+        toast({
+          title: 'خطأ',
+          description: data.error || 'فشل إنشاء رمز التحقق',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error generating OTP:', error);
+      setError(true);
+      setErrorMessage('حدث خطأ أثناء إنشاء رمز التحقق');
+
+      toast({
+        title: 'خطأ',
+        description: 'حدث خطأ أثناء إنشاء رمز التحقق',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingOTP(false);
+    }
+  };
+
+  // التحقق من رمز OTP
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!otp) {
+      setError(true);
+      setErrorMessage('يرجى إدخال رمز التحقق');
+      return;
+    }
+
+    setIsVerifyingOTP(true);
+    setError(false);
+
+    try {
+      const response = await fetch('/api/debug/verify-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ otp }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // تخزين وقت انتهاء الصلاحية في التخزين المحلي
+        localStorage.setItem('debugAuthExpiry', data.sessionExpiryTime.toString());
+
+        // إغلاق مربع الحوار وإعلام الصفحة الأم
+        onAuthenticated();
+        setError(false);
+        setOtp('');
+        setGeneratedOTP(null);
+
+        toast({
+          title: 'تم المصادقة بنجاح',
+          description: 'تم منح الوصول إلى صفحة التشخيص لمدة 30 دقيقة',
+        });
+      } else {
+        setError(true);
+        setErrorMessage(data.error || 'رمز التحقق غير صحيح');
+        setAttempts(attempts + 1);
+
+        if (attempts >= 3) {
+          toast({
+            title: 'تحذير أمني',
+            description: 'تم تسجيل محاولات متعددة للوصول غير المصرح به',
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'خطأ',
+            description: data.error || 'رمز التحقق غير صحيح',
+            variant: 'destructive',
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error verifying OTP:', error);
+      setError(true);
+      setErrorMessage('حدث خطأ أثناء التحقق من رمز التحقق');
+
+      toast({
+        title: 'خطأ',
+        description: 'حدث خطأ أثناء التحقق من رمز التحقق',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsVerifyingOTP(false);
+    }
+  };
+
+  // تنسيق وقت انتهاء الصلاحية
+  const formatExpiryTime = (isoString: string) => {
+    if (!isoString) return '';
+
+    const expiryDate = new Date(isoString);
+    return expiryDate.toLocaleTimeString('ar-SA', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  return (
+    <Dialog open={isOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center">
+            <ShieldAlert className="ml-2 h-5 w-5 text-warning" />
+            التحقق من الهوية
+          </DialogTitle>
+          <DialogDescription>
+            هذه الصفحة محمية. يرجى إنشاء رمز تحقق وإدخاله للوصول إلى صفحة التشخيص.
+          </DialogDescription>
+        </DialogHeader>
+
+        <Tabs defaultValue="generate" className="space-y-4">
+          <TabsList className="grid grid-cols-2">
+            <TabsTrigger value="generate">إنشاء رمز التحقق</TabsTrigger>
+            <TabsTrigger value="verify">إدخال رمز التحقق</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="generate" className="space-y-4">
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                انقر على الزر أدناه لإنشاء رمز تحقق جديد. سيكون الرمز صالحًا لمدة 30 دقيقة.
+              </p>
+              <Alert variant="warning" className="mt-2">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>ملاحظة أمنية</AlertTitle>
+                <AlertDescription className="text-xs">
+                  عرض الرمز في الواجهة هو حل مؤقت. في المستقبل، سيتم إرسال الرمز عبر البريد الإلكتروني لزيادة الأمان.
+                </AlertDescription>
+              </Alert>
+
+              {generatedOTP && (
+                <Alert>
+                  <KeyRound className="h-4 w-4" />
+                  <AlertTitle>رمز التحقق الخاص بك</AlertTitle>
+                  <AlertDescription>
+                    <div className="font-mono text-xl text-center my-2">{generatedOTP}</div>
+                    <p className="text-xs text-muted-foreground">
+                      هذا الرمز صالح حتى الساعة {formatExpiryTime(otpExpiryTime || '')}
+                    </p>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <Button
+                onClick={handleGenerateOTP}
+                className="w-full"
+                disabled={isGeneratingOTP}
+              >
+                {isGeneratingOTP ? (
+                  <>
+                    <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                    جاري إنشاء الرمز...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="ml-2 h-4 w-4" />
+                    إنشاء رمز تحقق جديد
+                  </>
+                )}
+              </Button>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="verify" className="space-y-4">
+            <form onSubmit={handleVerifyOTP} className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>خطأ في التحقق</AlertTitle>
+                  <AlertDescription>
+                    {errorMessage}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="otp">رمز التحقق</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="otp"
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    className="pl-10 text-center font-mono text-lg"
+                    placeholder="أدخل رمز التحقق"
+                    maxLength={6}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  أدخل رمز التحقق المكون من 6 أرقام الذي تم إنشاؤه
+                </p>
+              </div>
+
+              <div className="flex justify-end">
+                <Button type="submit" disabled={isVerifyingOTP}>
+                  {isVerifyingOTP ? (
+                    <>
+                      <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                      جاري التحقق...
+                    </>
+                  ) : (
+                    'تأكيد'
+                  )}
+                </Button>
+              </div>
+            </form>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -64,13 +64,20 @@ export function PermissionSidebarItem({
 
   // التحقق من الدور إذا كان مطلوبًا
   if (requiredRole) {
-    hasAccess = hasAccess && checkRole(requiredRole);
+    const hasRole = checkRole(requiredRole);
+    console.log(`[PermissionSidebarItem] ${label}: Required role ${requiredRole}, has role: ${hasRole}`);
+    hasAccess = hasAccess && hasRole;
   }
 
   // التحقق من الصلاحية إذا كانت مطلوبة
   if (requiredPermission) {
-    hasAccess = hasAccess && hasPermission(`${requiredPermission.area}.${requiredPermission.action}`);
+    const permissionString = `${requiredPermission.area}.${requiredPermission.action}`;
+    const hasPermissionResult = hasPermission(permissionString);
+    console.log(`[PermissionSidebarItem] ${label}: Required permission ${permissionString}, has permission: ${hasPermissionResult}`);
+    hasAccess = hasAccess && hasPermissionResult;
   }
+
+  console.log(`[PermissionSidebarItem] ${label}: Final access decision: ${hasAccess}`);
 
   // عدم عرض العنصر إذا لم يكن لدى المستخدم الصلاحيات المطلوبة
   if (!hasAccess) {

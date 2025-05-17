@@ -58,8 +58,10 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
   const [report, setReport] = useState<GenerateWeeklyReportOutput | null>(null);
   const [isLoadingTasks, setIsLoadingTasks] = useState(true);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [activeTab, setActiveTab] = useState<'summary' | 'completed' | 'inProgress' | 'upcoming' | 'blocked' | 'analysis' | 'planning'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'completed' | 'inProgress' | 'upcoming' | 'blocked' | 'analysis' | 'planning' | 'today' | 'overdue' | 'scheduled'>('summary');
   const [error, setError] = useState<string | null>(null);
+  // متغير لتتبع ما إذا تم توليد التقرير بالفعل
+  const [reportGenerated, setReportGenerated] = useState(false);
 
   // دالة لحساب نسبة إكمال المهام في حالة عدم توفرها من الخدمة
   const calculateCompletionRate = (report: GenerateWeeklyReportOutput | null): number => {
@@ -317,7 +319,13 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
   }, [user, organizationId, departmentId, userId]);
 
   // إنشاء التقرير الأسبوعي
-  const handleGenerateReport = async () => {
+  const handleGenerateReport = async (isAutoGenerate = false) => {
+    // إذا كان التوليد تلقائيًا وتم توليد التقرير بالفعل، نتخطى العملية
+    if (isAutoGenerate && reportGenerated) {
+      console.log("تخطي التوليد التلقائي: تم توليد التقرير بالفعل.");
+      return;
+    }
+
     if (isGeneratingReport || tasks.length === 0) return;
 
     setIsGeneratingReport(true);
@@ -485,10 +493,15 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
       };
 
       setReport(processedReport);
-      toast({
-        title: 'تم إنشاء التقرير الأسبوعي',
-        description: 'تم إنشاء التقرير الأسبوعي بنجاح.',
-      });
+      setReportGenerated(true); // تعيين علامة أنه تم توليد التقرير
+
+      // إظهار رسالة نجاح فقط إذا كان التوليد يدويًا (وليس تلقائيًا)
+      if (!isAutoGenerate) {
+        toast({
+          title: 'تم إنشاء التقرير الأسبوعي',
+          description: 'تم إنشاء التقرير الأسبوعي بنجاح.',
+        });
+      }
     } catch (error) {
       console.error('Error generating report:', error);
       setError('حدث خطأ أثناء إنشاء التقرير. يرجى المحاولة مرة أخرى.');
@@ -496,6 +509,20 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
       setIsGeneratingReport(false);
     }
   };
+
+  // توليد التقرير تلقائيًا بعد تحميل المهام
+  useEffect(() => {
+    // إذا انتهى تحميل المهام ولم يتم توليد التقرير بعد
+    if (!isLoadingTasks && !isGeneratingReport && !reportGenerated && tasks.length > 0) {
+      console.log("توليد التقرير الأسبوعي تلقائيًا...");
+      // توليد التقرير فورًا بدون تأخير
+      handleGenerateReport(true); // تمرير علامة تشير إلى أن التوليد تلقائي
+    } else if (!isLoadingTasks && !reportGenerated && tasks.length === 0) {
+      // إذا لم تكن هناك مهام، تعيين رسالة خطأ
+      setError('لا توجد مهام لإنشاء تقرير أسبوعي.');
+      setReportGenerated(true); // تعيين العلامة لتجنب محاولات التوليد المتكررة
+    }
+  }, [isLoadingTasks, tasks, isGeneratingReport, reportGenerated]);
 
   // تنسيق التاريخ بشكل موحد (dd-MM-yyyy)
   const formatDate = (date: Date) => {
@@ -557,7 +584,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
         {!report ? (
           <div className="text-center py-8">
             <Button
-              onClick={handleGenerateReport}
+              onClick={() => handleGenerateReport(false)}
               disabled={isGeneratingReport || tasks.length === 0}
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
@@ -613,16 +640,16 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                   التخطيط
                 </TabsTrigger>
                 <TabsTrigger value="completed">
-                  المكتملة ({report?.completedTasks?.length || 0})
+                  مكتملة ({report?.completedTasks?.length || 0})
                 </TabsTrigger>
                 <TabsTrigger value="inProgress">
-                  قيد التنفيذ ({report?.inProgressTasks?.length || 0})
+                  قيد الانتظار ({report?.inProgressTasks?.length || 0})
                 </TabsTrigger>
                 <TabsTrigger value="upcoming">
-                  القادمة ({report?.upcomingTasks?.length || 0})
+                  قادمة ({report?.upcomingTasks?.length || 0})
                 </TabsTrigger>
-                <TabsTrigger value="blocked">
-                  المعلقة ({report?.blockedTasks?.length || 0})
+                <TabsTrigger value="overdue">
+                  فائتة ({report?.overdueTasks?.length || 0})
                 </TabsTrigger>
               </TabsList>
 
@@ -1124,7 +1151,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
               <TabsContent value="completed" className="space-y-4">
                 <div className="flex items-center mb-4">
                   <CheckCircle2 className="ml-2 h-5 w-5 text-green-500" />
-                  <h3 className="text-lg font-semibold">المهام المكتملة</h3>
+                  <h3 className="text-lg font-semibold">المهام مكتملة</h3>
                   <Badge className="mr-2 bg-green-100 text-green-800 hover:bg-green-200 border-green-300">
                     {report?.completedTasks?.length || 0}
                   </Badge>
@@ -1188,7 +1215,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
               <TabsContent value="inProgress" className="space-y-4">
                 <div className="flex items-center mb-4">
                   <Clock className="ml-2 h-5 w-5 text-blue-500" />
-                  <h3 className="text-lg font-semibold">المهام قيد التنفيذ</h3>
+                  <h3 className="text-lg font-semibold">المهام قيد الانتظار</h3>
                   <Badge className="mr-2 bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300">
                     {report?.inProgressTasks?.length || 0}
                   </Badge>
@@ -1197,10 +1224,10 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                 {!report?.inProgressTasks?.length ? (
                   <div className="text-center py-4 space-y-2">
                     <p className="text-muted-foreground">
-                      لا توجد مهام قيد التنفيذ.
+                      لا توجد مهام قيد الانتظار.
                     </p>
                     <div className="bg-muted/20 p-3 rounded-md max-w-md mx-auto">
-                      <h4 className="text-sm font-medium mb-2 text-primary">نصائح لإدارة المهام قيد التنفيذ:</h4>
+                      <h4 className="text-sm font-medium mb-2 text-primary">نصائح لإدارة المهام قيد الانتظار:</h4>
                       <ul className="text-xs text-right space-y-1">
                         <li className="flex items-start">
                           <span className="ml-1 text-primary">•</span>
@@ -1256,7 +1283,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
               <TabsContent value="upcoming" className="space-y-4">
                 <div className="flex items-center mb-4">
                   <Calendar className="ml-2 h-5 w-5 text-orange-500" />
-                  <h3 className="text-lg font-semibold">المهام القادمة</h3>
+                  <h3 className="text-lg font-semibold">المهام قادمة</h3>
                   <Badge className="mr-2 bg-orange-100 text-orange-800 hover:bg-orange-200 border-orange-300">
                     {report?.upcomingTasks?.length || 0}
                   </Badge>
@@ -1584,7 +1611,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
               <TabsContent value="blocked" className="space-y-4">
                 <div className="flex items-center mb-4">
                   <PauseCircle className="ml-2 h-5 w-5 text-gray-500" />
-                  <h3 className="text-lg font-semibold">المهام المعلقة</h3>
+                  <h3 className="text-lg font-semibold">المهام معلقة</h3>
                   <Badge className="mr-2 bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300">
                     {report?.blockedTasks?.length || 0}
                   </Badge>
@@ -1596,7 +1623,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                       لا توجد مهام معلقة.
                     </p>
                     <div className="bg-muted/20 p-3 rounded-md max-w-md mx-auto">
-                      <h4 className="text-sm font-medium mb-2 text-primary">نصائح للتعامل مع المهام المعلقة:</h4>
+                      <h4 className="text-sm font-medium mb-2 text-primary">نصائح للتعامل مع المهام معلقة:</h4>
                       <ul className="text-xs text-right space-y-1">
                         <li className="flex items-start">
                           <span className="ml-1 text-primary">•</span>
@@ -1637,6 +1664,69 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                           id={task.id}
                           task={taskForCard}
                           aiReasoning={task.comment || "هذه المهمة معلقة وتحتاج إلى مراجعة"}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="overdue" className="space-y-4">
+                <div className="flex items-center mb-4">
+                  <AlertTriangle className="ml-2 h-5 w-5 text-red-500" />
+                  <h3 className="text-lg font-semibold">المهام فائتة</h3>
+                  <Badge className="mr-2 bg-red-100 text-red-800 hover:bg-red-200 border-red-300">
+                    {report?.overdueTasks?.length || 0}
+                  </Badge>
+                </div>
+
+                {!report?.overdueTasks?.length ? (
+                  <div className="text-center py-4 space-y-2">
+                    <p className="text-muted-foreground">
+                      لا توجد مهام فائتة.
+                    </p>
+                    <div className="bg-muted/20 p-3 rounded-md max-w-md mx-auto">
+                      <h4 className="text-sm font-medium mb-2 text-primary">نصائح للتعامل مع المهام الفائتة:</h4>
+                      <ul className="text-xs text-right space-y-1">
+                        <li className="flex items-start">
+                          <span className="ml-1 text-primary">•</span>
+                          <span>حدد أولويات المهام الفائتة وابدأ بالأكثر أهمية.</span>
+                        </li>
+                        <li className="flex items-start">
+                          <span className="ml-1 text-primary">•</span>
+                          <span>قم بتحديث المواعيد النهائية إذا كانت المهام لا تزال ذات صلة.</span>
+                        </li>
+                        <li className="flex items-start">
+                          <span className="ml-1 text-primary">•</span>
+                          <span>حلل أسباب التأخير لتجنب تكرارها في المستقبل.</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {report.overdueTasks.map((task) => {
+                      // تحويل TaskSummary إلى TaskType للتوافق مع TaskCardTemp
+                      const taskForCard = {
+                        id: task.id,
+                        description: task.description || task.title || '', // استخدام title إذا كان description غير موجود
+                        details: task.comment || task.notes || '', // استخدام notes إذا كان comment غير موجود
+                        status: 'pending',
+                        progress: task.progress || 0,
+                        priority: typeof task.priority === 'string' ?
+                          task.priority === 'high' ? 'high' :
+                          task.priority === 'medium' ? 'medium' :
+                          task.priority === 'low' ? 'low' : 'medium'
+                          : task.priority as any,
+                        dueDate: task.dueDate ? new Date(task.dueDate) : undefined
+                      } as TaskType;
+
+                      return (
+                        <TaskCardTemp
+                          key={task.id}
+                          id={task.id}
+                          task={taskForCard}
+                          aiReasoning={`مهمة فائتة - تاريخ الاستحقاق: ${task.dueDate ? format(new Date(task.dueDate), 'dd/MM/yyyy', { locale: ar }) : 'غير محدد'}`}
                         />
                       );
                     })}

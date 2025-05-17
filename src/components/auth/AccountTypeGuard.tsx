@@ -1,6 +1,6 @@
 /**
  * مكون للتحقق من نوع الحساب وعرض المحتوى المناسب فقط
- * 
+ *
  * يستخدم هذا المكون للتحقق من نوع الحساب (فردي أو مؤسسة) وعرض المحتوى المناسب فقط.
  * يمكن استخدامه لإخفاء الميزات المخصصة للمؤسسات عن المستخدمين الفرديين.
  */
@@ -14,17 +14,17 @@ interface AccountTypeGuardProps {
    * المحتوى الذي سيتم عرضه إذا كان نوع الحساب مطابقًا
    */
   children: React.ReactNode;
-  
+
   /**
    * نوع الحساب المطلوب لعرض المحتوى
    */
   requiredType: 'individual' | 'organization' | 'any';
-  
+
   /**
    * محتوى بديل يتم عرضه إذا لم يكن نوع الحساب مطابقًا
    */
   fallback?: React.ReactNode;
-  
+
   /**
    * ما إذا كان يجب عرض مؤشر تحميل أثناء التحقق من نوع الحساب
    */
@@ -41,9 +41,15 @@ export function AccountTypeGuard({
   showLoading = true
 }: AccountTypeGuardProps) {
   const { accountType, isLoading } = useAccountType();
-  
+
+  // تسجيل معلومات التشخيص
+  console.log('[AccountTypeGuard] Required Type:', requiredType);
+  console.log('[AccountTypeGuard] Account Type:', accountType);
+  console.log('[AccountTypeGuard] Is Loading:', isLoading);
+
   // إذا كان التحميل قيد التقدم وتم تمكين عرض مؤشر التحميل
   if (isLoading && showLoading) {
+    console.log('[AccountTypeGuard] Showing loading skeleton');
     return (
       <div className="w-full space-y-2">
         <Skeleton className="h-4 w-full" />
@@ -52,16 +58,19 @@ export function AccountTypeGuard({
       </div>
     );
   }
-  
+
   // إذا كان نوع الحساب مطابقًا للنوع المطلوب أو كان النوع المطلوب هو "أي"
-  if (
+  const hasAccess =
     requiredType === 'any' ||
     (requiredType === 'individual' && accountType === 'individual') ||
-    (requiredType === 'organization' && accountType === 'organization')
-  ) {
+    (requiredType === 'organization' && accountType === 'organization');
+
+  console.log('[AccountTypeGuard] Has Access:', hasAccess);
+
+  if (hasAccess) {
     return <>{children}</>;
   }
-  
+
   // إذا لم يكن نوع الحساب مطابقًا، عرض المحتوى البديل
   return <>{fallback}</>;
 }

@@ -1,6 +1,6 @@
 /**
  * خطاف للتحقق من نوع الحساب (فردي أو مؤسسة)
- * 
+ *
  * يستخدم هذا الخطاف للتحقق من نوع الحساب الحالي وتوفير معلومات حول ما إذا كان المستخدم
  * ينتمي إلى مؤسسة أو مستخدم فردي.
  */
@@ -24,7 +24,7 @@ export interface UseAccountTypeResult {
 
 /**
  * خطاف للتحقق من نوع الحساب (فردي أو مؤسسة)
- * 
+ *
  * @returns {UseAccountTypeResult} معلومات حول نوع الحساب
  */
 export function useAccountType(): UseAccountTypeResult {
@@ -36,32 +36,51 @@ export function useAccountType(): UseAccountTypeResult {
 
   useEffect(() => {
     if (!user) {
+      console.log('[useAccountType] No user, setting accountType to null');
       setAccountType(null);
       return;
     }
 
+    console.log('[useAccountType] Fetching account type for user:', user.uid);
+
     const fetchAccountType = async () => {
       try {
         // التحقق من وثيقة المستخدم
+        console.log('[useAccountType] Checking users collection for user:', user.uid);
         const userDoc = await getDoc(doc(db, 'users', user.uid));
-        
+
         if (!userDoc.exists()) {
-          setAccountType(null);
+          console.log('[useAccountType] User document not found in users collection');
+
+          // التحقق من وثيقة المستخدم في مجموعة individuals
+          console.log('[useAccountType] Checking individuals collection for user:', user.uid);
+          const individualDoc = await getDoc(doc(db, 'individuals', user.uid));
+
+          if (individualDoc.exists()) {
+            console.log('[useAccountType] User found in individuals collection, setting accountType to individual');
+            setAccountType('individual');
+          } else {
+            console.log('[useAccountType] User not found in any collection, setting accountType to null');
+            setAccountType(null);
+          }
           return;
         }
 
         const userData = userDoc.data();
-        
+        console.log('[useAccountType] User data:', userData);
+
         // التحقق من وجود حقل organizationId
         if (userData.organizationId) {
+          console.log('[useAccountType] User has organizationId, setting accountType to organization');
           setAccountType('organization');
           setOrganizationId(userData.organizationId);
           setDepartmentId(userData.departmentId);
         } else {
+          console.log('[useAccountType] User has no organizationId, setting accountType to individual');
           setAccountType('individual');
         }
       } catch (err) {
-        console.error('Error fetching account type:', err);
+        console.error('[useAccountType] Error fetching account type:', err);
         setError(err instanceof Error ? err : new Error(String(err)));
         setAccountType(null);
       }
