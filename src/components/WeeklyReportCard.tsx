@@ -58,7 +58,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
   const [report, setReport] = useState<GenerateWeeklyReportOutput | null>(null);
   const [isLoadingTasks, setIsLoadingTasks] = useState(true);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [activeTab, setActiveTab] = useState<'summary' | 'completed' | 'inProgress' | 'upcoming' | 'blocked'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'completed' | 'inProgress' | 'upcoming' | 'blocked' | 'analysis' | 'planning'>('summary');
   const [error, setError] = useState<string | null>(null);
 
   // دالة لحساب نسبة إكمال المهام في حالة عدم توفرها من الخدمة
@@ -150,7 +150,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
     const completionRate = calculateCompletionRate(report);
 
     // حساب نسبة الإكمال في الوقت المحدد
-    const onTimeCompletionRate = calculateOnTimeCompletionRate(tasks);
+    const onTimeCompletionRate = calculateOnTimeCompletionRate(tasks as any);
 
     // إضافة توصيات بناءً على نسبة الإكمال
     if (completionRate < 50) {
@@ -336,7 +336,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
           }
 
           // تضمين جميع المهام قيد التنفيذ بغض النظر عن تاريخ البدء
-          if (task.status === 'in-progress') {
+          if (task.status === 'in-progress' as any) {
             return true;
           }
 
@@ -352,7 +352,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
           }
 
           // تضمين المهام المعلقة بغض النظر عن التاريخ
-          if (task.status === 'blocked' || task.status === 'hold') {
+          if (task.status === 'blocked' as any || task.status === 'hold') {
             return true;
           }
 
@@ -404,12 +404,12 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
 
       // معالجة إضافية للتقرير بعد استلامه من الخدمة
       // تحديد المهام المعلقة والمهام قيد التنفيذ من قائمة المهام الأصلية
-      const blockedTasks = tasks.filter(task => task.status === 'blocked' || task.status === 'hold');
-      const inProgressTasks = tasks.filter(task => task.status === 'in-progress');
+      const blockedTasks = tasks.filter(task => task.status === 'blocked' as any || task.status === 'hold');
+      const inProgressTasks = tasks.filter(task => task.status === 'in-progress' as any);
 
       // استخدام المهام المتأخرة من الخدمة الخلفية أو إنشاؤها من المهام الأصلية
       const overdueTasks = result.overdueTasks || tasks.filter(task =>
-        (task.status === 'pending' || task.status === 'in-progress') &&
+        (task.status === 'pending' || task.status === 'in-progress' as any) &&
         task.dueDate &&
         task.dueDate < new Date()
       ).map(task => ({
@@ -602,8 +602,16 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
             </div>
 
             <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
-              <TabsList className="grid grid-cols-5 mb-4">
+              <TabsList className="grid grid-cols-7 mb-4">
                 <TabsTrigger value="summary">الملخص</TabsTrigger>
+                <TabsTrigger value="analysis">
+                  <BarChart className="ml-1 h-4 w-4" />
+                  التحليل
+                </TabsTrigger>
+                <TabsTrigger value="planning">
+                  <ListChecks className="ml-1 h-4 w-4" />
+                  التخطيط
+                </TabsTrigger>
                 <TabsTrigger value="completed">
                   المكتملة ({report?.completedTasks?.length || 0})
                 </TabsTrigger>
@@ -617,6 +625,300 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                   المعلقة ({report?.blockedTasks?.length || 0})
                 </TabsTrigger>
               </TabsList>
+
+              <TabsContent value="analysis" className="space-y-4">
+                <div className="bg-muted/30 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold mb-3">تحليل الأداء الأسبوعي</h3>
+                  <p className="text-right leading-7 mb-4">
+                    يقدم هذا التحليل نظرة متعمقة على أدائك خلال الأسبوع، مع تسليط الضوء على الاتجاهات والأنماط التي يمكن أن تساعدك في تحسين إنتاجيتك.
+                  </p>
+                </div>
+
+                {/* تحليل توزيع المهام حسب الحالة */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">توزيع المهام حسب الحالة</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {/* المهام المكتملة */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">المكتملة</span>
+                            <span className="font-medium">{report?.completedTasks?.length || 0} ({Math.round(((report?.completedTasks?.length || 0) / (
+                              (report?.completedTasks?.length || 0) +
+                              (report?.inProgressTasks?.length || 0) +
+                              (report?.upcomingTasks?.length || 0) +
+                              (report?.blockedTasks?.length || 0)
+                            ) * 100) || 0)}%)</span>
+                          </div>
+                          <Progress value={Math.round(((report?.completedTasks?.length || 0) / (
+                            (report?.completedTasks?.length || 0) +
+                            (report?.inProgressTasks?.length || 0) +
+                            (report?.upcomingTasks?.length || 0) +
+                            (report?.blockedTasks?.length || 0)
+                          ) * 100) || 0)} className="h-2 bg-muted" />
+                        </div>
+                        {/* المهام قيد التنفيذ */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">قيد التنفيذ</span>
+                            <span className="font-medium">{report?.inProgressTasks?.length || 0} ({Math.round(((report?.inProgressTasks?.length || 0) / (
+                              (report?.completedTasks?.length || 0) +
+                              (report?.inProgressTasks?.length || 0) +
+                              (report?.upcomingTasks?.length || 0) +
+                              (report?.blockedTasks?.length || 0)
+                            ) * 100) || 0)}%)</span>
+                          </div>
+                          <Progress value={Math.round(((report?.inProgressTasks?.length || 0) / (
+                            (report?.completedTasks?.length || 0) +
+                            (report?.inProgressTasks?.length || 0) +
+                            (report?.upcomingTasks?.length || 0) +
+                            (report?.blockedTasks?.length || 0)
+                          ) * 100) || 0)} className="h-2 bg-blue-100" />
+                        </div>
+                        {/* المهام القادمة */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">القادمة</span>
+                            <span className="font-medium">{report?.upcomingTasks?.length || 0} ({Math.round(((report?.upcomingTasks?.length || 0) / (
+                              (report?.completedTasks?.length || 0) +
+                              (report?.inProgressTasks?.length || 0) +
+                              (report?.upcomingTasks?.length || 0) +
+                              (report?.blockedTasks?.length || 0)
+                            ) * 100) || 0)}%)</span>
+                          </div>
+                          <Progress value={Math.round(((report?.upcomingTasks?.length || 0) / (
+                            (report?.completedTasks?.length || 0) +
+                            (report?.inProgressTasks?.length || 0) +
+                            (report?.upcomingTasks?.length || 0) +
+                            (report?.blockedTasks?.length || 0)
+                          ) * 100) || 0)} className="h-2 bg-orange-100" />
+                        </div>
+                        {/* المهام المعلقة */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">المعلقة</span>
+                            <span className="font-medium">{report?.blockedTasks?.length || 0} ({Math.round(((report?.blockedTasks?.length || 0) / (
+                              (report?.completedTasks?.length || 0) +
+                              (report?.inProgressTasks?.length || 0) +
+                              (report?.upcomingTasks?.length || 0) +
+                              (report?.blockedTasks?.length || 0)
+                            ) * 100) || 0)}%)</span>
+                          </div>
+                          <Progress value={Math.round(((report?.blockedTasks?.length || 0) / (
+                            (report?.completedTasks?.length || 0) +
+                            (report?.inProgressTasks?.length || 0) +
+                            (report?.upcomingTasks?.length || 0) +
+                            (report?.blockedTasks?.length || 0)
+                          ) * 100) || 0)} className="h-2 bg-gray-100" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* تحليل توزيع المهام حسب الأولوية */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">توزيع المهام حسب الأولوية</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {/* أولوية عالية */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">أولوية عالية</span>
+                            <span className="font-medium">{
+                              (report?.completedTasks?.filter(t => t.priority === 'high').length || 0) +
+                              (report?.inProgressTasks?.filter(t => t.priority === 'high').length || 0) +
+                              (report?.upcomingTasks?.filter(t => t.priority === 'high').length || 0) +
+                              (report?.blockedTasks?.filter(t => t.priority === 'high').length || 0)
+                            }</span>
+                          </div>
+                          <Progress value={Math.round((
+                            ((report?.completedTasks?.filter(t => t.priority === 'high').length || 0) +
+                            (report?.inProgressTasks?.filter(t => t.priority === 'high').length || 0) +
+                            (report?.upcomingTasks?.filter(t => t.priority === 'high').length || 0) +
+                            (report?.blockedTasks?.filter(t => t.priority === 'high').length || 0)) / (
+                              (report?.completedTasks?.length || 0) +
+                              (report?.inProgressTasks?.length || 0) +
+                              (report?.upcomingTasks?.length || 0) +
+                              (report?.blockedTasks?.length || 0)
+                            ) * 100) || 0)} className="h-2 bg-red-100" />
+                        </div>
+                        {/* أولوية متوسطة */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">أولوية متوسطة</span>
+                            <span className="font-medium">{
+                              (report?.completedTasks?.filter(t => t.priority === 'medium').length || 0) +
+                              (report?.inProgressTasks?.filter(t => t.priority === 'medium').length || 0) +
+                              (report?.upcomingTasks?.filter(t => t.priority === 'medium').length || 0) +
+                              (report?.blockedTasks?.filter(t => t.priority === 'medium').length || 0)
+                            }</span>
+                          </div>
+                          <Progress value={Math.round((
+                            ((report?.completedTasks?.filter(t => t.priority === 'medium').length || 0) +
+                            (report?.inProgressTasks?.filter(t => t.priority === 'medium').length || 0) +
+                            (report?.upcomingTasks?.filter(t => t.priority === 'medium').length || 0) +
+                            (report?.blockedTasks?.filter(t => t.priority === 'medium').length || 0)) / (
+                              (report?.completedTasks?.length || 0) +
+                              (report?.inProgressTasks?.length || 0) +
+                              (report?.upcomingTasks?.length || 0) +
+                              (report?.blockedTasks?.length || 0)
+                            ) * 100) || 0)} className="h-2 bg-yellow-100" />
+                        </div>
+                        {/* أولوية منخفضة */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">أولوية منخفضة</span>
+                            <span className="font-medium">{
+                              (report?.completedTasks?.filter(t => t.priority === 'low').length || 0) +
+                              (report?.inProgressTasks?.filter(t => t.priority === 'low').length || 0) +
+                              (report?.upcomingTasks?.filter(t => t.priority === 'low').length || 0) +
+                              (report?.blockedTasks?.filter(t => t.priority === 'low').length || 0)
+                            }</span>
+                          </div>
+                          <Progress value={Math.round((
+                            ((report?.completedTasks?.filter(t => t.priority === 'low').length || 0) +
+                            (report?.inProgressTasks?.filter(t => t.priority === 'low').length || 0) +
+                            (report?.upcomingTasks?.filter(t => t.priority === 'low').length || 0) +
+                            (report?.blockedTasks?.filter(t => t.priority === 'low').length || 0)) / (
+                              (report?.completedTasks?.length || 0) +
+                              (report?.inProgressTasks?.length || 0) +
+                              (report?.upcomingTasks?.length || 0) +
+                              (report?.blockedTasks?.length || 0)
+                            ) * 100) || 0)} className="h-2 bg-green-100" />
+                        </div>
+                        {/* بدون أولوية */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">بدون أولوية</span>
+                            <span className="font-medium">{
+                              (report?.completedTasks?.filter(t => !t.priority).length || 0) +
+                              (report?.inProgressTasks?.filter(t => !t.priority).length || 0) +
+                              (report?.upcomingTasks?.filter(t => !t.priority).length || 0) +
+                              (report?.blockedTasks?.filter(t => !t.priority).length || 0)
+                            }</span>
+                          </div>
+                          <Progress value={Math.round((
+                            ((report?.completedTasks?.filter(t => !t.priority).length || 0) +
+                            (report?.inProgressTasks?.filter(t => !t.priority).length || 0) +
+                            (report?.upcomingTasks?.filter(t => !t.priority).length || 0) +
+                            (report?.blockedTasks?.filter(t => !t.priority).length || 0)) / (
+                              (report?.completedTasks?.length || 0) +
+                              (report?.inProgressTasks?.length || 0) +
+                              (report?.upcomingTasks?.length || 0) +
+                              (report?.blockedTasks?.length || 0)
+                            ) * 100) || 0)} className="h-2 bg-gray-100" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* تحليل الاتجاهات والأنماط */}
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle>تحليل الاتجاهات والأنماط</CardTitle>
+                    <CardDescription>
+                      تحليل لأنماط العمل والإنتاجية خلال الأسبوع
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* نقاط القوة */}
+                      <div>
+                        <h4 className="text-sm font-semibold mb-2 flex items-center">
+                          <span className="inline-block w-3 h-3 rounded-full bg-green-500 ml-2"></span>
+                          نقاط القوة
+                        </h4>
+                        <ul className="space-y-1 text-sm pr-5">
+                          {report?.completedTasks?.length ? (
+                            <li className="list-disc">
+                              أكملت {report.completedTasks.length} مهام خلال هذا الأسبوع، مما يدل على مستوى جيد من الإنتاجية.
+                            </li>
+                          ) : null}
+                          {report?.keyMetrics?.onTimeCompletionRate && report.keyMetrics.onTimeCompletionRate > 70 ? (
+                            <li className="list-disc">
+                              معدل الإكمال في الوقت المحدد ({report.keyMetrics.onTimeCompletionRate}%) مرتفع، مما يدل على إدارة جيدة للوقت.
+                            </li>
+                          ) : null}
+                          {report?.inProgressTasks?.length ? (
+                            <li className="list-disc">
+                              لديك {report.inProgressTasks.length} مهام قيد التنفيذ، مما يدل على استمرارية العمل.
+                            </li>
+                          ) : null}
+                          {!report?.blockedTasks?.length ? (
+                            <li className="list-disc">
+                              لا توجد مهام معلقة، مما يدل على قدرتك على تجاوز العقبات بفعالية.
+                            </li>
+                          ) : null}
+                        </ul>
+                      </div>
+
+                      {/* مجالات التحسين */}
+                      <div>
+                        <h4 className="text-sm font-semibold mb-2 flex items-center">
+                          <span className="inline-block w-3 h-3 rounded-full bg-amber-500 ml-2"></span>
+                          مجالات التحسين
+                        </h4>
+                        <ul className="space-y-1 text-sm pr-5">
+                          {report?.keyMetrics?.completionRate && report.keyMetrics.completionRate < 50 ? (
+                            <li className="list-disc">
+                              معدل إكمال المهام ({report.keyMetrics.completionRate}%) منخفض، يمكن تحسينه من خلال تقسيم المهام الكبيرة إلى مهام أصغر.
+                            </li>
+                          ) : null}
+                          {report?.keyMetrics?.onTimeCompletionRate && report.keyMetrics.onTimeCompletionRate < 50 ? (
+                            <li className="list-disc">
+                              معدل الإكمال في الوقت المحدد ({report.keyMetrics.onTimeCompletionRate}%) منخفض، يمكن تحسينه من خلال تحديد مواعيد نهائية أكثر واقعية.
+                            </li>
+                          ) : null}
+                          {report?.blockedTasks?.length ? (
+                            <li className="list-disc">
+                              لديك {report.blockedTasks.length} مهام معلقة، يجب التركيز على حل المشاكل التي تعيقها.
+                            </li>
+                          ) : null}
+                          {report?.inProgressTasks?.filter(t => t.dueDate && new Date(t.dueDate) < new Date()).length ? (
+                            <li className="list-disc">
+                              لديك {report.inProgressTasks.filter(t => t.dueDate && new Date(t.dueDate) < new Date()).length} مهام متأخرة قيد التنفيذ، يجب إعطاؤها الأولوية.
+                            </li>
+                          ) : null}
+                        </ul>
+                      </div>
+
+                      {/* الاتجاهات */}
+                      <div>
+                        <h4 className="text-sm font-semibold mb-2 flex items-center">
+                          <span className="inline-block w-3 h-3 rounded-full bg-blue-500 ml-2"></span>
+                          الاتجاهات الملحوظة
+                        </h4>
+                        <ul className="space-y-1 text-sm pr-5">
+                          {report?.completedTasks?.length && report?.inProgressTasks?.length ? (
+                            <li className="list-disc">
+                              نسبة المهام المكتملة إلى المهام قيد التنفيذ هي {Math.round((report.completedTasks.length / report.inProgressTasks.length) * 100) / 100}،
+                              {report.completedTasks.length > report.inProgressTasks.length ? ' مما يدل على تركيز جيد على إكمال المهام.' : ' مما يشير إلى الحاجة للتركيز أكثر على إكمال المهام الحالية قبل البدء بمهام جديدة.'}
+                            </li>
+                          ) : null}
+                          {report?.completedTasks?.filter(t => t.priority === 'high').length ? (
+                            <li className="list-disc">
+                              أكملت {report.completedTasks.filter(t => t.priority === 'high').length} مهام ذات أولوية عالية،
+                              {report.completedTasks.filter(t => t.priority === 'high').length > (report.completedTasks.filter(t => t.priority === 'medium').length || 0) ? ' مما يدل على تركيز جيد على المهام المهمة.' : ' ولكن يجب التركيز أكثر على المهام ذات الأولوية العالية.'}
+                            </li>
+                          ) : null}
+                          {report?.upcomingTasks?.length ? (
+                            <li className="list-disc">
+                              لديك {report.upcomingTasks.length} مهام قادمة،
+                              {report.upcomingTasks.length > 5 ? ' مما قد يشير إلى ضغط عمل كبير في المستقبل القريب. يُنصح بالتخطيط المسبق.' : ' وهو عدد معقول يمكن إدارته بفعالية.'}
+                            </li>
+                          ) : null}
+                        </ul>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
               <TabsContent value="summary" className="space-y-4">
                 <div className="bg-muted/30 p-4 rounded-lg">
@@ -658,7 +960,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                   <h3 className="text-lg font-semibold mb-3">المهام الأكثر أهمية</h3>
                   <div className="space-y-2">
                     {/* المهام المعلقة ذات الأولوية */}
-                    {report?.blockedTasks?.filter(task => task.priority === 'high').length > 0 && (
+                    {report?.blockedTasks && report.blockedTasks.filter(task => task.priority === 'high').length > 0 && (
                       <div className="border rounded-md p-3 bg-red-50">
                         <h4 className="font-medium text-red-700 mb-2">مهام معلقة ذات أولوية عالية</h4>
                         <ul className="space-y-1">
@@ -681,7 +983,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                     )}
 
                     {/* المهام قيد التنفيذ المتأخرة */}
-                    {report?.inProgressTasks?.filter(task =>
+                    {report?.inProgressTasks && report.inProgressTasks.filter(task =>
                       task.dueDate && new Date(task.dueDate) < new Date()
                     ).length > 0 && (
                       <div className="border rounded-md p-3 bg-amber-50">
@@ -855,11 +1157,11 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                   <div className="space-y-3">
                     {report.completedTasks.map((task) => {
                       // تحويل TaskSummary إلى TaskType للتوافق مع TaskCardTemp
-                      const taskForCard: TaskType = {
+                      const taskForCard = {
                         id: task.id,
                         description: task.description || task.title || '', // استخدام title إذا كان description غير موجود
                         details: task.comment || task.notes || '', // استخدام notes إذا كان comment غير موجود
-                        status: 'completed',
+                        status: 'completed' as const,
                         progress: 100,
                         priority: typeof task.priority === 'string' ?
                           task.priority === 'high' ? 'high' :
@@ -868,7 +1170,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                           : task.priority as any,
                         dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
                         completedDate: task.completedDate ? new Date(task.completedDate) : undefined
-                      };
+                      } as TaskType;
 
                       return (
                         <TaskCardTemp
@@ -919,11 +1221,11 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                   <div className="space-y-3">
                     {report.inProgressTasks.map((task) => {
                       // تحويل TaskSummary إلى TaskType للتوافق مع TaskCardTemp
-                      const taskForCard: TaskType = {
+                      const taskForCard = {
                         id: task.id,
                         description: task.description || task.title || '', // استخدام title إذا كان description غير موجود
                         details: task.comment || task.notes || '', // استخدام notes إذا كان comment غير موجود
-                        status: 'in-progress',
+                        status: 'in-progress' as any,
                         progress: task.progress || 50,
                         priority: typeof task.priority === 'string' ?
                           task.priority === 'high' ? 'high' :
@@ -931,7 +1233,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                           task.priority === 'low' ? 'low' : 'medium'
                           : task.priority as any,
                         dueDate: task.dueDate ? new Date(task.dueDate) : undefined
-                      };
+                      } as TaskType;
 
                       const isOverdue = task.dueDate && new Date(task.dueDate) < new Date();
                       const reasoning = isOverdue
@@ -987,7 +1289,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                   <div className="space-y-3">
                     {report.upcomingTasks.map((task) => {
                       // تحويل TaskSummary إلى TaskType للتوافق مع TaskCardTemp
-                      const taskForCard: TaskType = {
+                      const taskForCard = {
                         id: task.id,
                         description: task.description || task.title || '', // استخدام title إذا كان description غير موجود
                         details: task.comment || task.notes || '', // استخدام notes إذا كان comment غير موجود
@@ -999,7 +1301,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                           task.priority === 'low' ? 'low' : 'medium'
                           : task.priority as any,
                         dueDate: task.dueDate ? new Date(task.dueDate) : undefined
-                      };
+                      } as TaskType;
 
                       return (
                         <TaskCardTemp
@@ -1012,6 +1314,271 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                     })}
                   </div>
                 )}
+              </TabsContent>
+
+              <TabsContent value="planning" className="space-y-4">
+                <div className="bg-muted/30 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold mb-3">التخطيط للأسبوع القادم</h3>
+                  <p className="text-right leading-7 mb-4">
+                    بناءً على تحليل أدائك في الأسبوع الحالي، إليك خطة عمل مقترحة للأسبوع القادم لتحسين إنتاجيتك وتحقيق أهدافك.
+                  </p>
+                </div>
+
+                {/* الأولويات المقترحة */}
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle>الأولويات المقترحة للأسبوع القادم</CardTitle>
+                    <CardDescription>
+                      مهام يجب التركيز عليها في الأسبوع القادم
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* المهام المتأخرة */}
+                      {report?.inProgressTasks?.filter(t => t.dueDate && new Date(t.dueDate) < new Date()).length ? (
+                        <div>
+                          <h4 className="text-sm font-semibold mb-2 flex items-center">
+                            <AlertTriangle className="h-4 w-4 text-red-500 ml-2" />
+                            المهام المتأخرة
+                          </h4>
+                          <ul className="space-y-1 text-sm pr-5">
+                            {report.inProgressTasks
+                              .filter(t => t.dueDate && new Date(t.dueDate) < new Date())
+                              .map((task, index) => (
+                                <li key={index} className="list-disc">
+                                  {task.description || task.title} - متأخرة منذ {task.dueDate ? Math.ceil((new Date().getTime() - new Date(task.dueDate).getTime()) / (1000 * 60 * 60 * 24)) : 0} أيام
+                                </li>
+                              ))}
+                          </ul>
+                        </div>
+                      ) : null}
+
+                      {/* المهام المعلقة */}
+                      {report?.blockedTasks?.length ? (
+                        <div>
+                          <h4 className="text-sm font-semibold mb-2 flex items-center">
+                            <PauseCircle className="h-4 w-4 text-gray-500 ml-2" />
+                            المهام المعلقة
+                          </h4>
+                          <ul className="space-y-1 text-sm pr-5">
+                            {report.blockedTasks
+                              .slice(0, 3)
+                              .map((task, index) => (
+                                <li key={index} className="list-disc">
+                                  {task.description || task.title} - تحديد العقبات وإيجاد حلول
+                                </li>
+                              ))}
+                            {report.blockedTasks.length > 3 && (
+                              <li className="text-xs text-muted-foreground">
+                                + {report.blockedTasks.length - 3} مهام معلقة أخرى...
+                              </li>
+                            )}
+                          </ul>
+                        </div>
+                      ) : null}
+
+                      {/* المهام ذات الأولوية العالية */}
+                      {report?.upcomingTasks?.filter(t => t.priority === 'high').length ? (
+                        <div>
+                          <h4 className="text-sm font-semibold mb-2 flex items-center">
+                            <span className="inline-block w-3 h-3 rounded-full bg-red-500 ml-2"></span>
+                            المهام ذات الأولوية العالية
+                          </h4>
+                          <ul className="space-y-1 text-sm pr-5">
+                            {report.upcomingTasks
+                              .filter(t => t.priority === 'high')
+                              .slice(0, 3)
+                              .map((task, index) => (
+                                <li key={index} className="list-disc">
+                                  {task.description || task.title}
+                                  {task.dueDate ? ` - تاريخ الاستحقاق: ${format(new Date(task.dueDate), 'dd/MM/yyyy', { locale: ar })}` : ''}
+                                </li>
+                              ))}
+                            {report.upcomingTasks.filter(t => t.priority === 'high').length > 3 && (
+                              <li className="text-xs text-muted-foreground">
+                                + {report.upcomingTasks.filter(t => t.priority === 'high').length - 3} مهام أخرى ذات أولوية عالية...
+                              </li>
+                            )}
+                          </ul>
+                        </div>
+                      ) : null}
+
+                      {/* المهام القريبة من الموعد النهائي */}
+                      {report?.upcomingTasks?.filter(t =>
+                        t.dueDate &&
+                        new Date(t.dueDate) > new Date() &&
+                        (new Date(t.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24) <= 7
+                      ).length ? (
+                        <div>
+                          <h4 className="text-sm font-semibold mb-2 flex items-center">
+                            <Clock className="h-4 w-4 text-amber-500 ml-2" />
+                            المهام القريبة من الموعد النهائي
+                          </h4>
+                          <ul className="space-y-1 text-sm pr-5">
+                            {report.upcomingTasks
+                              .filter(t =>
+                                t.dueDate &&
+                                new Date(t.dueDate) > new Date() &&
+                                (new Date(t.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24) <= 7
+                              )
+                              .slice(0, 3)
+                              .map((task, index) => (
+                                <li key={index} className="list-disc">
+                                  {task.description || task.title} - متبقي {task.dueDate ? Math.ceil((new Date(task.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0} أيام
+                                </li>
+                              ))}
+                            {report.upcomingTasks.filter(t =>
+                              t.dueDate &&
+                              new Date(t.dueDate) > new Date() &&
+                              (new Date(t.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24) <= 7
+                            ).length > 3 && (
+                              <li className="text-xs text-muted-foreground">
+                                + {report.upcomingTasks.filter(t =>
+                                  t.dueDate &&
+                                  new Date(t.dueDate) > new Date() &&
+                                  (new Date(t.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24) <= 7
+                                ).length - 3} مهام أخرى قريبة من الموعد النهائي...
+                              </li>
+                            )}
+                          </ul>
+                        </div>
+                      ) : null}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* استراتيجيات مقترحة */}
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle>استراتيجيات مقترحة لتحسين الإنتاجية</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* استراتيجيات مخصصة بناءً على التحليل */}
+                      <div className="space-y-2">
+                        {report?.keyMetrics?.completionRate && report.keyMetrics.completionRate < 50 ? (
+                          <div className="bg-blue-50 p-3 rounded-md">
+                            <h4 className="text-sm font-semibold text-blue-700 mb-2">تحسين معدل إكمال المهام</h4>
+                            <ul className="space-y-1 text-sm pr-5">
+                              <li className="list-disc">تقسيم المهام الكبيرة إلى مهام فرعية أصغر يمكن إنجازها بسهولة.</li>
+                              <li className="list-disc">تخصيص وقت محدد يوميًا للعمل على المهام ذات الأولوية العالية.</li>
+                              <li className="list-disc">استخدام تقنية بومودورو (25 دقيقة عمل، 5 دقائق راحة) لزيادة التركيز.</li>
+                            </ul>
+                          </div>
+                        ) : null}
+
+                        {report?.keyMetrics?.onTimeCompletionRate && report.keyMetrics.onTimeCompletionRate < 70 ? (
+                          <div className="bg-amber-50 p-3 rounded-md">
+                            <h4 className="text-sm font-semibold text-amber-700 mb-2">تحسين الالتزام بالمواعيد النهائية</h4>
+                            <ul className="space-y-1 text-sm pr-5">
+                              <li className="list-disc">تحديد مواعيد نهائية واقعية للمهام مع إضافة وقت احتياطي.</li>
+                              <li className="list-disc">تقسيم المهام الكبيرة إلى مراحل مع مواعيد نهائية لكل مرحلة.</li>
+                              <li className="list-disc">البدء في المهام مبكرًا وعدم تأجيلها حتى اقتراب الموعد النهائي.</li>
+                            </ul>
+                          </div>
+                        ) : null}
+
+                        {report?.blockedTasks?.length ? (
+                          <div className="bg-gray-50 p-3 rounded-md">
+                            <h4 className="text-sm font-semibold text-gray-700 mb-2">التعامل مع المهام المعلقة</h4>
+                            <ul className="space-y-1 text-sm pr-5">
+                              <li className="list-disc">تحديد العقبات التي تعيق كل مهمة بوضوح.</li>
+                              <li className="list-disc">طلب المساعدة أو الموارد اللازمة لتجاوز العقبات.</li>
+                              <li className="list-disc">إعادة تقييم المهام المعلقة لفترة طويلة وتحديد ما إذا كانت لا تزال ضرورية.</li>
+                            </ul>
+                          </div>
+                        ) : null}
+
+                        {report?.upcomingTasks?.length > 5 ? (
+                          <div className="bg-green-50 p-3 rounded-md">
+                            <h4 className="text-sm font-semibold text-green-700 mb-2">إدارة المهام القادمة</h4>
+                            <ul className="space-y-1 text-sm pr-5">
+                              <li className="list-disc">ترتيب المهام القادمة حسب الأولوية والموعد النهائي.</li>
+                              <li className="list-disc">تحديد المهام التي يمكن تفويضها أو تأجيلها إذا لزم الأمر.</li>
+                              <li className="list-disc">وضع خطة زمنية واضحة للبدء في المهام القادمة.</li>
+                            </ul>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* خطة الأسبوع القادم */}
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle>خطة الأسبوع القادم</CardTitle>
+                    <CardDescription>
+                      توزيع مقترح للمهام على أيام الأسبوع القادم
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* توزيع المهام على أيام الأسبوع */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* اليوم الأول والثاني */}
+                        <div className="space-y-3">
+                          <div>
+                            <h4 className="text-sm font-semibold mb-2">اليوم الأول والثاني</h4>
+                            <ul className="space-y-1 text-sm pr-5">
+                              <li className="list-disc">التركيز على المهام المتأخرة والمعلقة.</li>
+                              {report?.inProgressTasks?.filter(t => t.dueDate && new Date(t.dueDate) < new Date()).length ? (
+                                <li className="list-disc">إكمال {Math.min(report.inProgressTasks.filter(t => t.dueDate && new Date(t.dueDate) < new Date()).length, 2)} مهام متأخرة.</li>
+                              ) : null}
+                              {report?.blockedTasks?.length ? (
+                                <li className="list-disc">حل العقبات في {Math.min(report.blockedTasks.length, 2)} مهام معلقة.</li>
+                              ) : null}
+                              <li className="list-disc">مراجعة وتحديث خطة العمل الأسبوعية.</li>
+                            </ul>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-semibold mb-2">اليوم الثالث والرابع</h4>
+                            <ul className="space-y-1 text-sm pr-5">
+                              <li className="list-disc">التركيز على المهام ذات الأولوية العالية.</li>
+                              {report?.upcomingTasks?.filter(t => t.priority === 'high').length ? (
+                                <li className="list-disc">البدء في {Math.min(report.upcomingTasks.filter(t => t.priority === 'high').length, 2)} مهام ذات أولوية عالية.</li>
+                              ) : null}
+                              {report?.inProgressTasks?.length ? (
+                                <li className="list-disc">متابعة التقدم في المهام قيد التنفيذ.</li>
+                              ) : null}
+                              <li className="list-disc">تحديث نسب التقدم في المهام.</li>
+                            </ul>
+                          </div>
+                        </div>
+                        {/* اليوم الخامس والسادس والسابع */}
+                        <div className="space-y-3">
+                          <div>
+                            <h4 className="text-sm font-semibold mb-2">اليوم الخامس والسادس</h4>
+                            <ul className="space-y-1 text-sm pr-5">
+                              <li className="list-disc">التركيز على المهام القريبة من الموعد النهائي.</li>
+                              {report?.upcomingTasks?.filter(t =>
+                                t.dueDate &&
+                                new Date(t.dueDate) > new Date() &&
+                                (new Date(t.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24) <= 7
+                              ).length ? (
+                                <li className="list-disc">العمل على {Math.min(report.upcomingTasks.filter(t =>
+                                  t.dueDate &&
+                                  new Date(t.dueDate) > new Date() &&
+                                  (new Date(t.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24) <= 7
+                                ).length, 2)} مهام قريبة من الموعد النهائي.</li>
+                              ) : null}
+                              <li className="list-disc">إكمال المهام قيد التنفيذ قدر الإمكان.</li>
+                            </ul>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-semibold mb-2">اليوم السابع</h4>
+                            <ul className="space-y-1 text-sm pr-5">
+                              <li className="list-disc">مراجعة ما تم إنجازه خلال الأسبوع.</li>
+                              <li className="list-disc">تحديث حالة جميع المهام.</li>
+                              <li className="list-disc">التخطيط للأسبوع القادم.</li>
+                              <li className="list-disc">تحديد الدروس المستفادة وفرص التحسين.</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </TabsContent>
 
               <TabsContent value="blocked" className="space-y-4">
@@ -1050,7 +1617,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                   <div className="space-y-3">
                     {report.blockedTasks.map((task) => {
                       // تحويل TaskSummary إلى TaskType للتوافق مع TaskCardTemp
-                      const taskForCard: TaskType = {
+                      const taskForCard = {
                         id: task.id,
                         description: task.description || task.title || '', // استخدام title إذا كان description غير موجود
                         details: task.comment || task.notes || '', // استخدام notes إذا كان comment غير موجود
@@ -1062,7 +1629,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                           task.priority === 'low' ? 'low' : 'medium'
                           : task.priority as any,
                         dueDate: task.dueDate ? new Date(task.dueDate) : undefined
-                      };
+                      } as TaskType;
 
                       return (
                         <TaskCardTemp

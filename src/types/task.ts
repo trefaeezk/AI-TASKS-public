@@ -6,10 +6,10 @@ import type { Timestamp } from 'firebase/firestore';
 export type DurationUnit = 'hours' | 'days' | 'weeks';
 
 // Define Task Status type
-export type TaskStatus = 'pending' | 'completed' | 'hold';
+export type TaskStatus = 'pending' | 'completed' | 'hold' | 'in-progress' | 'blocked';
 
-// Define Priority Level type (1: Highest, 5: Lowest)
-export type PriorityLevel = 1 | 2 | 3 | 4 | 5;
+// Define Priority Level type (1: Highest, 5: Lowest) or string values
+export type PriorityLevel = 1 | 2 | 3 | 4 | 5 | 'high' | 'medium' | 'low';
 
 // Define Task Context type
 export type TaskContext = 'individual' | 'department' | 'organization';
@@ -31,13 +31,18 @@ export interface TaskType {
   details?: string;
   startDate?: Date; // JS Date object, optional
   dueDate?: Date; // JS Date object, optional
+  completedDate?: Date; // Date when the task was completed
   durationValue?: number;
   durationUnit?: DurationUnit;
   priority?: PriorityLevel;
   priorityReason?: string;
   status: TaskStatus;
+  progress?: number; // Progress percentage (0-100)
   taskCategoryName?: string;
   milestones?: Milestone[]; // Array of milestones with JS Date dueDate
+  title?: string; // Alternative to description, used in some contexts
+  notes?: string; // Additional notes
+  comment?: string; // Comments on the task
 
   // Task context fields
   taskContext?: TaskContext; // individual, department, or organization

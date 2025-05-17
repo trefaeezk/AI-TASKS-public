@@ -90,12 +90,14 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
   const [previousTaskState, setPreviousTaskState] = useState<Record<string, Partial<TaskType> | TaskType>>({}); // Store partial or full task
   const initialCategorySet = useRef(false); // Ref to track initial setting
 
-  // تهيئة فلتر التاريخ ليكون آخر 30 يومًا افتراضيًا
+  // تهيئة فلتر التاريخ ليكون شهر ماضي وشهر لاحق من تاريخ اليوم افتراضيًا
   const [dateFilter, setDateFilter] = useState<DateFilter>(() => {
     const now = new Date();
     const thirtyDaysAgo = new Date();
+    const thirtyDaysLater = new Date();
     thirtyDaysAgo.setDate(now.getDate() - 30);
-    return { startDate: thirtyDaysAgo, endDate: now };
+    thirtyDaysLater.setDate(now.getDate() + 30);
+    return { startDate: thirtyDaysAgo, endDate: thirtyDaysLater };
   });
 
   const [categoryFilter, setCategoryFilter] = useState<string | null>(() => {
@@ -138,11 +140,12 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
        let defaultStartDate: Date | null = null;
        let defaultEndDate: Date | null = null;
 
-       // تعيين الفلتر الافتراضي ليكون آخر 30 يومًا لجميع الفئات
+       // تعيين الفلتر الافتراضي ليكون شهر ماضي وشهر لاحق من تاريخ اليوم لجميع الفئات
        const now = new Date();
        defaultStartDate = new Date();
+       defaultEndDate = new Date();
        defaultStartDate.setDate(now.getDate() - 30);
-       defaultEndDate = now;
+       defaultEndDate.setDate(now.getDate() + 30);
 
        console.log(` - Default date filter for ${selectedCategory}: ${defaultStartDate} to ${defaultEndDate}`);
 
@@ -183,6 +186,16 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
            // Date Filter
            // Apply based on the selected category's logic
            let relevantDate: Date | null = null;
+
+           // لا نطبق فلتر التاريخ على المهام المعلقة (hold/blocked) والمهام الفائتة (overdue)
+           // لتجنب خطر فقدان هذه المهام المهمة
+           if (selectedCategory === 'hold' || selectedCategory === 'overdue' ||
+               task.status === 'hold' || (task.status === 'blocked' as any) ||
+               (task.dueDate && task.dueDate < new Date() && task.status === 'pending')) {
+               // تجاهل فلتر التاريخ لهذه المهام
+               return true;
+           }
+
            switch (selectedCategory) {
                 case 'completed':
                     // Assuming 'completed' tasks might have a completion timestamp later,
@@ -190,18 +203,12 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
                     // Using dueDate primarily for completed filtering for now.
                     relevantDate = task.dueDate || task.startDate || null;
                     break;
-                 case 'overdue':
                  case 'today':
                  case 'upcoming':
                  case 'scheduled':
                  case 'pending': // Apply date range to these based on due date first, then start date
                      relevantDate = task.dueDate || task.startDate || null;
                      break;
-                 case 'hold': // Generally ignore date filter for 'hold' unless explicitly set
-                      if (dateFilter.startDate && dateFilter.endDate) {
-                        relevantDate = task.dueDate || task.startDate || null;
-                      }
-                    break;
                  default:
                     relevantDate = task.dueDate || task.startDate || null; // Default fallback
            }

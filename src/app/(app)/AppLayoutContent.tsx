@@ -177,12 +177,18 @@ function FilterPopover() {
                                 variant="outline"
                                 onClick={() => {
                                     taskPageContext.setCategoryFilter(null);
-                                    taskPageContext.setDateFilter({ startDate: null, endDate: null });
+                                    // إعادة تعيين الفلتر إلى القيمة الافتراضية (شهر ماضي وشهر لاحق)
+                                    const now = new Date();
+                                    const thirtyDaysAgo = new Date();
+                                    const thirtyDaysLater = new Date();
+                                    thirtyDaysAgo.setDate(now.getDate() - 30);
+                                    thirtyDaysLater.setDate(now.getDate() + 30);
+                                    taskPageContext.setDateFilter({ startDate: thirtyDaysAgo, endDate: thirtyDaysLater });
                                     taskPageContext.setOkrFilter(false);
                                 }}
                                 disabled={!isFilterActive} // Disable if no filters are active
                             >
-                                إزالة الفلاتر
+                                إعادة تعيين الفلاتر
                             </Button>
                         </>
                     )}

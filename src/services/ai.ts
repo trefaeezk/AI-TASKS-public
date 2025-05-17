@@ -139,8 +139,8 @@ export interface GenerateWeeklyReportOutput {
   period: {
     startDate: string;
     endDate: string;
-  };
-  summary: string;
+  } | string; // Allow string for backward compatibility
+  summary?: string;
   stats?: {
     totalTasks: number;
     completedTasks: number;
