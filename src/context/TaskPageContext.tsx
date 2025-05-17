@@ -90,8 +90,14 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
   const [previousTaskState, setPreviousTaskState] = useState<Record<string, Partial<TaskType> | TaskType>>({}); // Store partial or full task
   const initialCategorySet = useRef(false); // Ref to track initial setting
 
-  // Filter State
-  const [dateFilter, setDateFilter] = useState<DateFilter>({ startDate: null, endDate: null });
+  // تهيئة فلتر التاريخ ليكون آخر 30 يومًا افتراضيًا
+  const [dateFilter, setDateFilter] = useState<DateFilter>(() => {
+    const now = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(now.getDate() - 30);
+    return { startDate: thirtyDaysAgo, endDate: now };
+  });
+
   const [categoryFilter, setCategoryFilter] = useState<string | null>(() => {
       if (typeof window !== 'undefined') {
           return localStorage.getItem('lastCategoryFilter') || null;
@@ -132,17 +138,14 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
        let defaultStartDate: Date | null = null;
        let defaultEndDate: Date | null = null;
 
-       if (selectedCategory === 'completed') {
-           const now = new Date();
-           defaultStartDate = startOfMonth(subMonths(now, 1));
-           defaultEndDate = endOfMonth(subMonths(now, 1));
-           console.log(` - Default for completed: ${defaultStartDate} to ${defaultEndDate}`);
-       } else {
-           // No default date filter for other categories (show all matching category filter)
-           defaultStartDate = null;
-           defaultEndDate = null;
-            console.log(` - No default date filter for ${selectedCategory}`);
-       }
+       // تعيين الفلتر الافتراضي ليكون آخر 30 يومًا لجميع الفئات
+       const now = new Date();
+       defaultStartDate = new Date();
+       defaultStartDate.setDate(now.getDate() - 30);
+       defaultEndDate = now;
+
+       console.log(` - Default date filter for ${selectedCategory}: ${defaultStartDate} to ${defaultEndDate}`);
+
        setDateFilter({ startDate: defaultStartDate, endDate: defaultEndDate });
 
    }, [selectedCategory]); // Run when selectedCategory changes
