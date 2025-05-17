@@ -73,6 +73,30 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
     return Math.round((report.completedTasks?.length || 0) / totalTasks * 100);
   };
 
+  // دالة لحساب نسبة الإكمال في الوقت المحدد
+  const calculateOnTimeCompletionRate = (tasks: TaskType[]): number => {
+    // تصفية المهام المكتملة فقط
+    const completedTasks = tasks.filter(task => task.status === 'completed' && task.completedDate);
+
+    if (completedTasks.length === 0) return 0;
+
+    // حساب عدد المهام المكتملة في الوقت المحدد
+    const onTimeTasks = completedTasks.filter(task => {
+      // إذا لم يكن هناك تاريخ استحقاق، نعتبرها مكتملة في الوقت المحدد
+      if (!task.dueDate) return true;
+
+      // مقارنة تاريخ الإكمال بتاريخ الاستحقاق
+      return task.completedDate && task.completedDate <= task.dueDate;
+    });
+
+    // إذا لم تكن هناك مهام مكتملة، نعيد 0 لتجنب قسمة على صفر
+    if (completedTasks.length === 0) return 0;
+
+    // إذا كانت هناك مهمة واحدة على الأقل، نعيد نسبة مئوية
+    // نضمن أن تكون النتيجة على الأقل 1 إذا كانت هناك مهمة واحدة مكتملة في الوقت المحدد
+    return Math.max(1, Math.round((onTimeTasks.length / completedTasks.length) * 100));
+  };
+
   // دالة لحساب متوسط التقدم في حالة عدم توفره من الخدمة
   const calculateAverageProgress = (report: GenerateWeeklyReportOutput | null): number => {
     if (!report) return 0;
@@ -83,35 +107,80 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
     // جمع التقدم من جميع المهام
     if (report.completedTasks) {
       report.completedTasks.forEach(task => {
-        totalProgress += task.progress || 0;
+        // المهام المكتملة دائمًا تكون بنسبة 100%
+        totalProgress += 100;
         taskCount++;
       });
     }
 
     if (report.inProgressTasks) {
       report.inProgressTasks.forEach(task => {
-        totalProgress += task.progress || 0;
+        totalProgress += task.progress || 50; // إذا لم يكن هناك تقدم محدد، نفترض 50%
         taskCount++;
       });
     }
 
     if (report.upcomingTasks) {
       report.upcomingTasks.forEach(task => {
-        totalProgress += task.progress || 0;
+        totalProgress += task.progress || 0; // المهام القادمة عادة تكون بنسبة 0%
         taskCount++;
       });
     }
 
     if (report.blockedTasks) {
       report.blockedTasks.forEach(task => {
-        totalProgress += task.progress || 0;
+        totalProgress += task.progress || 0; // المهام المعلقة عادة تكون بنسبة 0%
         taskCount++;
       });
     }
 
     if (taskCount === 0) return 0;
 
-    return Math.round(totalProgress / taskCount);
+    // نضمن أن تكون النتيجة على الأقل 1 إذا كانت هناك مهمة واحدة
+    return Math.max(1, Math.round(totalProgress / taskCount));
+  };
+
+  // دالة لإنشاء توصيات افتراضية بناءً على بيانات التقرير
+  const generateDefaultRecommendations = (report: GenerateWeeklyReportOutput, tasks: TaskInput[]): string[] => {
+    const recommendations: string[] = [];
+
+    // حساب نسبة الإكمال
+    const completionRate = calculateCompletionRate(report);
+
+    // حساب نسبة الإكمال في الوقت المحدد
+    const onTimeCompletionRate = calculateOnTimeCompletionRate(tasks);
+
+    // إضافة توصيات بناءً على نسبة الإكمال
+    if (completionRate < 50) {
+      recommendations.push('مراجعة سير العمل ومعالجة أسباب التأخير في إكمال المهام.');
+    }
+
+    // إضافة توصيات بناءً على نسبة الإكمال في الوقت المحدد
+    if (onTimeCompletionRate < 70) {
+      recommendations.push('تحسين إدارة الوقت والالتزام بالمواعيد النهائية للمهام.');
+    }
+
+    // إضافة توصيات بناءً على المهام المعلقة
+    if (report.blockedTasks && report.blockedTasks.length > 0) {
+      recommendations.push('التركيز على حل المشاكل التي تعيق المهام المعلقة.');
+    }
+
+    // إضافة توصيات بناءً على المهام القادمة
+    if (report.upcomingTasks && report.upcomingTasks.length > 0) {
+      recommendations.push('التخطيط المسبق للمهام القادمة لضمان إكمالها في الوقت المحدد.');
+    }
+
+    // إضافة توصية إيجابية إذا كان الأداء جيدًا
+    if (completionRate >= 70 && onTimeCompletionRate >= 70 && (!report.blockedTasks || report.blockedTasks.length === 0)) {
+      recommendations.push('الاستمرار في الأداء الجيد والحفاظ على مستوى الإنتاجية الحالي.');
+    }
+
+    // إذا لم يتم إضافة أي توصيات، إضافة توصية افتراضية
+    if (recommendations.length === 0) {
+      recommendations.push('مراجعة خطة العمل وتحديد أولويات المهام لتحسين الإنتاجية.');
+    }
+
+    return recommendations;
   };
   const [reportPeriod, setReportPeriod] = useState<{startDate: Date, endDate: Date}>(() => {
     // استخدام فترة التقرير المُمررة إذا كانت متوفرة، وإلا استخدام الأسبوع الحالي كافتراضي
@@ -348,17 +417,23 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
         // التأكد من وجود مؤشرات الأداء
         keyMetrics: {
           completionRate: result.keyMetrics?.completionRate !== undefined
-            ? result.keyMetrics.completionRate
-            : calculateCompletionRate(result),
+            ? Math.max(1, Math.round(result.keyMetrics.completionRate))
+            : Math.max(1, calculateCompletionRate(result)),
           onTimeCompletionRate: result.keyMetrics?.onTimeCompletionRate !== undefined
-            ? result.keyMetrics.onTimeCompletionRate
-            : 0,
+            ? Math.max(1, Math.round(result.keyMetrics.onTimeCompletionRate))
+            : Math.max(1, calculateOnTimeCompletionRate(tasks)), // استخدام الدالة الجديدة مع المهام الأصلية
           averageProgress: result.keyMetrics?.averageProgress !== undefined
-            ? result.keyMetrics.averageProgress
-            : calculateAverageProgress(result)
+            ? Math.max(1, Math.round(result.keyMetrics.averageProgress))
+            : Math.max(1, calculateAverageProgress(result))
         },
+        // تنسيق الملخص إذا كان موجودًا
+        summary: result.summary
+          ? result.summary.replace(/\s+/g, ' ').trim() // إزالة المسافات الزائدة
+          : undefined,
         // التأكد من وجود التوصيات
-        recommendations: result.recommendations || [],
+        recommendations: result.recommendations && result.recommendations.length > 0
+          ? result.recommendations
+          : generateDefaultRecommendations(result, tasksForAI), // إنشاء توصيات افتراضية
         // تحديث فترة التقرير لتتوافق مع الفترة المحددة
         period: `${formatDate(reportPeriod.startDate)} إلى ${formatDate(reportPeriod.endDate)}`
       };
@@ -528,7 +603,37 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
 
               <TabsContent value="summary" className="space-y-4">
                 <div className="bg-muted/30 p-4 rounded-lg">
-                  <p className="whitespace-pre-line">{report?.summary || ''}</p>
+                  <p className="text-right leading-7 mb-2">
+                    {report?.summary ? (
+                      // تنسيق الملخص المستلم من الخدمة
+                      report.summary.split('. ').map((sentence, index) => (
+                        <span key={index} className="block mb-1">{sentence.trim()}{sentence.trim().length > 0 ? '.' : ''}</span>
+                      ))
+                    ) : (
+                      // إنشاء ملخص افتراضي منسق
+                      <>
+                        <span className="block mb-2">
+                          خلال الفترة من {formatDate(reportPeriod.startDate)} إلى {formatDate(reportPeriod.endDate)}، تم إكمال {report?.completedTasks?.length || 0} مهام من أصل {
+                            (report?.completedTasks?.length || 0) +
+                            (report?.inProgressTasks?.length || 0) +
+                            (report?.upcomingTasks?.length || 0) +
+                            (report?.blockedTasks?.length || 0)
+                          } مهام.
+                        </span>
+                        <span className="block mb-2">
+                          معدل إكمال المهام: {Math.max(1, calculateCompletionRate(report))}%.
+                        </span>
+
+                        {report?.blockedTasks?.length ? <span className="block mb-1">هناك {report.blockedTasks.length} مهام معلقة تحتاج إلى متابعة.</span> : ''}
+                        {report?.inProgressTasks?.length ? <span className="block mb-1">هناك {report.inProgressTasks.length} مهام قيد التنفيذ.</span> : ''}
+                        {report?.upcomingTasks?.length ? <span className="block mb-1">هناك {report.upcomingTasks.length} مهام قادمة.</span> : ''}
+
+                        <span className="block mt-2">
+                          يجب التركيز على إكمال المهام المتأخرة وتحسين إدارة الوقت.
+                        </span>
+                      </>
+                    )}
+                  </p>
                 </div>
 
                 <h3 className="text-lg font-semibold flex items-center mt-4">
@@ -541,8 +646,8 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                       <div className="text-center">
                         <div className="text-2xl font-bold">
                           {report?.keyMetrics?.completionRate !== undefined
-                            ? Math.round(report.keyMetrics.completionRate)
-                            : calculateCompletionRate(report)}%
+                            ? Math.max(1, Math.round(report.keyMetrics.completionRate))
+                            : Math.max(1, calculateCompletionRate(report))}%
                         </div>
                         <p className="text-sm text-muted-foreground">نسبة إكمال المهام</p>
                       </div>
@@ -553,8 +658,8 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                       <div className="text-center">
                         <div className="text-2xl font-bold">
                           {report?.keyMetrics?.onTimeCompletionRate !== undefined
-                            ? Math.round(report.keyMetrics.onTimeCompletionRate)
-                            : 0}%
+                            ? Math.max(1, Math.round(report.keyMetrics.onTimeCompletionRate))
+                            : Math.max(1, calculateOnTimeCompletionRate(tasks))}%
                         </div>
                         <p className="text-sm text-muted-foreground">نسبة الإكمال في الوقت المحدد</p>
                       </div>
@@ -565,8 +670,8 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                       <div className="text-center">
                         <div className="text-2xl font-bold">
                           {report?.keyMetrics?.averageProgress !== undefined
-                            ? Math.round(report.keyMetrics.averageProgress)
-                            : calculateAverageProgress(report)}%
+                            ? Math.max(1, Math.round(report.keyMetrics.averageProgress))
+                            : Math.max(1, calculateAverageProgress(report))}%
                         </div>
                         <p className="text-sm text-muted-foreground">متوسط التقدم</p>
                       </div>
@@ -584,33 +689,13 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                       </li>
                     ))
                   ) : (
-                    // إنشاء توصيات افتراضية بناءً على بيانات التقرير
-                    <>
-                      {calculateCompletionRate(report) < 50 && (
-                        <li className="flex items-start">
-                          <span className="ml-2 text-primary">•</span>
-                          <span>مراجعة سير العمل ومعالجة أسباب التأخير في إكمال المهام.</span>
-                        </li>
-                      )}
-                      {report?.blockedTasks?.length > 0 && (
-                        <li className="flex items-start">
-                          <span className="ml-2 text-primary">•</span>
-                          <span>التركيز على حل المشاكل التي تعيق المهام المعلقة.</span>
-                        </li>
-                      )}
-                      {report?.upcomingTasks?.length > 0 && (
-                        <li className="flex items-start">
-                          <span className="ml-2 text-primary">•</span>
-                          <span>التخطيط المسبق للمهام القادمة لضمان إكمالها في الوقت المحدد.</span>
-                        </li>
-                      )}
-                      {!(calculateCompletionRate(report) < 50 || report?.blockedTasks?.length > 0 || report?.upcomingTasks?.length > 0) && (
-                        <li className="flex items-start">
-                          <span className="ml-2 text-primary">•</span>
-                          <span>الاستمرار في الأداء الجيد والحفاظ على مستوى الإنتاجية الحالي.</span>
-                        </li>
-                      )}
-                    </>
+                    // استخدام دالة إنشاء التوصيات الافتراضية
+                    generateDefaultRecommendations(report, tasks).map((recommendation, index) => (
+                      <li key={index} className="flex items-start">
+                        <span className="ml-2 text-primary">•</span>
+                        <span>{recommendation}</span>
+                      </li>
+                    ))
                   )}
                 </ul>
               </TabsContent>

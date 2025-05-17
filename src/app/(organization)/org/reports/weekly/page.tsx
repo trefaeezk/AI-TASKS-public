@@ -3,9 +3,6 @@
 // منع التوليد المسبق للصفحة
 export const dynamic = 'force-dynamic';
 
-// تعطيل التوليد المسبق للصفحة
-export const runtime = 'edge';
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';

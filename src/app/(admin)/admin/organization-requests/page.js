@@ -3,9 +3,6 @@
 // منع التوليد المسبق للصفحة
 export const dynamic = 'force-dynamic';
 
-// تعطيل التوليد المسبق للصفحة
-export const runtime = 'edge';
-
 // استيراد المكونات والهوكس اللازمة
 import React from 'react';
 import dynamicImport from 'next/dynamic';

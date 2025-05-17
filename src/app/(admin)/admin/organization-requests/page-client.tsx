@@ -3,9 +3,6 @@
 // منع التوليد المسبق للصفحة
 export const dynamic = 'force-dynamic';
 
-// تعطيل التوليد المسبق للصفحة
-export const runtime = 'edge';
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { collection, query, getDocs, orderBy, doc, updateDoc } from 'firebase/firestore';
