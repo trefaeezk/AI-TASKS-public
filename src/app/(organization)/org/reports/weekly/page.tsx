@@ -203,6 +203,7 @@ export default function OrganizationWeeklyReportsPage() {
               <WeeklyReportCard
                 organizationId={organizationId}
                 departmentId={reportType === 'department' ? selectedDepartmentId : undefined}
+                reportPeriod={{ startDate: currentWeekStart, endDate: currentWeekEnd }}
               />
             </TabsContent>
 
@@ -210,6 +211,7 @@ export default function OrganizationWeeklyReportsPage() {
               <WeeklyReportCard
                 organizationId={organizationId}
                 departmentId={reportType === 'department' ? selectedDepartmentId : undefined}
+                reportPeriod={{ startDate: previousWeekStart, endDate: previousWeekEnd }}
               />
             </TabsContent>
 

@@ -43,9 +43,13 @@ interface WeeklyReportCardProps {
   departmentId?: string;
   userId?: string;
   className?: string;
+  reportPeriod?: {
+    startDate: Date;
+    endDate: Date;
+  };
 }
 
-export function WeeklyReportCard({ organizationId, departmentId, userId, className }: WeeklyReportCardProps) {
+export function WeeklyReportCard({ organizationId, departmentId, userId, className, reportPeriod: propReportPeriod }: WeeklyReportCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<TaskType[]>([]);
@@ -55,11 +59,25 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
   const [activeTab, setActiveTab] = useState<'summary' | 'completed' | 'inProgress' | 'upcoming' | 'blocked'>('summary');
   const [error, setError] = useState<string | null>(null);
   const [reportPeriod, setReportPeriod] = useState<{startDate: Date, endDate: Date}>(() => {
+    // استخدام فترة التقرير المُمررة إذا كانت متوفرة، وإلا استخدام الأسبوع الحالي كافتراضي
+    if (propReportPeriod) {
+      return propReportPeriod;
+    }
+
     const now = new Date();
-    const lastWeekStart = startOfWeek(subWeeks(now, 1), { weekStartsOn: 0 }); // Sunday
-    const lastWeekEnd = endOfWeek(subWeeks(now, 1), { weekStartsOn: 0 }); // Saturday
-    return { startDate: lastWeekStart, endDate: lastWeekEnd };
+    const currentWeekStart = startOfWeek(now, { weekStartsOn: 0 }); // Sunday
+    const currentWeekEnd = endOfWeek(now, { weekStartsOn: 0 }); // Saturday
+    return { startDate: currentWeekStart, endDate: currentWeekEnd };
   });
+
+  // تحديث فترة التقرير عند تغيير الفترة المُمررة
+  useEffect(() => {
+    if (propReportPeriod) {
+      setReportPeriod(propReportPeriod);
+      // إعادة تعيين التقرير عند تغيير الفترة
+      setReport(null);
+    }
+  }, [propReportPeriod]);
 
   // جلب المهام من Firestore
   useEffect(() => {
@@ -237,7 +255,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
 
   // تنسيق التاريخ
   const formatDate = (date: Date) => {
-    return format(date, 'PPP', { locale: ar });
+    return format(date, 'dd MMMM yyyy', { locale: ar });
   };
 
   // تصدير التقرير كملف PDF

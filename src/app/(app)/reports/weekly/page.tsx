@@ -14,19 +14,19 @@ import { ar } from 'date-fns/locale';
 export default function WeeklyReportsPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'current' | 'previous' | 'custom'>('current');
-  
+
   // تحديد فترات التقارير
   const now = new Date();
   const currentWeekStart = startOfWeek(now, { weekStartsOn: 0 }); // Sunday
   const currentWeekEnd = endOfWeek(now, { weekStartsOn: 0 }); // Saturday
   const previousWeekStart = startOfWeek(subWeeks(now, 1), { weekStartsOn: 0 });
   const previousWeekEnd = endOfWeek(subWeeks(now, 1), { weekStartsOn: 0 });
-  
+
   // تنسيق التاريخ
   const formatDateRange = (start: Date, end: Date) => {
     return `${format(start, 'dd MMM', { locale: ar })} - ${format(end, 'dd MMM yyyy', { locale: ar })}`;
   };
-  
+
   if (!user) {
     return (
       <div className="container mx-auto p-4">
@@ -38,7 +38,7 @@ export default function WeeklyReportsPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="container mx-auto p-4" dir="rtl">
       <div className="flex justify-between items-center mb-6">
@@ -53,7 +53,7 @@ export default function WeeklyReportsPage() {
           </Link>
         </Button>
       </div>
-      
+
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-lg flex items-center">
@@ -83,15 +83,15 @@ export default function WeeklyReportsPage() {
                 فترة مخصصة
               </TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="current">
-              <WeeklyReportCard />
+              <WeeklyReportCard reportPeriod={{ startDate: currentWeekStart, endDate: currentWeekEnd }} />
             </TabsContent>
-            
+
             <TabsContent value="previous">
-              <WeeklyReportCard />
+              <WeeklyReportCard reportPeriod={{ startDate: previousWeekStart, endDate: previousWeekEnd }} />
             </TabsContent>
-            
+
             <TabsContent value="custom">
               <div className="text-center py-8 text-muted-foreground">
                 سيتم تنفيذ هذه الميزة قريبًا.
