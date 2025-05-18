@@ -255,50 +255,6 @@ export function DebugAuthDialog({ isOpen, onAuthenticated }: DebugAuthDialogProp
                     </>
                   )}
                 </Button>
-
-                <Button
-                  onClick={async () => {
-                    try {
-                      setIsGeneratingOTP(true);
-
-                      // استخدام Firebase Functions مباشرة
-                      const { httpsCallable } = await import('firebase/functions');
-                      const { getFunctions } = await import('firebase/functions');
-                      const { initializeApp } = await import('firebase/app');
-                      const { firebaseConfig } = await import('../../../firebaseConfig.js');
-
-                      // تهيئة Firebase مباشرة
-                      const app = initializeApp(firebaseConfig);
-
-                      // تهيئة Firebase Functions مع تحديد المنطقة
-                      const functions = getFunctions(app, 'us-central1');
-
-                      console.log('Testing SMTP email sending...');
-                      const testSMTPEmail = httpsCallable(functions, 'testSMTPEmail');
-                      const result = await testSMTPEmail({});
-                      console.log('Test SMTP email result:', result);
-
-                      toast({
-                        title: 'تم إرسال بريد إلكتروني اختباري',
-                        description: 'تم إرسال بريد إلكتروني اختباري باستخدام SMTP إلى بريدك الإلكتروني. يرجى التحقق من صندوق الوارد الخاص بك.',
-                      });
-                    } catch (error) {
-                      console.error('Error testing SMTP email:', error);
-                      toast({
-                        title: 'خطأ',
-                        description: 'حدث خطأ أثناء اختبار إرسال البريد الإلكتروني باستخدام SMTP.',
-                        variant: 'destructive',
-                      });
-                    } finally {
-                      setIsGeneratingOTP(false);
-                    }
-                  }}
-                  className="w-full"
-                  variant="outline"
-                  disabled={isGeneratingOTP}
-                >
-                  اختبار إرسال البريد الإلكتروني (SMTP)
-                </Button>
               </div>
             </div>
           </TabsContent>

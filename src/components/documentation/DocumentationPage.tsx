@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import MarkdownRenderer from './MarkdownRenderer';
 import DocumentationSidebar from './DocumentationSidebar';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useToast } from '@/hooks/use-toast';
 
 // تعريف أنواع الوثائق
 export type DocumentCategory = 'general' | 'debug' | 'users' | 'tasks' | 'reports' | 'settings';
@@ -33,7 +34,7 @@ const documents: Document[] = [
     title: 'نظرة عامة على صفحة التشخيص',
     description: 'شرح عام لصفحة التشخيص وكيفية استخدامها',
     category: 'debug',
-    path: '/docs/debug/README.md',
+    path: 'debug/README.md',
     requiredPermission: 'owner',
   },
   {
@@ -41,7 +42,7 @@ const documents: Document[] = [
     title: 'إدارة الصلاحيات لصفحة التشخيص',
     description: 'شرح نظام الصلاحيات للوصول إلى صفحة التشخيص',
     category: 'debug',
-    path: '/docs/debug/access-control.md',
+    path: 'debug/access-control.md',
     requiredPermission: 'owner',
   },
   {
@@ -49,7 +50,7 @@ const documents: Document[] = [
     title: 'نظام البريد الإلكتروني في صفحة التشخيص',
     description: 'شرح نظام البريد الإلكتروني المستخدم في صفحة التشخيص',
     category: 'debug',
-    path: '/docs/debug/email-system.md',
+    path: 'debug/email-system.md',
     requiredPermission: 'owner',
   },
   {
@@ -57,7 +58,7 @@ const documents: Document[] = [
     title: 'نظرة عامة على النظام',
     description: 'شرح عام لنظام إدارة المهام',
     category: 'general',
-    path: '/docs/README.md',
+    path: 'README.md',
     requiredPermission: 'user',
   },
 ];
@@ -66,12 +67,14 @@ const DocumentationPage: React.FC = () => {
   const router = useRouter();
   const { user, userClaims } = useAuth();
   const { hasPermission } = usePermissions();
+  const { toast } = useToast();
   const [activeDocId, setActiveDocId] = useState<string | null>(null);
   const [activeDocument, setActiveDocument] = useState<Document | null>(null);
   const [documentContent, setDocumentContent] = useState<string>('');
   const [activeCategory, setActiveCategory] = useState<DocumentCategory>('general');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [retryCount, setRetryCount] = useState<number>(0);
 
   // التحقق من الصلاحيات للوصول إلى الوثيقة
   const canAccessDocument = (doc: Document): boolean => {
@@ -98,25 +101,55 @@ const DocumentationPage: React.FC = () => {
   };
 
   // تحميل محتوى الوثيقة
-  const loadDocumentContent = async (doc: Document) => {
+  const loadDocumentContent = useCallback(async (doc: Document) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(doc.path);
+      // استخدام API الوثائق مع إضافة رمز المصادقة
+      const token = await user?.getIdToken();
+      console.log(`Loading document from path: ${doc.path}`);
+      const apiPath = doc.path.startsWith('/') ? doc.path : `/${doc.path}`;
+      const response = await fetch(`/api/docs${apiPath}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
       if (!response.ok) {
         throw new Error(`فشل تحميل الوثيقة: ${response.statusText}`);
       }
       const content = await response.text();
+      console.log(`Document loaded successfully, content length: ${content.length}`);
       setDocumentContent(content);
       setActiveDocument(doc);
+      setRetryCount(0); // إعادة تعيين عداد المحاولات عند النجاح
     } catch (err: any) {
       console.error('Error loading document:', err);
       setError(`حدث خطأ أثناء تحميل الوثيقة: ${err.message}`);
       setDocumentContent('');
+
+      // إظهار إشعار بالخطأ
+      toast({
+        title: "خطأ في تحميل الوثيقة",
+        description: err.message,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, toast]);
+
+  // إعادة محاولة تحميل الوثيقة
+  const retryLoadDocument = useCallback(() => {
+    if (activeDocument) {
+      setRetryCount(prev => prev + 1);
+      toast({
+        title: "جاري إعادة المحاولة",
+        description: `محاولة تحميل الوثيقة مرة أخرى (${retryCount + 1})`,
+      });
+      loadDocumentContent(activeDocument);
+    }
+  }, [activeDocument, loadDocumentContent, retryCount, toast]);
 
   // تحديد الوثيقة النشطة عند تغيير المعرف
   useEffect(() => {
@@ -135,7 +168,7 @@ const DocumentationPage: React.FC = () => {
         setActiveDocId(accessibleDocs[0].id);
       }
     }
-  }, [activeDocId]);
+  }, [activeDocId, canAccessDocument, loadDocumentContent]);
 
   // التحقق من تسجيل الدخول
   if (!user) {
@@ -232,6 +265,15 @@ const DocumentationPage: React.FC = () => {
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>خطأ</AlertTitle>
                   <AlertDescription>{error}</AlertDescription>
+                  <Button
+                    onClick={retryLoadDocument}
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                  >
+                    <RefreshCw className="h-4 w-4 ml-2" />
+                    إعادة المحاولة
+                  </Button>
                 </Alert>
               )}
 
@@ -240,7 +282,15 @@ const DocumentationPage: React.FC = () => {
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                 </div>
               ) : (
-                documentContent && <MarkdownRenderer content={documentContent} />
+                documentContent ? (
+                  <MarkdownRenderer content={documentContent} />
+                ) : (
+                  !error && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>لا يوجد محتوى للعرض. يرجى اختيار وثيقة من القائمة الجانبية.</p>
+                    </div>
+                  )
+                )
               )}
             </CardContent>
           </Card>

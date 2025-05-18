@@ -54,7 +54,7 @@ export const sendEmailSMTP = async (
 
     // إرسال البريد الإلكتروني
     const info = await transporter.sendMail(mailOptions);
-    
+
     console.log('Email sent successfully with SMTP:', info.messageId);
     return true;
   } catch (error) {
@@ -97,7 +97,7 @@ export const sendEmail = async (emailData: EmailData): Promise<boolean> => {
 
     // إرسال البريد الإلكتروني
     const result = await resend.emails.send(emailOptions);
-    
+
     if (result.error) {
       console.error('Error sending email with Resend:', result.error);
       return false;
@@ -200,78 +200,15 @@ export const generateAndSendOTP = functions.https.onCall(async (_, context) => {
 });
 ```
 
-### 2. اختبار إرسال البريد الإلكتروني
+### 2. استخدام نظام البريد الإلكتروني
 
-تستخدم هذه الوظيفة لاختبار إرسال البريد الإلكتروني باستخدام SMTP.
+تم تكوين نظام البريد الإلكتروني بنجاح ويعمل بشكل صحيح. يستخدم النظام خدمة SMTP لإرسال البريد الإلكتروني، مع استخدام Resend API كخطة بديلة في حالة فشل SMTP.
 
-#### وظيفة اختبار إرسال البريد الإلكتروني
+#### ملاحظات هامة:
 
-```typescript
-export const testSMTPEmail = functions.https.onCall(async (data, context) => {
-  // التحقق من وجود مستخدم مسجل الدخول
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-      'unauthenticated',
-      'يجب تسجيل الدخول لاختبار إرسال البريد الإلكتروني'
-    );
-  }
-
-  // التحقق من أن المستخدم هو مالك التطبيق
-  const isOwner = context.auth.token.owner === true;
-
-  if (!isOwner) {
-    throw new functions.https.HttpsError(
-      'permission-denied',
-      'غير مصرح لك باختبار إرسال البريد الإلكتروني'
-    );
-  }
-
-  const { email } = data;
-  const userEmail = email || context.auth.token.email;
-
-  try {
-    // استيراد وظيفة sendEmailSMTP من ملف smtp
-    const { sendEmailSMTP } = await import('./smtp');
-    
-    const result = await sendEmailSMTP(
-      userEmail,
-      'اختبار إرسال البريد الإلكتروني باستخدام SMTP',
-      `هذا بريد إلكتروني اختباري للتأكد من عمل خدمة البريد الإلكتروني SMTP. الوقت الحالي: ${new Date().toLocaleString()}`,
-      `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px; text-align: center;">
-          <h2 style="color: #333;">اختبار إرسال البريد الإلكتروني باستخدام SMTP</h2>
-          <p>مرحبًا،</p>
-          <p>هذا بريد إلكتروني اختباري للتأكد من عمل خدمة البريد الإلكتروني SMTP.</p>
-          <p>الوقت الحالي: <strong>${new Date().toLocaleString()}</strong></p>
-          <p style="margin-top: 30px; font-size: 12px; color: #777;">
-            هذا بريد إلكتروني تم إنشاؤه تلقائيًا، يرجى عدم الرد عليه.
-          </p>
-        </div>
-      `
-    );
-    
-    if (result) {
-      return {
-        success: true,
-        message: `تم إرسال البريد الإلكتروني الاختباري بنجاح إلى ${userEmail} باستخدام SMTP`
-      };
-    } else {
-      throw new functions.https.HttpsError(
-        'internal',
-        'فشل إرسال البريد الإلكتروني الاختباري باستخدام SMTP'
-      );
-    }
-  } catch (error) {
-    console.error('Error in SMTP test email sending:', error);
-    throw new functions.https.HttpsError(
-      'internal',
-      'حدث خطأ أثناء اختبار إرسال البريد الإلكتروني باستخدام SMTP',
-      error
-    );
-  }
-});
-```
-
+- تم اختبار نظام البريد الإلكتروني والتأكد من عمله بشكل صحيح.
+- يتم استخدام نظام البريد الإلكتروني لإرسال رموز التحقق (OTP) وإشعارات النظام.
+- يمكن تكوين إعدادات البريد الإلكتروني من خلال متغيرات البيئة أو إعدادات Firebase Functions.
 ## تكوين إعدادات البريد الإلكتروني
 
 ### 1. تكوين إعدادات SMTP

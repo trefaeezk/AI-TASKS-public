@@ -12,8 +12,19 @@ interface MarkdownRendererProps {
 }
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
+  console.log(`Rendering markdown content with length: ${content.length}`);
+
+  // التعامل مع المحتوى الفارغ
+  if (!content || content.trim() === '') {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <p>لا يوجد محتوى للعرض.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="markdown-content prose prose-sm md:prose-base lg:prose-lg dark:prose-invert max-w-none">
+    <div className="markdown-content prose prose-sm md:prose-base lg:prose-lg dark:prose-invert max-w-none" dir="rtl">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
