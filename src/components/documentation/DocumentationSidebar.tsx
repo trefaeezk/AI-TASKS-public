@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,7 +13,7 @@ interface DocumentationSidebarProps {
   setActiveCategory: (category: DocumentCategory) => void;
 }
 
-const DocumentationSidebar: React.FC<DocumentationSidebarProps> = ({
+const DocumentationSidebar: React.FC<DocumentationSidebarProps> = memo(({
   documents,
   activeDocId,
   setActiveDocId,
@@ -68,7 +68,7 @@ const DocumentationSidebar: React.FC<DocumentationSidebarProps> = ({
               </TabsTrigger>
             ))}
           </TabsList>
-          
+
           {uniqueCategories.map(category => (
             <TabsContent key={category} value={category}>
               <ScrollArea className="h-[50vh]">
@@ -91,6 +91,6 @@ const DocumentationSidebar: React.FC<DocumentationSidebarProps> = ({
       </CardContent>
     </Card>
   );
-};
+});
 
 export default DocumentationSidebar;

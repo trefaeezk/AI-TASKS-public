@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NextPage } from 'next';
+import { NextPage, GetServerSideProps } from 'next';
 import Head from 'next/head';
 import DocumentationPage from '@/components/documentation/DocumentationPage';
 import { useAuth } from '@/context/AuthContext';
@@ -9,7 +9,58 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const Documentation: NextPage = () => {
+// تعريف واجهة البيانات
+interface DocumentationProps {
+  documents: {
+    id: string;
+    title: string;
+    description: string;
+    category: string;
+    path: string;
+    requiredPermission: string;
+  }[];
+  initialDocContent?: string;
+  initialDocId?: string;
+}
+
+// دالة getServerSideProps لتحميل البيانات من الخادم
+export const getServerSideProps: GetServerSideProps = async ({ req }) => {
+  try {
+    // استخدام API الوثائق الداخلي
+    const protocol = req.headers['x-forwarded-proto'] || 'http';
+    const host = req.headers.host;
+    const baseUrl = `${protocol}://${host}`;
+
+    // استخدام API الوثائق بدون firebase-admin
+    const response = await fetch(`${baseUrl}/api/documentation`);
+
+    if (!response.ok) {
+      throw new Error(`Error fetching documentation data: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    return {
+      props: {
+        documents: data.documents || [],
+        initialDocContent: data.initialDocContent || '',
+        initialDocId: data.initialDocId || 'general-overview',
+      },
+    };
+  } catch (error) {
+    console.error('Error in getServerSideProps:', error);
+    return {
+      props: {
+        documents: [],
+        initialDocContent: '',
+        initialDocId: '',
+        error: 'حدث خطأ أثناء تحميل البيانات من الخادم',
+      },
+    };
+  }
+};
+
+const Documentation: NextPage<DocumentationProps> = ({ documents, initialDocContent, initialDocId }) => {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +118,11 @@ const Documentation: NextPage = () => {
           </Button>
         </div>
       ) : (
-        <DocumentationPage />
+        <DocumentationPage
+          serverDocuments={documents}
+          initialDocContent={initialDocContent}
+          initialDocId={initialDocId}
+        />
       )}
     </div>
   );

@@ -94,6 +94,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log(`Content type: ${contentType}`);
 
+    // إضافة رؤوس التخزين المؤقت
+    res.setHeader('Cache-Control', 'public, max-age=3600'); // تخزين مؤقت لمدة ساعة
+
     // إرسال المحتوى
     res.setHeader('Content-Type', contentType);
     res.status(200).send(fileContent);

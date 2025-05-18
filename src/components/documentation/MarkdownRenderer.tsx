@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Image from 'next/image';
@@ -11,7 +11,7 @@ interface MarkdownRendererProps {
   content: string;
 }
 
-const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
+const MarkdownRenderer: React.FC<MarkdownRendererProps> = memo(({ content }) => {
   console.log(`Rendering markdown content with length: ${content.length}`);
 
   // التعامل مع المحتوى الفارغ
@@ -103,6 +103,6 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
       </ReactMarkdown>
     </div>
   );
-};
+});
 
 export default MarkdownRenderer;

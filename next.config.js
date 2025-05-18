@@ -12,9 +12,48 @@ const nextConfig = {
   // تكوين لتجاوز مشاكل التوليد المسبق للصفحات
   // استخدام الخيار الرسمي من Next.js
   // تعطيل التوليد المسبق للصفحات التي تستخدم حزم خارجية
-  serverExternalPackages: ['firebase', 'firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/functions'],
+  serverExternalPackages: ['firebase', 'firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/functions', 'firebase-admin'],
+
+  // تكوين لتجاهل مكتبات جانب الخادم
+  serverComponentsExternalPackages: ['firebase-admin'],
+
+  // تكوين لتجاوز مشاكل الوحدات الخارجية
+  webpack: (config, { isServer }) => {
+    // تكوين لدعم WebAssembly
+    config.experiments = {
+      ...config.experiments,
+      syncWebAssembly: false,
+      asyncWebAssembly: true,
+    };
+
+    // إضافة قاعدة لملفات WebAssembly
+    config.module.rules.push({
+      test: /\.wasm$/,
+      type: 'webassembly/async',
+    });
+
+    // تجاهل مكتبات جانب الخادم في جانب العميل
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        net: false,
+        http2: false,
+        tls: false,
+        child_process: false,
+      };
+    }
+
+    return config;
+  },
 
   experimental: {
+    // تمكين دعم WebAssembly
+    webAssembly: {
+      sync: false,
+      async: true
+    },
     // خيارات تجريبية أخرى
   },
 

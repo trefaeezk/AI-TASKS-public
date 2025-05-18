@@ -27,54 +27,88 @@ export interface Document {
   content?: string;
 }
 
-// قائمة الوثائق المتاحة
-const documents: Document[] = [
-  {
-    id: 'debug-overview',
-    title: 'نظرة عامة على صفحة التشخيص',
-    description: 'شرح عام لصفحة التشخيص وكيفية استخدامها',
-    category: 'debug',
-    path: 'debug/README.md',
-    requiredPermission: 'owner',
-  },
-  {
-    id: 'debug-access-control',
-    title: 'إدارة الصلاحيات لصفحة التشخيص',
-    description: 'شرح نظام الصلاحيات للوصول إلى صفحة التشخيص',
-    category: 'debug',
-    path: 'debug/access-control.md',
-    requiredPermission: 'owner',
-  },
-  {
-    id: 'debug-email-system',
-    title: 'نظام البريد الإلكتروني في صفحة التشخيص',
-    description: 'شرح نظام البريد الإلكتروني المستخدم في صفحة التشخيص',
-    category: 'debug',
-    path: 'debug/email-system.md',
-    requiredPermission: 'owner',
-  },
-  {
-    id: 'general-overview',
-    title: 'نظرة عامة على النظام',
-    description: 'شرح عام لنظام إدارة المهام',
-    category: 'general',
-    path: 'README.md',
-    requiredPermission: 'user',
-  },
-];
+// تعريف واجهة الخصائص
+interface DocumentationPageProps {
+  serverDocuments?: {
+    id: string;
+    title: string;
+    description: string;
+    category: string;
+    path: string;
+    requiredPermission: string;
+  }[];
+  initialDocContent?: string;
+  initialDocId?: string;
+}
 
-const DocumentationPage: React.FC = () => {
+const DocumentationPage: React.FC<DocumentationPageProps> = ({
+  serverDocuments,
+  initialDocContent,
+  initialDocId
+}) => {
+  // تحويل الوثائق من الخادم إلى النموذج المطلوب
+  const documents: Document[] = serverDocuments ?
+    serverDocuments.map(doc => ({
+      ...doc,
+      category: doc.category as DocumentCategory
+    })) : [
+      {
+        id: 'debug-overview',
+        title: 'نظرة عامة على صفحة التشخيص',
+        description: 'شرح عام لصفحة التشخيص وكيفية استخدامها',
+        category: 'debug',
+        path: 'debug/README.md',
+        requiredPermission: 'owner',
+      },
+      {
+        id: 'debug-access-control',
+        title: 'إدارة الصلاحيات لصفحة التشخيص',
+        description: 'شرح نظام الصلاحيات للوصول إلى صفحة التشخيص',
+        category: 'debug',
+        path: 'debug/access-control.md',
+        requiredPermission: 'owner',
+      },
+      {
+        id: 'debug-email-system',
+        title: 'نظام البريد الإلكتروني في صفحة التشخيص',
+        description: 'شرح نظام البريد الإلكتروني المستخدم في صفحة التشخيص',
+        category: 'debug',
+        path: 'debug/email-system.md',
+        requiredPermission: 'owner',
+      },
+      {
+        id: 'general-overview',
+        title: 'نظرة عامة على النظام',
+        description: 'شرح عام لنظام إدارة المهام',
+        category: 'general',
+        path: 'README.md',
+        requiredPermission: 'user',
+      },
+    ];
   const router = useRouter();
   const { user, userClaims } = useAuth();
   const { hasPermission } = usePermissions();
   const { toast } = useToast();
-  const [activeDocId, setActiveDocId] = useState<string | null>(null);
+  const [activeDocId, setActiveDocId] = useState<string | null>(initialDocId || null);
   const [activeDocument, setActiveDocument] = useState<Document | null>(null);
-  const [documentContent, setDocumentContent] = useState<string>('');
+  const [documentContent, setDocumentContent] = useState<string>(initialDocContent || '');
   const [activeCategory, setActiveCategory] = useState<DocumentCategory>('general');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [retryCount, setRetryCount] = useState<number>(0);
+
+  // استخدام المحتوى المبدئي إذا كان متوفرًا
+  useEffect(() => {
+    if (initialDocContent && initialDocId) {
+      const doc = documents.find(d => d.id === initialDocId);
+      if (doc) {
+        setActiveDocument(doc);
+        setDocumentContent(initialDocContent);
+        setActiveCategory(doc.category);
+        console.log('Using initial document content from server');
+      }
+    }
+  }, [initialDocContent, initialDocId, documents]);
 
   // التحقق من الصلاحيات للوصول إلى الوثيقة
   const canAccessDocument = (doc: Document): boolean => {
@@ -109,10 +143,14 @@ const DocumentationPage: React.FC = () => {
       const token = await user?.getIdToken();
       console.log(`Loading document from path: ${doc.path}`);
       const apiPath = doc.path.startsWith('/') ? doc.path : `/${doc.path}`;
+
+      // استخدام API الوثائق
       const response = await fetch(`/api/docs${apiPath}`, {
         headers: {
           Authorization: `Bearer ${token}`
-        }
+        },
+        // إضافة معلمة عشوائية لتجنب التخزين المؤقت
+        cache: 'no-store'
       });
 
       if (!response.ok) {
@@ -153,6 +191,12 @@ const DocumentationPage: React.FC = () => {
 
   // تحديد الوثيقة النشطة عند تغيير المعرف
   useEffect(() => {
+    // تخطي التحميل إذا كان المحتوى المبدئي متوفرًا وهو نفس الوثيقة النشطة
+    if (initialDocContent && initialDocId && activeDocId === initialDocId && documentContent) {
+      console.log('Skipping document loading as initial content is already set');
+      return;
+    }
+
     if (activeDocId) {
       const doc = documents.find(d => d.id === activeDocId);
       if (doc && canAccessDocument(doc)) {
@@ -168,7 +212,7 @@ const DocumentationPage: React.FC = () => {
         setActiveDocId(accessibleDocs[0].id);
       }
     }
-  }, [activeDocId, canAccessDocument, loadDocumentContent]);
+  }, [activeDocId, canAccessDocument, loadDocumentContent, initialDocContent, initialDocId, documentContent]);
 
   // التحقق من تسجيل الدخول
   if (!user) {
