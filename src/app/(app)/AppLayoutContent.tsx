@@ -447,6 +447,14 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                   requiredPermission={{ area: 'settings', action: 'view' }}
                 />
 
+                <PermissionSidebarItem
+                  href="/documentation"
+                  icon={BookOpen}
+                  label="الوثائق"
+                  tooltip="وثائق النظام"
+                  requiredPermission={{ area: 'settings', action: 'view' }}
+                />
+
                 {/* رابط صفحة التشخيص - يظهر فقط للمالك */}
                 <PermissionSidebarItem
                   href="/debug"
@@ -454,15 +462,6 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                   label="التشخيص"
                   tooltip="صفحة التشخيص وإصلاح المشاكل"
                   requiredRole="owner"
-                />
-
-                {/* رابط صفحة الوثائق */}
-                <PermissionSidebarItem
-                  href="/documentation"
-                  icon={BookOpen}
-                  label="الوثائق"
-                  tooltip="وثائق النظام"
-                  requiredPermission={{ area: 'users', action: 'view' }}
                 />
             </SidebarMenu>
             </SidebarContent>

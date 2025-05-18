@@ -283,8 +283,8 @@ export default function NotificationSettingsPage() {
                     updateSetting('doNotDisturbStart', '22:00');
                     updateSetting('doNotDisturbEnd', '08:00');
                   } else {
-                    updateSetting('doNotDisturbStart', undefined);
-                    updateSetting('doNotDisturbEnd', undefined);
+                    updateSetting('doNotDisturbStart', null as any);
+                    updateSetting('doNotDisturbEnd', null as any);
                   }
                 }}
               />

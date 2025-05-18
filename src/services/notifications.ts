@@ -15,7 +15,8 @@ import {
   limit,
   Timestamp,
   serverTimestamp,
-  onSnapshot
+  onSnapshot,
+  setDoc
 } from 'firebase/firestore';
 import {
   Notification,
@@ -301,7 +302,8 @@ export async function getUserNotificationSettings(userId: string): Promise<Notif
         updatedAt: serverTimestamp() as Timestamp,
       };
 
-      await updateDoc(doc(db, 'notificationSettings', userId), defaultSettings);
+      // استخدام setDoc بدلاً من updateDoc لإنشاء وثيقة جديدة
+      await setDoc(doc(db, 'notificationSettings', userId), defaultSettings);
 
       return {
         userId,
@@ -338,8 +340,18 @@ export async function updateUserNotificationSettings(
   try {
     const settingsRef = doc(db, 'notificationSettings', userId);
 
+    // نسخ الإعدادات لتجنب تعديل الكائن الأصلي
+    const settingsCopy = { ...settings };
+
+    // تحويل قيم undefined إلى null لأن Firestore لا يدعم undefined
+    const cleanedSettings: Record<string, any> = {};
+
+    Object.entries(settingsCopy).forEach(([key, value]) => {
+      cleanedSettings[key] = value === undefined ? null : value;
+    });
+
     const updateData: Partial<NotificationSettingsFirestore> = {
-      ...settings,
+      ...cleanedSettings,
       updatedAt: serverTimestamp() as Timestamp,
     };
 

@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sun, Moon, Languages, Bell, ArrowRight } from 'lucide-react'; // Import icons
-import SystemTypeSelector from '@/components/settings/SystemTypeSelector';
 import OrganizationRequestButton from '@/components/settings/OrganizationRequestButton';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
@@ -173,9 +172,6 @@ export default function SettingsPage() {
           </Button>
         </CardContent>
       </Card>
-
-      {/* نوع النظام - التبديل بين نظام الأفراد والمؤسسات */}
-      {user && <SystemTypeSelector />}
 
       {/* بطاقة خيارات متقدمة */}
       <Card>
