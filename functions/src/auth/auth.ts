@@ -166,7 +166,9 @@ export const updateUserPermissionsHttp = functions.region('us-central1').https.o
 /**
  * دالة HTTP لتعيين حالة تعطيل المستخدم
  * تتطلب أن يكون المستدعي مالكًا أو مسؤولًا
+ * تم تعطيلها مؤقتًا لتقليل استهلاك الموارد - استخدم setUserDisabledStatus بدلاً منها
  */
+/*
 export const setUserDisabledStatusHttp = functions.region('us-central1').https.onRequest(async (req, res) => {
   // إعداد CORS
   corsHandler(req, res, async () => {
@@ -222,11 +224,14 @@ export const setUserDisabledStatusHttp = functions.region('us-central1').https.o
     }
   });
 });
+*/
 
 /**
  * دالة HTTP لتعيين دور المسؤول للمستخدم
  * تتطلب أن يكون المستدعي مالكًا
+ * تم تعطيلها مؤقتًا لتقليل استهلاك الموارد - استخدم setAdminRole بدلاً منها
  */
+/*
 export const setAdminRoleHttp = functions.region('us-central1').https.onRequest(async (req, res) => {
   // إعداد CORS
   corsHandler(req, res, async () => {
@@ -294,11 +299,14 @@ export const setAdminRoleHttp = functions.region('us-central1').https.onRequest(
     }
   });
 });
+*/
 
 /**
  * دالة HTTP لإنشاء مستخدم جديد
  * تتطلب أن يكون المستدعي مالكًا أو مسؤولًا
+ * تم تعطيلها مؤقتًا لتقليل استهلاك الموارد - استخدم createUser بدلاً منها
  */
+/*
 export const createUserHttp = functions.region('us-central1').https.onRequest(async (req, res) => {
   // إعداد CORS
   corsHandler(req, res, async () => {
@@ -398,3 +406,4 @@ export const createUserHttp = functions.region('us-central1').https.onRequest(as
     }
   });
 });
+*/

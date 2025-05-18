@@ -12,11 +12,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { collection, getDocs, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { UserRole } from '@/types/roles';
 import { CreateUserDialog } from '@/components/admin/CreateUserDialog';
 import { UserDetailsDialog } from '@/components/admin/UserDetailsDialog';
 import { ManagedUser } from '@/types/user';
 import { useToast } from '@/hooks/use-toast';
+
+// تهيئة Firebase Functions
+const functionsInstance = getFunctions();
 
 export default function UsersPage() {
   const { user, refreshUserData } = useAuth();
@@ -49,28 +53,19 @@ export default function UsersPage() {
       try {
         setLoading(true);
 
-        // الحصول على رمز المصادقة للمستخدم الحالي
-        const idToken = await user.getIdToken();
-
       if (organizationId) {
         console.log(`Fetching users for organization: ${organizationId}`);
 
-        // استخدام وظيفة getOrganizationMembersHttp للحصول على أعضاء المؤسسة
-        const response = await fetch(`https://us-central1-tasks-intelligence.cloudfunctions.net/getOrganizationMembersHttp?orgId=${organizationId}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${idToken}`
-          }
-        });
+        // استخدام وظيفة getOrganizationMembers للحصول على أعضاء المؤسسة
+        const getOrganizationMembersFn = httpsCallable<{ orgId: string }, { members: any[] }>(functionsInstance, 'getOrganizationMembers');
+        const result = await getOrganizationMembersFn({ orgId: organizationId });
 
-        if (!response.ok) {
-          throw new Error(`فشل في جلب أعضاء المؤسسة: ${await response.text()}`);
+        if (!result.data || !result.data.members) {
+          throw new Error('فشل في جلب أعضاء المؤسسة: لم يتم استلام بيانات صحيحة');
         }
 
-        const data = await response.json();
-
         // تحويل البيانات إلى تنسيق ManagedUser
-        const orgUsers = data.members.map((member: any) => ({
+        const orgUsers = result.data.members.map((member: any) => ({
           uid: member.uid,
           email: member.email || '',
           role: member.role || 'user',
@@ -86,22 +81,16 @@ export default function UsersPage() {
       } else if (isOwner) {
         console.log('Fetching all users (owner view)');
 
-        // استخدام وظيفة listUsersHttp للحصول على جميع المستخدمين
-        const response = await fetch('https://us-central1-tasks-intelligence.cloudfunctions.net/listUsersHttp', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${idToken}`
-          }
-        });
+        // استخدام وظيفة listFirebaseUsers للحصول على جميع المستخدمين
+        const listFirebaseUsersFn = httpsCallable<{}, { users: any[] }>(functionsInstance, 'listFirebaseUsers');
+        const result = await listFirebaseUsersFn({});
 
-        if (!response.ok) {
-          throw new Error(`فشل في جلب قائمة المستخدمين: ${await response.text()}`);
+        if (!result.data || !result.data.users) {
+          throw new Error('فشل في جلب قائمة المستخدمين: لم يتم استلام بيانات صحيحة');
         }
 
-        const data = await response.json();
-
         // تحويل البيانات إلى تنسيق ManagedUser
-        const allUsers = data.users.map((user: any) => ({
+        const allUsers = result.data.users.map((user: any) => ({
           uid: user.uid,
           email: user.email || '',
           role: (user.customClaims?.role as UserRole) || 'user',
@@ -134,7 +123,7 @@ export default function UsersPage() {
 
     fetchUsers();
 
-    // لا نحتاج إلى مستمع للتغييرات بعد الآن، لأننا نستخدم وظائف HTTP
+    // لا نحتاج إلى مستمع للتغييرات بعد الآن، لأننا نستخدم وظائف Callable
     return () => {};
   }, [user, hasViewPermission, toast]);
 
@@ -213,23 +202,13 @@ export default function UsersPage() {
     }
 
     try {
-      // الحصول على رمز المصادقة للمستخدم الحالي
-      const idToken = await user.getIdToken();
-
-      // إرسال طلب إلى وظيفة Firebase
-      const response = await fetch('https://us-central1-tasks-intelligence.cloudfunctions.net/createUserHttp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify(userData)
-      });
+      // استخدام وظيفة createUser
+      const createUserFn = httpsCallable<any, { uid?: string; error?: string }>(functionsInstance, 'createUser');
+      const result = await createUserFn(userData);
 
       // التحقق من نجاح العملية
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'فشل إنشاء المستخدم');
+      if (result.data?.error) {
+        throw new Error(result.data.error);
       }
 
       toast({
@@ -237,7 +216,64 @@ export default function UsersPage() {
         description: `تم إنشاء المستخدم ${userData.email} بنجاح.`,
       });
 
-      // لا نحتاج لتحديث القائمة يدويًا لأن المستمع سيقوم بذلك تلقائيًا
+      // تحديث قائمة المستخدمين
+      const fetchUsers = async () => {
+        // استدعاء وظيفة fetchUsers لتحديث القائمة
+        if (user && hasViewPermission) {
+          setLoading(true);
+          try {
+            // نفس الكود الموجود في useEffect
+            const userClaims = (user as any).customClaims;
+            const organizationId = userClaims?.organizationId;
+            const isOwner = userClaims?.owner === true;
+
+            if (organizationId) {
+              const getOrganizationMembersFn = httpsCallable<{ orgId: string }, { members: any[] }>(functionsInstance, 'getOrganizationMembers');
+              const result = await getOrganizationMembersFn({ orgId: organizationId });
+
+              if (result.data?.members) {
+                const orgUsers = result.data.members.map((member: any) => ({
+                  uid: member.uid,
+                  email: member.email || '',
+                  role: member.role || 'user',
+                  name: member.name || '',
+                  disabled: false,
+                  customPermissions: [],
+                  isAdmin: member.role === 'admin' || member.role === 'owner',
+                  accountType: 'organization',
+                  organizationId
+                }));
+                setUsers(orgUsers);
+              }
+            } else if (isOwner) {
+              const listFirebaseUsersFn = httpsCallable<{}, { users: any[] }>(functionsInstance, 'listFirebaseUsers');
+              const result = await listFirebaseUsersFn({});
+
+              if (result.data?.users) {
+                const allUsers = result.data.users.map((user: any) => ({
+                  uid: user.uid,
+                  email: user.email || '',
+                  role: (user.customClaims?.role as UserRole) || 'user',
+                  name: user.displayName || '',
+                  disabled: user.disabled || false,
+                  customPermissions: user.customClaims?.customPermissions || [],
+                  isAdmin: user.customClaims?.admin === true || user.customClaims?.role === 'admin',
+                  accountType: user.customClaims?.accountType || 'individual',
+                  organizationId: user.customClaims?.organizationId
+                }));
+                setUsers(allUsers);
+              }
+            }
+          } catch (error) {
+            console.error('Error refreshing users:', error);
+          } finally {
+            setLoading(false);
+          }
+        }
+      };
+
+      // تحديث القائمة
+      fetchUsers();
     } catch (error: any) {
       console.error('Error creating user:', error);
       toast({
@@ -262,29 +298,26 @@ export default function UsersPage() {
     const isCurrentUser = userId === user.uid;
 
     try {
-      // الحصول على رمز المصادقة للمستخدم الحالي
-      const idToken = await user.getIdToken();
-
       // تحديد الوظيفة المناسبة بناءً على نوع التحديث
-      let functionUrl = '';
+      let functionName = '';
       let requestData = {};
       let isRoleUpdate = false;
 
       if ('role' in userData) {
-        functionUrl = 'https://us-central1-tasks-intelligence.cloudfunctions.net/updateUserRoleHttp';
+        functionName = 'updateUserRole';
         requestData = {
           uid: userId,
           role: userData.role
         };
         isRoleUpdate = true;
       } else if ('customPermissions' in userData) {
-        functionUrl = 'https://us-central1-tasks-intelligence.cloudfunctions.net/updateUserPermissionsHttp';
+        functionName = 'updateUserPermissions';
         requestData = {
           uid: userId,
           permissions: userData.customPermissions
         };
       } else if ('disabled' in userData) {
-        functionUrl = 'https://us-central1-tasks-intelligence.cloudfunctions.net/toggleUserStatusHttp';
+        functionName = 'setUserDisabledStatus';
         requestData = {
           uid: userId,
           disabled: userData.disabled
@@ -293,20 +326,13 @@ export default function UsersPage() {
         throw new Error('نوع التحديث غير معروف');
       }
 
-      // إرسال طلب إلى وظيفة Firebase
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify(requestData)
-      });
+      // استدعاء الوظيفة المناسبة
+      const updateFn = httpsCallable<any, { result?: string; error?: string }>(functionsInstance, functionName);
+      const result = await updateFn(requestData);
 
       // التحقق من نجاح العملية
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'فشل تحديث بيانات المستخدم');
+      if (result.data?.error) {
+        throw new Error(result.data.error);
       }
 
       toast({
@@ -328,7 +354,64 @@ export default function UsersPage() {
         });
       }
 
-      // لا نحتاج لتحديث القائمة يدويًا لأن المستمع سيقوم بذلك تلقائيًا
+      // تحديث قائمة المستخدمين
+      const fetchUsers = async () => {
+        // استدعاء وظيفة fetchUsers لتحديث القائمة
+        if (user && hasViewPermission) {
+          setLoading(true);
+          try {
+            // نفس الكود الموجود في useEffect
+            const userClaims = (user as any).customClaims;
+            const organizationId = userClaims?.organizationId;
+            const isOwner = userClaims?.owner === true;
+
+            if (organizationId) {
+              const getOrganizationMembersFn = httpsCallable<{ orgId: string }, { members: any[] }>(functionsInstance, 'getOrganizationMembers');
+              const result = await getOrganizationMembersFn({ orgId: organizationId });
+
+              if (result.data?.members) {
+                const orgUsers = result.data.members.map((member: any) => ({
+                  uid: member.uid,
+                  email: member.email || '',
+                  role: member.role || 'user',
+                  name: member.name || '',
+                  disabled: false,
+                  customPermissions: [],
+                  isAdmin: member.role === 'admin' || member.role === 'owner',
+                  accountType: 'organization',
+                  organizationId
+                }));
+                setUsers(orgUsers);
+              }
+            } else if (isOwner) {
+              const listFirebaseUsersFn = httpsCallable<{}, { users: any[] }>(functionsInstance, 'listFirebaseUsers');
+              const result = await listFirebaseUsersFn({});
+
+              if (result.data?.users) {
+                const allUsers = result.data.users.map((user: any) => ({
+                  uid: user.uid,
+                  email: user.email || '',
+                  role: (user.customClaims?.role as UserRole) || 'user',
+                  name: user.displayName || '',
+                  disabled: user.disabled || false,
+                  customPermissions: user.customClaims?.customPermissions || [],
+                  isAdmin: user.customClaims?.admin === true || user.customClaims?.role === 'admin',
+                  accountType: user.customClaims?.accountType || 'individual',
+                  organizationId: user.customClaims?.organizationId
+                }));
+                setUsers(allUsers);
+              }
+            }
+          } catch (error) {
+            console.error('Error refreshing users:', error);
+          } finally {
+            setLoading(false);
+          }
+        }
+      };
+
+      // تحديث القائمة
+      fetchUsers();
     } catch (error: any) {
       console.error('Error updating user:', error);
       toast({

@@ -6,7 +6,7 @@ import {
   Home, FileText, Settings, LogOut, PlusCircle, ListTodo, ListChecks,
   Edit3, ListPlus, TestTubeDiagonal, Menu, Shield, UserCircle,
   BarChart3, Filter, Users, Wrench, Database, Layers, Building,
-  Bell, Wand2, Target, Bug
+  Bell, Wand2, Target, Bug, BookOpen
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -454,6 +454,15 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                   label="التشخيص"
                   tooltip="صفحة التشخيص وإصلاح المشاكل"
                   requiredRole="owner"
+                />
+
+                {/* رابط صفحة الوثائق */}
+                <PermissionSidebarItem
+                  href="/documentation"
+                  icon={BookOpen}
+                  label="الوثائق"
+                  tooltip="وثائق النظام"
+                  requiredPermission={{ area: 'users', action: 'view' }}
                 />
             </SidebarMenu>
             </SidebarContent>

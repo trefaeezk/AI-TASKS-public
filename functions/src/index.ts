@@ -9,11 +9,11 @@
  */
 
 import * as functions from "firebase-functions";
-import { onRequest } from "firebase-functions/v2/https";
+// import { onRequest } from "firebase-functions/v2/https"; // No se usa después de eliminar las funciones HTTP duplicadas
 import * as admin from "firebase-admin";
-import cors from "cors";
+// import cors from "cors"; // No se usa después de eliminar las funciones HTTP
 import { db } from './shared/utils';
-import { createCallableFunction, createHttpFunction, LegacyCallableContext } from './shared/function-utils';
+import { createCallableFunction, LegacyCallableContext } from './shared/function-utils';
 
 // تصدير وظائف الذكاء الاصطناعي
 export * from './ai';
@@ -21,8 +21,8 @@ export * from './ai';
 // تصدير وظائف المصادقة
 export * from './auth';
 
-// Initialize CORS middleware with options
-const corsHandler = cors({ origin: true });
+// تصدير وظائف البريد الإلكتروني والتشخيص
+export * from './email';
 
 /**
  * Checks if the calling user is an authenticated admin.
@@ -246,69 +246,8 @@ export const setAdminRole = createCallableFunction<SetAdminRoleRequest>(async (r
     }
 });
 
-// HTTP version with CORS support
-export const setAdminRoleHttp = createHttpFunction(async (req, res) => {
-    const functionName = 'setAdminRoleHttp';
-
-    // Handle CORS
-    corsHandler(req, res, async () => {
-        console.log(`--- ${functionName} Cloud Function triggered ---`);
-        console.log(`${functionName} called with method:`, req.method);
-
-        // Handle preflight OPTIONS request
-        if (req.method === 'OPTIONS') {
-            res.status(204).send('');
-            return;
-        }
-
-        // Only allow POST requests
-        if (req.method !== 'POST') {
-            res.status(405).send('Method Not Allowed');
-            return;
-        }
-
-        try {
-            // Get auth token from Authorization header
-            const authHeader = req.headers.authorization;
-            if (!authHeader || !authHeader.startsWith('Bearer ')) {
-                res.status(401).json({ error: 'Unauthorized: No token provided' });
-                return;
-            }
-
-            const idToken = authHeader.split('Bearer ')[1];
-            const decodedToken = await admin.auth().verifyIdToken(idToken);
-
-            // Check admin claim
-            if (!decodedToken.admin) {
-                res.status(403).json({ error: 'Forbidden: Admin privileges required' });
-                return;
-            }
-
-            const { uid, isAdmin } = req.body;
-            if (!uid || typeof uid !== "string") {
-                res.status(400).json({ error: 'A valid user ID (UID) must be provided.' });
-                return;
-            }
-            if (typeof isAdmin !== "boolean") {
-                res.status(400).json({ error: 'A valid admin status (boolean) must be provided.' });
-                return;
-            }
-
-            console.log(`Attempting to set admin=${isAdmin} for user ${uid} by admin ${decodedToken.uid}`);
-            await admin.auth().setCustomUserClaims(uid, { admin: isAdmin ? true : null });
-            console.log(`Successfully set admin=${isAdmin} for user ${uid}.`);
-
-            res.status(200).json({ result: `Successfully set admin=${isAdmin} for user ${uid}.` });
-
-        } catch (error: any) {
-            console.error(`Error in ${functionName}:`, error);
-            res.status(500).json({
-                error: `Failed to set admin role: ${error.message || 'Unknown internal server error.'}`,
-                code: error.code || 'unknown'
-            });
-        }
-    });
-});
+// HTTP version with CORS support - تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
+// export const setAdminRoleHttp = createHttpFunction(...);
 
 /**
  * نوع بيانات طلب تعيين حالة تعطيل المستخدم
@@ -370,69 +309,8 @@ export const setUserDisabledStatus = createCallableFunction<SetUserDisabledStatu
     }
 });
 
-// HTTP version with CORS support
-export const setUserDisabledStatusHttp = createHttpFunction(async (req, res) => {
-    const functionName = 'setUserDisabledStatusHttp';
-
-    // Handle CORS
-    corsHandler(req, res, async () => {
-        console.log(`--- ${functionName} Cloud Function triggered ---`);
-        console.log(`${functionName} called with method:`, req.method);
-
-        // Handle preflight OPTIONS request
-        if (req.method === 'OPTIONS') {
-            res.status(204).send('');
-            return;
-        }
-
-        // Only allow POST requests
-        if (req.method !== 'POST') {
-            res.status(405).send('Method Not Allowed');
-            return;
-        }
-
-        try {
-            // Get auth token from Authorization header
-            const authHeader = req.headers.authorization;
-            if (!authHeader || !authHeader.startsWith('Bearer ')) {
-                res.status(401).json({ error: 'Unauthorized: No token provided' });
-                return;
-            }
-
-            const idToken = authHeader.split('Bearer ')[1];
-            const decodedToken = await admin.auth().verifyIdToken(idToken);
-
-            // Check admin claim
-            if (!decodedToken.admin) {
-                res.status(403).json({ error: 'Forbidden: Admin privileges required' });
-                return;
-            }
-
-            const { uid, disabled } = req.body;
-            if (!uid || typeof uid !== "string") {
-                res.status(400).json({ error: 'A valid user ID (UID) must be provided.' });
-                return;
-            }
-            if (typeof disabled !== "boolean") {
-                res.status(400).json({ error: 'A valid disabled status (boolean) must be provided.' });
-                return;
-            }
-
-            console.log(`Attempting to set disabled=${disabled} for user ${uid} by admin ${decodedToken.uid}`);
-            await admin.auth().updateUser(uid, { disabled });
-            console.log(`Successfully set disabled=${disabled} for user ${uid}.`);
-
-            res.status(200).json({ result: `Successfully set disabled=${disabled} for user ${uid}.` });
-
-        } catch (error: any) {
-            console.error(`Error in ${functionName}:`, error);
-            res.status(500).json({
-                error: `Failed to set disabled status: ${error.message || 'Unknown internal server error.'}`,
-                code: error.code || 'unknown'
-            });
-        }
-    });
-});
+// HTTP version with CORS support - تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
+// export const setUserDisabledStatusHttp = createHttpFunction(...);
 
 /**
  * نوع بيانات طلب إنشاء مستخدم جديد
@@ -605,249 +483,10 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
     }
 });
 
-// HTTP version with CORS support
-export const createUserHttp = createHttpFunction(async (req, res) => {
-    const functionName = 'createUserHttp';
-
-    // Handle CORS
-    corsHandler(req, res, async () => {
-        console.log(`--- ${functionName} Cloud Function triggered ---`);
-        console.log(`${functionName} called with method:`, req.method);
-
-        // Handle preflight OPTIONS request
-        if (req.method === 'OPTIONS') {
-            res.status(204).send('');
-            return;
-        }
-
-        // Only allow POST requests
-        if (req.method !== 'POST') {
-            res.status(405).json({ error: 'Method Not Allowed' });
-            return;
-        }
-
-        try {
-            // Get auth token from Authorization header
-            const authHeader = req.headers.authorization;
-            if (!authHeader || !authHeader.startsWith('Bearer ')) {
-                res.status(401).json({ error: 'Unauthorized: No token provided' });
-                return;
-            }
-
-            const idToken = authHeader.split('Bearer ')[1];
-            const decodedToken = await admin.auth().verifyIdToken(idToken);
-
-            // Check admin claim
-            if (!decodedToken.admin) {
-                res.status(403).json({ error: 'Forbidden: Admin privileges required' });
-                return;
-            }
-
-            const { email, password, name, role, accountType, organizationId } = req.body;
-
-            // التحقق من نوع الحساب والمؤسسة
-            const callerOrganizationId = decodedToken.organizationId;
-            const callerAccountType = decodedToken.accountType;
-
-            // إذا كان المستخدم مسؤول مؤسسة، يجب أن يضيف مستخدمين للمؤسسة نفسها فقط
-            if (callerAccountType === 'organization' && callerOrganizationId) {
-                // لا يمكن لمسؤول المؤسسة إنشاء مستخدم مستقل
-                if (accountType === 'individual' || role === 'independent') {
-                    res.status(403).json({ error: 'لا يمكن لمسؤول المؤسسة إنشاء مستخدم مستقل' });
-                    return;
-                }
-
-                // لا يمكن لمسؤول المؤسسة إنشاء مستخدم لمؤسسة أخرى
-                if (organizationId && organizationId !== callerOrganizationId) {
-                    res.status(403).json({ error: 'لا يمكن لمسؤول المؤسسة إنشاء مستخدم لمؤسسة أخرى' });
-                    return;
-                }
-
-                // إذا لم يتم تحديد معرف المؤسسة، استخدم معرف مؤسسة المستخدم الحالي
-                const effectiveOrgId = organizationId || callerOrganizationId;
-
-                console.log(`Organization admin ${decodedToken.uid} creating user for organization ${effectiveOrgId}`);
-            }
-
-            // Basic input validation
-            if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                res.status(400).json({ error: 'A valid email must be provided.' });
-                return;
-            }
-            if (!password || typeof password !== "string" || password.length < 6) {
-                res.status(400).json({ error: 'A valid password (at least 6 characters) must be provided.' });
-                return;
-            }
-            if (!name || typeof name !== "string") {
-                res.status(400).json({ error: 'A valid name must be provided.' });
-                return;
-            }
-
-            // Validate role - now supporting extended roles
-            const validRoles = ['owner', 'admin', 'individual_admin', 'engineer', 'supervisor', 'technician', 'assistant', 'user', 'independent'];
-            if (!role || typeof role !== "string" || !validRoles.includes(role)) {
-                res.status(400).json({
-                    error: `A valid role must be provided. Valid roles are: ${validRoles.join(', ')}`
-                });
-                return;
-            }
-
-            // إذا كان نوع الحساب فردي، نتأكد من أن الدور هو 'independent'
-            let effectiveRole = role;
-            if (accountType === 'individual' && role !== 'independent' && role !== 'owner' && role !== 'admin' && role !== 'individual_admin') {
-                console.log(`${functionName}: Changing role from '${role}' to 'independent' for individual account type`);
-                effectiveRole = 'independent';
-            }
-
-            // التحقق من أن المستدعي مالك إذا كان يحاول إنشاء مستخدم بدور مالك أو مسؤول
-            if ((role === 'owner' || role === 'admin') && !decodedToken.owner) {
-                res.status(403).json({ error: 'فقط المالك يمكنه إنشاء مستخدمين بدور مالك أو مسؤول.' });
-                return;
-            }
-
-            // التحقق من نوع الحساب
-            if (!accountType || (accountType !== 'organization' && accountType !== 'individual')) {
-                res.status(400).json({ error: 'يجب تحديد نوع الحساب (organization أو individual).' });
-                return;
-            }
-
-            // إذا كان المستخدم مسؤول مؤسسة، يجب أن يضيف مستخدمين للمؤسسة نفسها فقط
-            if (decodedToken.accountType === 'organization' && decodedToken.organizationId) {
-                // لا يمكن لمسؤول المؤسسة إنشاء مستخدم مستقل
-                if (accountType === 'individual' || role === 'independent') {
-                    res.status(403).json({ error: 'لا يمكن لمسؤول المؤسسة إنشاء مستخدم مستقل.' });
-                    return;
-                }
-
-                // لا يمكن لمسؤول المؤسسة إنشاء مستخدم لمؤسسة أخرى
-                if (organizationId && organizationId !== decodedToken.organizationId) {
-                    res.status(403).json({ error: 'لا يمكن لمسؤول المؤسسة إنشاء مستخدم لمؤسسة أخرى.' });
-                    return;
-                }
-            }
-
-            // تحديد نوع الحساب والمؤسسة
-            let effectiveAccountType = accountType;
-            let effectiveOrgId = organizationId;
-
-            // إذا كان المستخدم مسؤول مؤسسة، نضمن أن المستخدم الجديد ينتمي لنفس المؤسسة
-            if (decodedToken.accountType === 'organization' && decodedToken.organizationId) {
-                effectiveAccountType = 'organization'; // إجبار نوع الحساب ليكون مؤسسة
-                effectiveOrgId = decodedToken.organizationId; // استخدام معرف مؤسسة المستخدم الحالي
-                console.log(`Forcing organization account type and organization ID ${effectiveOrgId} for new user`);
-            }
-
-            console.log(`Attempting to create user ${email} with role ${effectiveRole} by admin ${decodedToken.uid}`);
-            console.log(`Account type: ${effectiveAccountType}, Organization ID: ${effectiveOrgId || 'N/A'}`);
-
-            const userRecord = await admin.auth().createUser({ email, password, displayName: name });
-            console.log(`User ${email} created with UID ${userRecord.uid}.`);
-
-            // تعيين الخصائص حسب الدور
-            const customClaims: Record<string, any> = {
-                role: effectiveRole,
-                accountType: effectiveAccountType
-            };
-
-            // إضافة معرف المؤسسة إذا كان نوع الحساب مؤسسة
-            if (effectiveAccountType === 'organization' && effectiveOrgId) {
-                customClaims.organizationId = effectiveOrgId;
-            }
-
-            if (role === 'owner') {
-                customClaims.owner = true;
-                customClaims.admin = true; // المالك هو مسؤول أيضًا
-                console.log(`Setting owner and admin claims for user ${userRecord.uid}.`);
-            } else if (role === 'admin') {
-                customClaims.admin = true;
-                console.log(`Setting admin claim for user ${userRecord.uid}.`);
-            } else if (role === 'individual_admin') {
-                customClaims.individual_admin = true;
-                console.log(`Setting individual_admin claim for user ${userRecord.uid}.`);
-            } else {
-                console.log(`Setting role claim '${role}' for user ${userRecord.uid}.`);
-            }
-
-            await admin.auth().setCustomUserClaims(userRecord.uid, customClaims);
-
-            // Save additional user data in Firestore
-            console.log(`Saving user data to Firestore for user ${userRecord.uid}`);
-
-            // إنشاء كائن userData مع الخصائص الأساسية
-            const userData: Record<string, any> = {
-                name: name,
-                email: email,
-                role: effectiveRole,
-                accountType: effectiveAccountType,
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                createdBy: decodedToken.uid
-            };
-
-            // إضافة معلومات المؤسسة إذا كان نوع الحساب مؤسسة
-            if (effectiveAccountType === 'organization' && effectiveOrgId) {
-                userData.organizationId = effectiveOrgId;
-            }
-
-            await db.collection('users').doc(userRecord.uid).set(userData);
-
-            // إذا كان المستخدم ينتمي لمؤسسة، أضفه كعضو في المؤسسة
-            if (effectiveAccountType === 'organization' && effectiveOrgId) {
-                try {
-                    // التحقق من وجود المؤسسة
-                    const orgDoc = await db.collection('organizations').doc(effectiveOrgId).get();
-                    if (!orgDoc.exists) {
-                        console.error(`Organization ${effectiveOrgId} does not exist`);
-                        res.status(400).json({ error: `المؤسسة غير موجودة` });
-                        return;
-                    }
-
-                    // إضافة المستخدم كعضو في المؤسسة
-                    await db.collection('organizations').doc(effectiveOrgId).collection('members').doc(userRecord.uid).set({
-                        role: effectiveRole,
-                        joinedAt: admin.firestore.FieldValue.serverTimestamp(),
-                        addedBy: decodedToken.uid
-                    });
-
-                    console.log(`Added user ${userRecord.uid} as member of organization ${effectiveOrgId}`);
-
-                    // إضافة معلومات المؤسسة إلى وثيقة المستخدم
-                    const orgData = orgDoc.data();
-                    await db.collection('users').doc(userRecord.uid).update({
-                        organizationName: orgData?.name || '',
-                        organizationRole: effectiveRole
-                    });
-
-                    console.log(`Updated user ${userRecord.uid} with organization info`);
-                } catch (error) {
-                    console.error(`Error adding user to organization: ${error}`);
-                    // نستمر في العملية حتى لو فشلت إضافة المستخدم للمؤسسة
-                }
-            }
-
-            console.log(`Successfully created user ${email} (UID: ${userRecord.uid}) with role '${effectiveRole}'.`);
-            res.status(200).json({ uid: userRecord.uid });
-
-        } catch (error: any) {
-            console.error(`Error in ${functionName}:`, error);
-
-            let statusCode = 500;
-            let errorMessage = `Failed to create user: ${error.message || 'Unknown internal server error.'}`;
-
-            if (error.code === 'auth/email-already-exists') {
-                statusCode = 400;
-                errorMessage = 'فشل إنشاء المستخدم: البريد الإلكتروني مستخدم بالفعل.';
-            } else if (error.code === 'auth/invalid-password') {
-                statusCode = 400;
-                errorMessage = 'فشل إنشاء المستخدم: كلمة المرور غير صالحة (يجب أن تكون 6 أحرف على الأقل).';
-            }
-
-            res.status(statusCode).json({
-                error: errorMessage,
-                code: error.code || 'unknown'
-            });
-        }
-    });
-});
+// HTTP version with CORS support - تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
+// export const createUserHttp = createHttpFunction(async (req, res) => {
+//     // Function body removed to reduce resource usage
+// });
 
 
 /**
@@ -938,7 +577,20 @@ export * from './roles';
 export * from './system';
 
 // Import and export individual user functions
-export * from './individual';
+// تصدير كل الوظائف من ملف individual باستثناء importIndividualData
+import {
+  getIndividualUserData,
+  updateIndividualUserData,
+  exportIndividualData
+  // importIndividualData تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
+  // createIndividualUser تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
+} from './individual';
+
+export {
+  getIndividualUserData,
+  updateIndividualUserData,
+  exportIndividualData
+};
 
 // Import and export organization functions
 // Exportamos todo excepto las funciones que causan conflicto
@@ -949,7 +601,7 @@ export {
   addOrganizationMember,
   removeOrganizationMember,
   getOrganizationMembers,
-  getOrganizationMembersHttp,
+  // getOrganizationMembersHttp, // تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
   requestOrganization,
   approveOrganizationRequest,
   rejectOrganizationRequest,
@@ -959,7 +611,7 @@ export {
   createOkrPeriod,
   getOkrPeriods,
   updateOkrPeriod,
-  deleteOkrPeriod,
+  // deleteOkrPeriod, // تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
   createObjective,
   createKeyResult,
   getKeyResultsByObjective,
@@ -978,254 +630,22 @@ export {
   exportOkrToExcel
 } from './organization';
 
-// Import and export authentication functions
-export * from './auth';
-
-// Import and export AI functions
-export * from './ai';
+// وظائف المصادقة والذكاء الاصطناعي تم تصديرها بالفعل في بداية الملف
 
 /**
  * دالة لتعيين المستخدم كمالك بشكل مباشر
- * لا تتطلب أي صلاحيات (مؤقتًا لحل المشكلة)
+ * تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
  */
-export const setOwnerDirectHttp = onRequest(async (req, res) => {
-    // إعداد CORS
-    corsHandler(req, res, async () => {
-        console.log("[setOwnerDirectHttp] Function called");
-
-        try {
-            // التحقق من المصادقة
-            if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer ')) {
-                console.error("[setOwnerDirectHttp] No authorization token provided");
-                res.status(401).json({ error: 'يجب توفير رمز المصادقة.' });
-                return;
-            }
-
-            const idToken = req.headers.authorization.split('Bearer ')[1];
-            const decodedToken = await admin.auth().verifyIdToken(idToken);
-            const uid = req.query.uid as string || decodedToken.uid;
-
-            if (!uid) {
-                console.error("[setOwnerDirectHttp] No user ID provided");
-                res.status(400).json({ error: 'يجب توفير معرف المستخدم.' });
-                return;
-            }
-
-            // تعيين المستخدم كمالك
-            console.log(`[setOwnerDirectHttp] Setting user ${uid} as owner`);
-
-            // الحصول على معلومات المستخدم الحالية
-            const userRecord = await admin.auth().getUser(uid);
-            const currentClaims = userRecord.customClaims || {};
-
-            // تعيين خاصية owner مع الحفاظ على الخصائص الأخرى
-            const newClaims = {
-                ...currentClaims,
-                owner: true,
-                admin: true,
-                role: 'owner'
-            };
-
-            // تحديث custom claims
-            await admin.auth().setCustomUserClaims(uid, newClaims);
-
-            // تحديث وثيقة المستخدم في Firestore
-            await db.collection('users').doc(uid).update({
-                role: 'owner',
-                isOwner: true,
-                isAdmin: true,
-                updatedAt: new Date()
-            });
-
-            res.status(200).json({
-                success: true,
-                message: 'تم تعيين المستخدم كمالك بنجاح.',
-                claims: newClaims
-            });
-
-        } catch (error: any) {
-            console.error("[setOwnerDirectHttp] Error:", error);
-            res.status(500).json({ error: `حدث خطأ أثناء تعيين المستخدم كمالك: ${error.message}` });
-        }
-    });
-});
+// export const setOwnerDirectHttp = onRequest(...);
 
 /**
  * دالة لجلب قائمة المستخدمين من Firebase Authentication
- * تتطلب أن يكون المستدعي مالكًا أو مسؤولًا
- * إذا كان المستدعي مالكًا، يتم عرض جميع المستخدمين
- * إذا كان المستدعي مسؤولًا في مؤسسة، يتم عرض مستخدمي المؤسسة فقط
+ * تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
  */
-export const listUsersHttp = onRequest(async (req, res) => {
-    // إعداد CORS
-    corsHandler(req, res, async () => {
-        console.log("[listUsersHttp] Function called");
-
-        try {
-            // التحقق من المصادقة
-            if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer ')) {
-                console.error("[listUsersHttp] No authorization token provided");
-                res.status(401).json({ error: 'يجب توفير رمز المصادقة.' });
-                return;
-            }
-
-            const idToken = req.headers.authorization.split('Bearer ')[1];
-            const decodedToken = await admin.auth().verifyIdToken(idToken);
-
-            // التحقق من صلاحيات المستخدم
-            if (!decodedToken.owner && !decodedToken.admin) {
-                console.error(`[listUsersHttp] User ${decodedToken.uid} is not an owner or admin`);
-                res.status(403).json({ error: 'يجب أن تكون مالكًا أو مسؤولًا للوصول إلى هذه الوظيفة.' });
-                return;
-            }
-
-            // جلب قائمة المستخدمين
-            const userRecords = await admin.auth().listUsers();
-            let filteredUsers: admin.auth.UserRecord[] = [];
-
-            // إذا كان المستخدم مالكًا، يمكنه رؤية جميع المستخدمين
-            if (decodedToken.owner) {
-                console.log(`[listUsersHttp] User ${decodedToken.uid} is an owner, showing all users`);
-                filteredUsers = userRecords.users;
-            }
-            // إذا كان المستخدم مسؤولًا في مؤسسة، يمكنه رؤية مستخدمي المؤسسة فقط
-            else if (decodedToken.admin && decodedToken.organizationId) {
-                console.log(`[listUsersHttp] User ${decodedToken.uid} is an admin in organization ${decodedToken.organizationId}, filtering users`);
-
-                // الحصول على قائمة أعضاء المؤسسة
-                const membersSnapshot = await db.collection('organizations')
-                    .doc(decodedToken.organizationId)
-                    .collection('members')
-                    .get();
-
-                const memberIds = new Set(membersSnapshot.docs.map(doc => doc.id));
-
-                // فلترة المستخدمين حسب العضوية في المؤسسة
-                filteredUsers = userRecords.users.filter(user => {
-                    // التحقق من أن المستخدم عضو في المؤسسة
-                    const isMember = memberIds.has(user.uid);
-
-                    // التحقق من أن المستخدم ينتمي للمؤسسة في custom claims
-                    const userClaims = user.customClaims || {};
-                    const isOrgMember = userClaims.organizationId === decodedToken.organizationId;
-
-                    return isMember || isOrgMember;
-                });
-            }
-            // إذا كان المستخدم مسؤولًا عامًا (غير منتمي لمؤسسة)، يمكنه رؤية المستخدمين المستقلين فقط
-            else if (decodedToken.admin) {
-                console.log(`[listUsersHttp] User ${decodedToken.uid} is a general admin, showing individual users only`);
-
-                // فلترة المستخدمين المستقلين فقط
-                filteredUsers = userRecords.users.filter(user => {
-                    const userClaims = user.customClaims || {};
-                    return userClaims.accountType === 'individual' || !userClaims.accountType;
-                });
-            }
-
-            // تحويل البيانات إلى تنسيق مناسب
-            const users = filteredUsers.map(user => ({
-                uid: user.uid,
-                email: user.email,
-                displayName: user.displayName,
-                disabled: user.disabled,
-                customClaims: user.customClaims
-            }));
-
-            res.status(200).json({ users });
-
-        } catch (error: any) {
-            console.error("[listUsersHttp] Error:", error);
-            res.status(500).json({ error: `حدث خطأ أثناء جلب قائمة المستخدمين: ${error.message}` });
-        }
-    });
-});
+// export const listUsersHttp = onRequest(...);
 
 /**
  * دالة لجلب معلومات مستخدم واحد بواسطة معرف المستخدم
- * تتطلب أن يكون المستدعي مالكًا أو مسؤولًا أو عضوًا في نفس المؤسسة
+ * تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
  */
-export const getUserHttp = onRequest(async (req, res) => {
-    // إعداد CORS
-    corsHandler(req, res, async () => {
-        console.log("[getUserHttp] Function called");
-
-        try {
-            // التحقق من المصادقة
-            if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer ')) {
-                console.error("[getUserHttp] No authorization token provided");
-                res.status(401).json({ error: 'يجب توفير رمز المصادقة.' });
-                return;
-            }
-
-            const idToken = req.headers.authorization.split('Bearer ')[1];
-            const decodedToken = await admin.auth().verifyIdToken(idToken);
-
-            // الحصول على معرف المستخدم المطلوب
-            const uid = req.query.uid as string;
-
-            if (!uid) {
-                console.error("[getUserHttp] No user ID provided");
-                res.status(400).json({ error: 'يجب توفير معرف المستخدم.' });
-                return;
-            }
-
-            console.log(`[getUserHttp] User ${decodedToken.uid} is requesting info for user ${uid}`);
-
-            // التحقق من صلاحيات المستخدم
-            // إذا كان المستخدم مالكًا أو مسؤولًا، يمكنه الوصول إلى أي مستخدم
-            if (!decodedToken.owner && !decodedToken.admin) {
-                // إذا كان المستخدم ليس مالكًا أو مسؤولًا، نتحقق من أنه يطلب معلومات مستخدم في نفس المؤسسة
-
-                // التحقق من أن المستخدم ينتمي لمؤسسة
-                if (!decodedToken.organizationId) {
-                    console.error(`[getUserHttp] User ${decodedToken.uid} is not in an organization and not an admin/owner`);
-                    res.status(403).json({ error: 'ليس لديك صلاحية للوصول إلى معلومات هذا المستخدم.' });
-                    return;
-                }
-
-                // التحقق من أن المستخدم المطلوب ينتمي لنفس المؤسسة
-                const memberDoc = await db.collection('organizations')
-                    .doc(decodedToken.organizationId)
-                    .collection('members')
-                    .doc(uid)
-                    .get();
-
-                if (!memberDoc.exists) {
-                    console.error(`[getUserHttp] User ${uid} is not in the same organization as ${decodedToken.uid}`);
-                    res.status(403).json({ error: 'ليس لديك صلاحية للوصول إلى معلومات هذا المستخدم.' });
-                    return;
-                }
-            }
-
-            // الحصول على معلومات المستخدم
-            const userRecord = await admin.auth().getUser(uid);
-
-            // الحصول على معلومات إضافية من Firestore
-            let firestoreData: any = null;
-            try {
-                const userDoc = await db.collection('users').doc(uid).get();
-                if (userDoc.exists) {
-                    firestoreData = userDoc.data() || null;
-                }
-            } catch (err) {
-                console.error(`[getUserHttp] Error fetching Firestore data for user ${uid}:`, err);
-            }
-
-            // دمج معلومات المستخدم
-            const userData = {
-                uid: userRecord.uid,
-                email: userRecord.email,
-                displayName: userRecord.displayName,
-                disabled: userRecord.disabled,
-                customClaims: userRecord.customClaims,
-                firestoreData
-            };
-
-            res.status(200).json(userData);
-        } catch (error: any) {
-            console.error("[getUserHttp] Error:", error);
-            res.status(500).json({ error: `حدث خطأ أثناء جلب معلومات المستخدم: ${error.message}` });
-        }
-    });
-});
+// export const getUserHttp = onRequest(...);

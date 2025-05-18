@@ -32,23 +32,46 @@ export function DebugAuthDialog({ isOpen, onAuthenticated }: DebugAuthDialogProp
     setError(false);
 
     try {
-      const response = await fetch('/api/debug/generate-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      // استخدام Firebase Functions مباشرة
+      const { httpsCallable } = await import('firebase/functions');
+      const { getFunctions } = await import('firebase/functions');
+      const { app } = await import('@/config/firebase');
+
+      // تهيئة Firebase Functions
+      const functions = getFunctions(app);
+
+      console.log('Calling generateAndSendOTP function...');
+      console.log('Firebase Functions instance:', functions);
+      const generateAndSendOTP = httpsCallable(functions, 'generateAndSendOTP');
+      console.log('Function reference created, calling function...');
+      const result = await generateAndSendOTP({});
+      console.log('Function call result:', result);
+
+      // @ts-ignore
+      const data = result.data;
+
+      if (data.success) {
+        // إذا تم إرسال البريد الإلكتروني بنجاح، لا نعرض الرمز في الواجهة
+        if (data.emailSent) {
+          setGeneratedOTP(null);
+          setOtpExpiryTime(data.expiryTime);
+
+          toast({
+            title: 'تم إرسال رمز التحقق',
+            description: data.message,
+          });
+        } else {
+          // إذا فشل إرسال البريد الإلكتروني، نعرض الرمز في الواجهة مؤقتًا
+          // هذا للتطوير فقط، يجب إزالته في الإنتاج
+          setGeneratedOTP('******'); // لا نعرض الرمز الفعلي
+          setOtpExpiryTime(data.expiryTime);
+
+          toast({
+            title: 'تم إنشاء رمز التحقق',
+            description: 'تم إنشاء رمز التحقق ولكن فشل إرساله عبر البريد الإلكتروني. يرجى التحقق من بريدك الإلكتروني أو الاتصال بمسؤول النظام.',
+            variant: 'warning',
+          });
         }
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setGeneratedOTP(data.otp);
-        setOtpExpiryTime(data.expiryTime);
-
-        toast({
-          title: 'تم إنشاء رمز التحقق',
-          description: data.message,
-        });
       } else {
         setError(true);
         setErrorMessage(data.error || 'فشل إنشاء رمز التحقق');
@@ -59,14 +82,14 @@ export function DebugAuthDialog({ isOpen, onAuthenticated }: DebugAuthDialogProp
           variant: 'destructive',
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating OTP:', error);
       setError(true);
-      setErrorMessage('حدث خطأ أثناء إنشاء رمز التحقق');
+      setErrorMessage(error.message || 'حدث خطأ أثناء إنشاء رمز التحقق');
 
       toast({
         title: 'خطأ',
-        description: 'حدث خطأ أثناء إنشاء رمز التحقق',
+        description: error.message || 'حدث خطأ أثناء إنشاء رمز التحقق',
         variant: 'destructive',
       });
     } finally {
@@ -88,17 +111,22 @@ export function DebugAuthDialog({ isOpen, onAuthenticated }: DebugAuthDialogProp
     setError(false);
 
     try {
-      const response = await fetch('/api/debug/verify-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ otp }),
-      });
+      // استخدام Firebase Functions مباشرة
+      const { httpsCallable } = await import('firebase/functions');
+      const { getFunctions } = await import('firebase/functions');
+      const { app } = await import('@/config/firebase');
 
-      const data = await response.json();
+      // تهيئة Firebase Functions
+      const functions = getFunctions(app);
 
-      if (response.ok) {
+      console.log('Calling verifyOTP function with code:', otp);
+      const verifyOTPFn = httpsCallable(functions, 'verifyOTP');
+      const result = await verifyOTPFn({ otp });
+
+      // @ts-ignore
+      const data = result.data;
+
+      if (data.success) {
         // تخزين وقت انتهاء الصلاحية في التخزين المحلي
         localStorage.setItem('debugAuthExpiry', data.sessionExpiryTime.toString());
 
@@ -131,14 +159,14 @@ export function DebugAuthDialog({ isOpen, onAuthenticated }: DebugAuthDialogProp
           });
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error verifying OTP:', error);
       setError(true);
-      setErrorMessage('حدث خطأ أثناء التحقق من رمز التحقق');
+      setErrorMessage(error.message || 'حدث خطأ أثناء التحقق من رمز التحقق');
 
       toast({
         title: 'خطأ',
-        description: 'حدث خطأ أثناء التحقق من رمز التحقق',
+        description: error.message || 'حدث خطأ أثناء التحقق من رمز التحقق',
         variant: 'destructive',
       });
     } finally {
@@ -179,46 +207,99 @@ export function DebugAuthDialog({ isOpen, onAuthenticated }: DebugAuthDialogProp
           <TabsContent value="generate" className="space-y-4">
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                انقر على الزر أدناه لإنشاء رمز تحقق جديد. سيكون الرمز صالحًا لمدة 30 دقيقة.
+                انقر على الزر أدناه لإنشاء رمز تحقق جديد وإرساله إلى بريدك الإلكتروني. سيكون الرمز صالحًا لمدة 30 دقيقة.
               </p>
-              <Alert variant="warning" className="mt-2">
+              <Alert className="mt-2">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>ملاحظة أمنية</AlertTitle>
+                <AlertTitle>ملاحظة</AlertTitle>
                 <AlertDescription className="text-xs">
-                  عرض الرمز في الواجهة هو حل مؤقت. في المستقبل، سيتم إرسال الرمز عبر البريد الإلكتروني لزيادة الأمان.
+                  سيتم إرسال رمز التحقق إلى بريدك الإلكتروني المسجل في النظام. يرجى التحقق من صندوق الوارد الخاص بك وأيضًا مجلد البريد غير المرغوب فيه (Spam).
+                </AlertDescription>
+              </Alert>
+              <Alert className="mt-2" variant="warning">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>تنبيه</AlertTitle>
+                <AlertDescription className="text-xs">
+                  قد يستغرق وصول البريد الإلكتروني بضع دقائق. إذا لم يصل البريد، يمكنك المحاولة مرة أخرى أو التواصل مع مسؤول النظام.
                 </AlertDescription>
               </Alert>
 
               {generatedOTP && (
-                <Alert>
+                <Alert variant="success">
                   <KeyRound className="h-4 w-4" />
-                  <AlertTitle>رمز التحقق الخاص بك</AlertTitle>
+                  <AlertTitle>تم إرسال رمز التحقق</AlertTitle>
                   <AlertDescription>
-                    <div className="font-mono text-xl text-center my-2">{generatedOTP}</div>
-                    <p className="text-xs text-muted-foreground">
-                      هذا الرمز صالح حتى الساعة {formatExpiryTime(otpExpiryTime || '')}
+                    <p className="text-sm">تم إرسال رمز التحقق إلى بريدك الإلكتروني.</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      الرمز صالح حتى الساعة {formatExpiryTime(otpExpiryTime || '')}
                     </p>
                   </AlertDescription>
                 </Alert>
               )}
 
-              <Button
-                onClick={handleGenerateOTP}
-                className="w-full"
-                disabled={isGeneratingOTP}
-              >
-                {isGeneratingOTP ? (
-                  <>
-                    <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                    جاري إنشاء الرمز...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="ml-2 h-4 w-4" />
-                    إنشاء رمز تحقق جديد
-                  </>
-                )}
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  onClick={handleGenerateOTP}
+                  className="w-full"
+                  disabled={isGeneratingOTP}
+                >
+                  {isGeneratingOTP ? (
+                    <>
+                      <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                      جاري إنشاء الرمز...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="ml-2 h-4 w-4" />
+                      إنشاء رمز تحقق جديد
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  onClick={async () => {
+                    try {
+                      setIsGeneratingOTP(true);
+
+                      // استخدام Firebase Functions مباشرة
+                      const { httpsCallable } = await import('firebase/functions');
+                      const { getFunctions } = await import('firebase/functions');
+                      const { initializeApp } = await import('firebase/app');
+                      const { firebaseConfig } = await import('../../../firebaseConfig.js');
+
+                      // تهيئة Firebase مباشرة
+                      const app = initializeApp(firebaseConfig);
+
+                      // تهيئة Firebase Functions مع تحديد المنطقة
+                      const functions = getFunctions(app, 'us-central1');
+
+                      console.log('Testing SMTP email sending...');
+                      const testSMTPEmail = httpsCallable(functions, 'testSMTPEmail');
+                      const result = await testSMTPEmail({});
+                      console.log('Test SMTP email result:', result);
+
+                      toast({
+                        title: 'تم إرسال بريد إلكتروني اختباري',
+                        description: 'تم إرسال بريد إلكتروني اختباري باستخدام SMTP إلى بريدك الإلكتروني. يرجى التحقق من صندوق الوارد الخاص بك.',
+                      });
+                    } catch (error) {
+                      console.error('Error testing SMTP email:', error);
+                      toast({
+                        title: 'خطأ',
+                        description: 'حدث خطأ أثناء اختبار إرسال البريد الإلكتروني باستخدام SMTP.',
+                        variant: 'destructive',
+                      });
+                    } finally {
+                      setIsGeneratingOTP(false);
+                    }
+                  }}
+                  className="w-full"
+                  variant="outline"
+                  disabled={isGeneratingOTP}
+                >
+                  اختبار إرسال البريد الإلكتروني (SMTP)
+                </Button>
+              </div>
             </div>
           </TabsContent>
 
@@ -249,7 +330,7 @@ export function DebugAuthDialog({ isOpen, onAuthenticated }: DebugAuthDialogProp
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  أدخل رمز التحقق المكون من 6 أرقام الذي تم إنشاؤه
+                  أدخل رمز التحقق المكون من 6 أرقام الذي تم إرساله إلى بريدك الإلكتروني
                 </p>
               </div>
 

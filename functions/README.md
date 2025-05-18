@@ -141,3 +141,121 @@ firebase deploy --only functions
 1. **الصلاحيات المخصصة**: يمكن تخصيص صلاحيات أي مستخدم بغض النظر عن دوره الأساسي.
 2. **تصدير واستيراد البيانات**: يمكن للمستخدمين الفرديين تصدير واستيراد بياناتهم.
 3. **الفصل بين البيانات**: لا يمكن لمديري المؤسسات الوصول إلى بيانات المستخدمين الفرديين.
+
+## تحسينات الأداء (تم التحديث)
+
+تم إجراء تحسينات على وظائف Firebase لتقليل استهلاك الموارد وحل مشكلة "تجاوز الحصة" (Quota Exceeded).
+
+### التغييرات الرئيسية:
+
+1. **تعطيل الوظائف HTTP المكررة**:
+   - تم تعطيل `setAdminRoleHttp`، `setUserDisabledStatusHttp`، `createUserHttp`، `setOwnerDirectHttp`، `listUsersHttp`، `getUserHttp`
+   - يجب استخدام الوظائف البديلة (Callable Functions) بدلاً منها
+
+2. **تحسين وظائف OTP**:
+   - تم تبسيط وظائف `generateAndSendOTP` و `verifyOTP` لتكون أكثر كفاءة
+
+### تغييرات مطلوبة في الفرونت إند:
+
+يجب تعديل الفرونت إند لاستخدام الوظائف البديلة (Callable Functions) بدلاً من الوظائف HTTP المباشرة:
+
+#### 1. تعديل صفحة المسؤول (admin/page.tsx):
+
+```javascript
+// بدلاً من:
+const functionUrl = 'https://us-central1-tasks-intelligence.cloudfunctions.net/setAdminRoleHttp';
+const response = await fetch(functionUrl, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+    },
+    body: JSON.stringify({
+        uid: userId,
+        isAdmin: !currentIsAdmin
+    })
+});
+
+// استخدم:
+const setAdminRoleFn = httpsCallable<{ uid: string; isAdmin: boolean }, { result?: string; error?: string }>(functionsInstance, 'setAdminRole');
+const result = await setAdminRoleFn({ uid: userId, isAdmin: !currentIsAdmin });
+```
+
+#### 2. تعديل وظيفة تعطيل المستخدم:
+
+```javascript
+// بدلاً من:
+const functionUrl = 'https://us-central1-tasks-intelligence.cloudfunctions.net/setUserDisabledStatusHttp';
+const response = await fetch(functionUrl, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+    },
+    body: JSON.stringify({
+        uid: userId,
+        disabled: !currentIsDisabled
+    })
+});
+
+// استخدم:
+const setUserDisabledStatusFn = httpsCallable<{ uid: string; disabled: boolean }, { result?: string; error?: string }>(functionsInstance, 'setUserDisabledStatus');
+const result = await setUserDisabledStatusFn({ uid: userId, disabled: !currentIsDisabled });
+```
+
+#### 3. تعديل وظيفة إنشاء مستخدم:
+
+```javascript
+// بدلاً من:
+const functionUrl = 'https://us-central1-tasks-intelligence.cloudfunctions.net/createUserHttp';
+const response = await fetch(functionUrl, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+    },
+    body: JSON.stringify(userData)
+});
+
+// استخدم:
+const createUserFn = httpsCallable<CreateUserInput, { uid?: string; error?: string }>(functionsInstance, 'createUser');
+const result = await createUserFn(userData);
+```
+
+#### 4. تعديل وظيفة جلب قائمة المستخدمين:
+
+```javascript
+// بدلاً من:
+const response = await fetch('https://us-central1-tasks-intelligence.cloudfunctions.net/listUsersHttp', {
+    method: 'GET',
+    headers: {
+        'Authorization': `Bearer ${idToken}`
+    }
+});
+
+// استخدم:
+const listFirebaseUsersFn = httpsCallable<{ maxResults?: number; pageToken?: string }, { users: any[] }>(functionsInstance, 'listFirebaseUsers');
+const result = await listFirebaseUsersFn({});
+```
+
+### ملاحظات إضافية:
+
+1. **تأكد من استيراد الوظائف اللازمة**:
+   ```javascript
+   import { httpsCallable } from 'firebase/functions';
+   ```
+
+2. **تأكد من تهيئة functionsInstance**:
+   ```javascript
+   const functionsInstance = getFunctions();
+   ```
+
+3. **تعامل مع الأخطاء بشكل صحيح**:
+   ```javascript
+   try {
+       const result = await functionCall(params);
+       // معالجة النتيجة
+   } catch (error) {
+       // معالجة الخطأ
+   }
+   ```

@@ -25,67 +25,12 @@ interface CreateIndividualUserRequest {
 /**
  * إنشاء مستخدم فردي جديد
  * هذه الدالة تستخدم للتسجيل الذاتي للمستخدمين الفرديين
+ * تم تعطيلها مؤقتًا لتقليل استهلاك الموارد واستخدام createUser في index.ts بدلاً منها
  */
-export const createIndividualUser = createCallableFunction<CreateIndividualUserRequest>(async (request) => {
-    const functionName = 'createIndividualUser';
-    console.log(`[Individual] --- ${functionName} Cloud Function triggered ---`);
-
-    try {
-        // التحقق من وجود مستخدم مسجل الدخول
-        if (!request.auth) {
-            throw new functions.https.HttpsError(
-                'unauthenticated',
-                'يجب تسجيل الدخول للوصول إلى هذه الوظيفة.'
-            );
-        }
-
-        const uid = request.auth.uid;
-        const { name, email } = request.data;
-
-        // التحقق من صحة المدخلات
-        if (!name || typeof name !== "string") {
-            throw new functions.https.HttpsError(
-                "invalid-argument",
-                "يجب توفير اسم المستخدم."
-            );
-        }
-
-        // التحقق مما إذا كان المستخدم موجودًا بالفعل في مجموعة individuals
-        const individualDoc = await db.collection('individuals').doc(uid).get();
-        if (individualDoc.exists) {
-            throw new functions.https.HttpsError(
-                "already-exists",
-                "المستخدم الفردي موجود بالفعل."
-            );
-        }
-
-        // تعيين دور المستخدم إلى 'independent'
-        await admin.auth().setCustomUserClaims(uid, {
-            role: 'independent'
-        });
-
-        // إنشاء وثيقة المستخدم الفردي في Firestore
-        await db.collection('individuals').doc(uid).set({
-            name: name,
-            email: email || request.auth.token.email || '',
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-
-        console.log(`[Individual] Successfully created individual user for ${uid}.`);
-        return { success: true };
-
-    } catch (error: any) {
-        console.error(`[Individual] Error in ${functionName}:`, error);
-        if (error instanceof functions.https.HttpsError) {
-            throw error;
-        }
-        throw new functions.https.HttpsError(
-            "internal",
-            `Failed to create individual user: ${error.message || 'Unknown internal server error.'}`
-        );
-    }
-});
+// export const createIndividualUser = createCallableFunction<CreateIndividualUserRequest>(async (request) => {
+//     // تم تعطيل هذه الوظيفة مؤقتًا لتقليل استهلاك الموارد
+//     // استخدم createUser في index.ts بدلاً منها مع تحديد accountType: 'individual'
+// });
 
 /**
  * نوع بيانات طلب الحصول على بيانات المستخدم الفردي
