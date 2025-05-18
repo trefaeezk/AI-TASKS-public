@@ -96,12 +96,94 @@ const Documentation: NextPage<DocumentationProps> = ({ documents, initialDocCont
     );
   }
 
+  // إضافة سجلات تصحيح
+  console.log('Rendering Documentation page');
+  console.log('Documents:', documents);
+  console.log('Initial Doc Content:', initialDocContent ? 'Available' : 'Not available');
+  console.log('Initial Doc ID:', initialDocId);
+  console.log('User:', user);
+  console.log('Loading:', loading);
+  console.log('Error:', error);
+
   return (
     <div className="min-h-screen bg-background">
       <Head>
         <title>الوثائق - نظام إدارة المهام</title>
         <meta name="description" content="وثائق نظام إدارة المهام" />
       </Head>
+
+      {/* إضافة عنصر بسيط للتحقق من عملية التقديم */}
+      <div className="container mx-auto py-4 text-center">
+        <h1 className="text-2xl font-bold">صفحة الوثائق</h1>
+        <p className="text-muted-foreground">جاري تحميل المحتوى...</p>
+
+        {/* إضافة زر اختبار API */}
+        <div className="mt-4">
+          <Button
+            onClick={async () => {
+              try {
+                console.log('Testing API...');
+                const response = await fetch('/api/test');
+                const data = await response.json();
+                console.log('API test response:', data);
+                alert('API is working! Check console for details.');
+              } catch (error) {
+                console.error('API test error:', error);
+                alert('API test failed! Check console for details.');
+              }
+            }}
+            className="mx-2"
+          >
+            اختبار API
+          </Button>
+
+          <Button
+            onClick={async () => {
+              try {
+                console.log('Testing Documentation API...');
+                const response = await fetch('/api/documentation');
+                const data = await response.json();
+                console.log('Documentation API response:', data);
+                alert('Documentation API is working! Check console for details.');
+              } catch (error) {
+                console.error('Documentation API test error:', error);
+                alert('Documentation API test failed! Check console for details.');
+              }
+            }}
+            className="mx-2"
+          >
+            اختبار API الوثائق
+          </Button>
+
+          <Button
+            onClick={async () => {
+              try {
+                console.log('Testing Docs API...');
+                // استخدام رمز مصادقة فارغ للاختبار
+                const response = await fetch('/api/docs/README.md', {
+                  headers: {
+                    'Authorization': 'Bearer test-token'
+                  }
+                });
+                if (response.ok) {
+                  const text = await response.text();
+                  console.log('Docs API response:', text.substring(0, 100) + '...');
+                  alert('Docs API is working! Check console for details.');
+                } else {
+                  console.error('Docs API error:', response.status, response.statusText);
+                  alert(`Docs API error: ${response.status} ${response.statusText}`);
+                }
+              } catch (error) {
+                console.error('Docs API test error:', error);
+                alert('Docs API test failed! Check console for details.');
+              }
+            }}
+            className="mx-2"
+          >
+            اختبار API الملفات
+          </Button>
+        </div>
+      </div>
 
       {error ? (
         <div className="container mx-auto py-8">

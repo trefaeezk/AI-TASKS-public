@@ -12,8 +12,6 @@ interface MarkdownRendererProps {
 }
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = memo(({ content }) => {
-  console.log(`Rendering markdown content with length: ${content.length}`);
-
   // التعامل مع المحتوى الفارغ
   if (!content || content.trim() === '') {
     return (

@@ -1,37 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // تكوين لتحسين عملية البناء
-  reactStrictMode: true,
 
   // تعطيل التحقق من الأنواع أثناء البناء
   typescript: {
-    // تعطيل التحقق من الأنواع أثناء البناء
     ignoreBuildErrors: true,
   },
 
-  // تكوين لتجاوز مشاكل التوليد المسبق للصفحات
-  // استخدام الخيار الرسمي من Next.js
-  // تعطيل التوليد المسبق للصفحات التي تستخدم حزم خارجية
-  serverExternalPackages: ['firebase', 'firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/functions', 'firebase-admin'],
-
-  // تكوين لتجاهل مكتبات جانب الخادم
-  serverComponentsExternalPackages: ['firebase-admin'],
-
-  // تكوين لتجاوز مشاكل الوحدات الخارجية
+  // تكوين webpack لتجاوز مشاكل الوحدات الخارجية ودعم WebAssembly
   webpack: (config, { isServer }) => {
-    // تكوين لدعم WebAssembly
-    config.experiments = {
-      ...config.experiments,
-      syncWebAssembly: false,
-      asyncWebAssembly: true,
-    };
-
-    // إضافة قاعدة لملفات WebAssembly
-    config.module.rules.push({
-      test: /\.wasm$/,
-      type: 'webassembly/async',
-    });
-
     // تجاهل مكتبات جانب الخادم في جانب العميل
     if (!isServer) {
       config.resolve.fallback = {
@@ -41,42 +17,45 @@ const nextConfig = {
         net: false,
         http2: false,
         tls: false,
+        dns: false,
         child_process: false,
+      };
+    }
+
+    // تعطيل HMR في بيئة الإنتاج
+    if (process.env.NODE_ENV === 'production') {
+      config.optimization.runtimeChunk = false;
+      config.optimization.splitChunks = {
+        cacheGroups: {
+          default: false,
+        },
       };
     }
 
     return config;
   },
 
-  experimental: {
-    // تمكين دعم WebAssembly
-    webAssembly: {
-      sync: false,
-      async: true
-    },
-    // خيارات تجريبية أخرى
-  },
-
-  // تكوين لتجاوز أخطاء البناء
-  onDemandEntries: {
-    // فترة انتظار أطول للصفحات المعقدة
-    maxInactiveAge: 60 * 60 * 1000,
-    // عدد أكبر من الصفحات في الذاكرة
-    pagesBufferLength: 5,
-  },
-
   // تكوين لتحسين الأداء
   compiler: {
-    // تعطيل التحقق من الأنواع في وقت التشغيل
     removeConsole: process.env.NODE_ENV === 'production',
   },
 
-  // إعدادات إضافية لتجنب مشاكل البناء مع الصفحات التي تستخدم hooks
-  // swcMinify تم إزالته في الإصدارات الحديثة
+  // تكوين لتجنب مشاكل HMR
+  devIndicators: {
+    position: 'bottom-right',
+  },
 
-  // تعطيل التوليد المسبق للصفحات الديناميكية
-  // هذا سيساعد في تجنب أخطاء useState في الصفحات التي تستخدم hooks
-  staticPageGenerationTimeout: 120,
+  // تكوين لتحسين الأداء في بيئة الإنتاج
+  productionBrowserSourceMaps: false,
+
+  // تكوين لتحسين الأداء في بيئة التطوير
+  reactStrictMode: false,
+
+  // تكوين لتجنب مشاكل التحميل
+  poweredByHeader: false,
+
+  // تكوين Turbopack
+  // تم تعطيل تكوين Turbopack لتجنب المشاكل
 }
 
 module.exports = nextConfig

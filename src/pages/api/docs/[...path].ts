@@ -17,6 +17,8 @@ if (!admin.apps.length) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  console.log('API docs handler called:', req.url);
+
   // إضافة رأس CORS للسماح بالوصول من أي مصدر
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -24,30 +26,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // التعامل مع طلبات OPTIONS
   if (req.method === 'OPTIONS') {
+    console.log('OPTIONS request received');
     return res.status(200).end();
   }
 
   // التحقق من طريقة الطلب
   if (req.method !== 'GET') {
+    console.log('Method not allowed:', req.method);
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  console.log('GET request received for docs API');
+
   try {
-    console.log('API request received for docs:', req.url);
     // التحقق من المصادقة
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    let decodedToken: any = null;
 
-    const token = authHeader.split('Bearer ')[1];
-    let decodedToken;
+    // في بيئة التطوير، السماح بالوصول بدون مصادقة للاختبار
+    if (process.env.NODE_ENV === 'development' && authHeader === 'Bearer test-token') {
+      console.log('Development mode: Using test token');
+      // إنشاء رمز مصادقة وهمي للاختبار
+      decodedToken = {
+        uid: 'test-user',
+        email: 'test@example.com',
+        owner: true,
+        admin: true
+      };
+    } else {
+      // التحقق من وجود رمز المصادقة
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
 
-    try {
-      decodedToken = await getAuth().verifyIdToken(token);
-    } catch (error) {
-      console.error('Error verifying token:', error);
-      return res.status(401).json({ error: 'Invalid token' });
+      const token = authHeader.split('Bearer ')[1];
+
+      try {
+        console.log('Verifying token:', token.substring(0, 10) + '...');
+        decodedToken = await getAuth().verifyIdToken(token);
+        console.log('Token verified successfully, user claims:', decodedToken);
+      } catch (error) {
+        console.error('Error verifying token:', error);
+        return res.status(401).json({ error: 'Invalid token' });
+      }
     }
 
     // الحصول على مسار الملف
@@ -60,20 +81,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // بناء المسار الكامل للملف
     const fullPath = path.join(process.cwd(), 'docs', ...filePath);
 
-    console.log(`Requested file path: ${filePath.join('/')}`);
-    console.log(`Full path: ${fullPath}`);
-
     // التحقق من وجود الملف
     if (!fs.existsSync(fullPath)) {
-      console.error(`File not found: ${fullPath}`);
       return res.status(404).json({ error: 'File not found' });
     }
 
-    console.log(`File exists: ${fullPath}`);
-
     // التحقق من الصلاحيات
     const isOwner = decodedToken.owner === true;
-    const isAdmin = decodedToken.admin === true;
 
     // التحقق من الصلاحيات حسب المسار
     if (filePath[0] === 'debug' && !isOwner) {
@@ -83,8 +97,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // قراءة محتوى الملف
     const fileContent = fs.readFileSync(fullPath, 'utf8');
 
-    console.log(`File content length: ${fileContent.length}`);
-
     // تحديد نوع المحتوى
     const contentType = fullPath.endsWith('.md')
       ? 'text/markdown'
@@ -92,16 +104,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ? 'application/json'
         : 'text/plain';
 
-    console.log(`Content type: ${contentType}`);
-
     // إضافة رؤوس التخزين المؤقت
-    res.setHeader('Cache-Control', 'public, max-age=3600'); // تخزين مؤقت لمدة ساعة
+    res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400'); // تخزين مؤقت لمدة ساعة، مع السماح باستخدام النسخة القديمة لمدة يوم
+    res.setHeader('ETag', `"${Buffer.from(fileContent).toString('base64').substring(0, 27)}"`); // إضافة ETag للتحقق من التغييرات
 
     // إرسال المحتوى
     res.setHeader('Content-Type', contentType);
     res.status(200).send(fileContent);
-
-    console.log(`Response sent successfully for: ${filePath.join('/')}`);
   } catch (error: any) {
     console.error('Error serving documentation file:', error);
 

@@ -3,24 +3,24 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Bell, 
-  CheckCircle, 
-  Clock, 
-  Calendar, 
-  AlertTriangle, 
-  Info, 
-  Wand2, 
-  X, 
-  Check, 
+import {
+  Bell,
+  CheckCircle,
+  Clock,
+  Calendar,
+  AlertTriangle,
+  Info,
+  Wand2,
+  X,
+  Check,
   Settings
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { 
-  Popover, 
-  PopoverContent, 
-  PopoverTrigger 
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
 } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -28,11 +28,11 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Notification, NotificationType } from '@/types/notification';
-import { 
-  getUserNotifications, 
-  subscribeToUserNotifications, 
-  updateNotificationStatus, 
-  markAllNotificationsAsRead 
+import {
+  getUserNotifications,
+  subscribeToUserNotifications,
+  updateNotificationStatus,
+  markAllNotificationsAsRead
 } from '@/services/notifications';
 import Link from 'next/link';
 
@@ -155,8 +155,8 @@ export function NotificationsPopover() {
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <Badge 
-              variant="destructive" 
+            <Badge
+              variant="destructive"
               className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
             >
               {unreadCount > 9 ? '9+' : unreadCount}
@@ -170,20 +170,20 @@ export function NotificationsPopover() {
           <h3 className="font-medium">الإشعارات</h3>
           <div className="flex gap-1">
             {unreadCount > 0 && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8" 
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
                 onClick={handleMarkAllAsRead}
                 title="تعليم الكل كمقروء"
               >
                 <Check className="h-4 w-4" />
               </Button>
             )}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8" 
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
               asChild
               title="إعدادات الإشعارات"
             >
@@ -218,8 +218,8 @@ export function NotificationsPopover() {
               ) : (
                 <div className="divide-y">
                   {filteredNotifications.map((notification) => (
-                    <div 
-                      key={notification.id} 
+                    <div
+                      key={notification.id}
                       className={`p-4 hover:bg-muted cursor-pointer ${notification.status === 'unread' ? 'bg-muted/50' : ''}`}
                       onClick={() => handleNotificationClick(notification)}
                     >
@@ -241,10 +241,10 @@ export function NotificationsPopover() {
                           </p>
                           {notification.actionLink && notification.actionText && (
                             <div className="mt-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="h-7 text-xs w-full" 
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs w-full"
                                 asChild
                               >
                                 <Link href={notification.actionLink}>

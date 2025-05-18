@@ -22,13 +22,25 @@ const DocumentationSidebar: React.FC<DocumentationSidebarProps> = memo(({
 }) => {
   // الحصول على الفئات الفريدة من الوثائق المتاحة
   const getUniqueCategories = (): DocumentCategory[] => {
+    if (!documents || documents.length === 0) {
+      console.log('No documents available');
+      return ['general'] as DocumentCategory[];
+    }
     const categories = documents.map(doc => doc.category);
-    return [...new Set(categories)] as DocumentCategory[];
+    const uniqueCategories = [...new Set(categories)] as DocumentCategory[];
+    console.log('Unique categories:', uniqueCategories);
+    return uniqueCategories.length > 0 ? uniqueCategories : ['general'] as DocumentCategory[];
   };
 
   // الحصول على الوثائق حسب الفئة
   const getDocumentsByCategory = (category: DocumentCategory): Document[] => {
-    return documents.filter(doc => doc.category === category);
+    if (!documents || documents.length === 0) {
+      console.log('No documents available for category:', category);
+      return [];
+    }
+    const filteredDocs = documents.filter(doc => doc.category === category);
+    console.log(`Documents for category ${category}:`, filteredDocs.length);
+    return filteredDocs;
   };
 
   // ترجمة اسم الفئة إلى العربية
@@ -46,12 +58,25 @@ const DocumentationSidebar: React.FC<DocumentationSidebarProps> = memo(({
         return 'التقارير';
       case 'settings':
         return 'الإعدادات';
+      case 'performance':
+        return 'الأداء';
+      case 'development':
+        return 'التطوير';
       default:
-        return category;
+        // للفئات غير المعروفة، نعرض الاسم كما هو
+        console.log('Unknown category:', category);
+        return String(category);
     }
   };
 
   const uniqueCategories = getUniqueCategories();
+
+  // إضافة سجلات تصحيح
+  console.log('DocumentationSidebar component rendering');
+  console.log('Documents:', documents);
+  console.log('Unique categories:', uniqueCategories);
+  console.log('Active category:', activeCategory);
+  console.log('Active doc ID:', activeDocId);
 
   return (
     <Card>
@@ -60,8 +85,15 @@ const DocumentationSidebar: React.FC<DocumentationSidebarProps> = memo(({
         <CardDescription>اختر قسم الوثائق</CardDescription>
       </CardHeader>
       <CardContent>
+        {/* عرض عدد الوثائق والفئات للتشخيص */}
+        <div className="mb-4 p-2 bg-muted rounded-md">
+          <p className="text-sm">عدد الوثائق: {documents.length}</p>
+          <p className="text-sm">عدد الفئات: {uniqueCategories.length}</p>
+          <p className="text-sm">الفئة النشطة: {getCategoryName(activeCategory)}</p>
+        </div>
+
         <Tabs value={activeCategory} onValueChange={(value) => setActiveCategory(value as DocumentCategory)}>
-          <TabsList className="grid" style={{ gridTemplateColumns: `repeat(${uniqueCategories.length}, 1fr)` }}>
+          <TabsList className="grid" style={{ gridTemplateColumns: `repeat(${uniqueCategories.length || 1}, 1fr)` }}>
             {uniqueCategories.map(category => (
               <TabsTrigger key={category} value={category}>
                 {getCategoryName(category)}
@@ -78,7 +110,15 @@ const DocumentationSidebar: React.FC<DocumentationSidebarProps> = memo(({
                       key={doc.id}
                       variant={activeDocId === doc.id ? "default" : "ghost"}
                       className="w-full justify-start text-right"
-                      onClick={() => setActiveDocId(doc.id)}
+                      onClick={() => {
+                        // تجنب إعادة تحميل نفس الوثيقة
+                        if (activeDocId !== doc.id) {
+                          console.log('Sidebar: Setting active doc ID:', doc.id);
+                          setActiveDocId(doc.id);
+                        } else {
+                          console.log('Sidebar: Document already active:', doc.id);
+                        }
+                      }}
                     >
                       {doc.title}
                     </Button>

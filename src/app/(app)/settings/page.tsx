@@ -7,10 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sun, Moon, Languages } from 'lucide-react'; // Import icons
+import { Sun, Moon, Languages, Bell, ArrowRight } from 'lucide-react'; // Import icons
 import SystemTypeSelector from '@/components/settings/SystemTypeSelector';
 import OrganizationRequestButton from '@/components/settings/OrganizationRequestButton';
 import { useAuth } from '@/hooks/use-auth';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 // Settings page component
 export default function SettingsPage() {
@@ -146,6 +148,29 @@ export default function SettingsPage() {
               {/* Add other languages here */}
             </SelectContent>
           </Select>
+        </CardContent>
+      </Card>
+
+      {/* قسم إعدادات الإشعارات */}
+      <Card>
+        <CardHeader>
+          <CardTitle>الإشعارات</CardTitle>
+          <CardDescription>إدارة إعدادات الإشعارات وتفضيلات التنبيهات</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-between">
+          <div className="flex items-center space-x-4 space-x-reverse">
+            <Bell className="h-6 w-6 text-muted-foreground ml-3" />
+            <div>
+              <h3 className="font-medium">إعدادات الإشعارات</h3>
+              <p className="text-sm text-muted-foreground">تخصيص كيفية استلام الإشعارات وأنواعها</p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/settings/notifications" className="flex items-center">
+              <span>إدارة الإشعارات</span>
+              <ArrowRight className="mr-2 h-4 w-4" />
+            </Link>
+          </Button>
         </CardContent>
       </Card>
 

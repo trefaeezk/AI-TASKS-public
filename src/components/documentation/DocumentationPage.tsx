@@ -14,7 +14,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useToast } from '@/hooks/use-toast';
 
 // تعريف أنواع الوثائق
-export type DocumentCategory = 'general' | 'debug' | 'users' | 'tasks' | 'reports' | 'settings';
+export type DocumentCategory = 'general' | 'debug' | 'users' | 'tasks' | 'reports' | 'settings' | 'performance' | 'development' | string;
 
 // تعريف هيكل الوثيقة
 export interface Document {
@@ -92,46 +92,86 @@ const DocumentationPage: React.FC<DocumentationPageProps> = ({
   const [activeDocId, setActiveDocId] = useState<string | null>(initialDocId || null);
   const [activeDocument, setActiveDocument] = useState<Document | null>(null);
   const [documentContent, setDocumentContent] = useState<string>(initialDocContent || '');
-  const [activeCategory, setActiveCategory] = useState<DocumentCategory>('general');
+  // تحديد الفئة الافتراضية
+  const defaultCategory = documents.length > 0 ?
+    (documents.find(d => d.category === 'general')?.category || documents[0].category) :
+    'general';
+
+  const [activeCategory, setActiveCategory] = useState<DocumentCategory>(defaultCategory);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [retryCount, setRetryCount] = useState<number>(0);
 
-  // استخدام المحتوى المبدئي إذا كان متوفرًا
+  // استخدام المحتوى المبدئي إذا كان متوفرًا - يتم تنفيذه مرة واحدة فقط
   useEffect(() => {
+    console.log('Initial document effect running');
+    console.log('Initial doc ID:', initialDocId);
+    console.log('Initial doc content length:', initialDocContent ? initialDocContent.length : 0);
+
+    // تجنب إعادة التحميل إذا كان هناك وثيقة نشطة بالفعل
+    if (activeDocument) {
+      console.log('Skipping initial document loading as active document is already set');
+      return;
+    }
+
     if (initialDocContent && initialDocId) {
       const doc = documents.find(d => d.id === initialDocId);
       if (doc) {
+        console.log('Setting initial document content for:', doc.id, doc.title);
         setActiveDocument(doc);
         setDocumentContent(initialDocContent);
         setActiveCategory(doc.category);
         console.log('Using initial document content from server');
       }
     }
-  }, [initialDocContent, initialDocId, documents]);
+  }, []); // تنفيذ مرة واحدة فقط عند التحميل الأولي
 
   // التحقق من الصلاحيات للوصول إلى الوثيقة
   const canAccessDocument = (doc: Document): boolean => {
+    console.log('Checking access for document:', doc.id, 'with required permission:', doc.requiredPermission);
+    console.log('User claims:', userClaims);
+
     if (doc.requiredPermission === 'owner') {
-      return userClaims?.owner === true;
+      const hasAccess = userClaims?.owner === true;
+      console.log('Owner permission check:', hasAccess);
+      return hasAccess;
     }
     if (doc.requiredPermission === 'admin') {
-      return userClaims?.admin === true || userClaims?.owner === true;
+      const hasAccess = userClaims?.admin === true || userClaims?.owner === true;
+      console.log('Admin permission check:', hasAccess);
+      return hasAccess;
     }
     if (doc.requiredPermission === 'user') {
+      console.log('User permission check: true');
       return true; // أي مستخدم مسجل الدخول
     }
-    return hasPermission(doc.requiredPermission);
+
+    const hasAccess = hasPermission(doc.requiredPermission);
+    console.log('Custom permission check:', doc.requiredPermission, hasAccess);
+    return hasAccess;
   };
 
   // الحصول على الوثائق المتاحة للمستخدم الحالي
   const getAccessibleDocuments = (): Document[] => {
-    return documents.filter(doc => canAccessDocument(doc));
+    if (!documents || documents.length === 0) {
+      console.log('No documents available');
+      return [];
+    }
+    const accessibleDocs = documents.filter(doc => canAccessDocument(doc));
+    console.log('Accessible documents count:', accessibleDocs.length);
+    return accessibleDocs;
   };
 
   // الحصول على الوثائق حسب الفئة
   const getDocumentsByCategory = (category: DocumentCategory): Document[] => {
-    return getAccessibleDocuments().filter(doc => doc.category === category);
+    const accessibleDocs = getAccessibleDocuments();
+    if (!accessibleDocs || accessibleDocs.length === 0) {
+      console.log('No accessible documents available for category:', category);
+      return [];
+    }
+    const filteredDocs = accessibleDocs.filter(doc => doc.category === category);
+    console.log(`Accessible documents for category ${category}:`, filteredDocs.length);
+    return filteredDocs;
   };
 
   // تحميل محتوى الوثيقة
@@ -139,12 +179,28 @@ const DocumentationPage: React.FC<DocumentationPageProps> = ({
     setLoading(true);
     setError(null);
     try {
+      console.log('Loading document content for:', doc.id, doc.path);
+
       // استخدام API الوثائق مع إضافة رمز المصادقة
-      const token = await user?.getIdToken();
-      console.log(`Loading document from path: ${doc.path}`);
+      let token = '';
+
+      try {
+        token = await user?.getIdToken() || '';
+        console.log('Got user token:', token ? 'Yes' : 'No');
+      } catch (tokenError) {
+        console.error('Error getting token:', tokenError);
+        // استخدام رمز مصادقة وهمي في بيئة التطوير
+        if (process.env.NODE_ENV === 'development') {
+          token = 'test-token';
+          console.log('Using test token in development mode');
+        }
+      }
+
       const apiPath = doc.path.startsWith('/') ? doc.path : `/${doc.path}`;
+      console.log('API path:', apiPath);
 
       // استخدام API الوثائق
+      console.log('Fetching from:', `/api/docs${apiPath}`);
       const response = await fetch(`/api/docs${apiPath}`, {
         headers: {
           Authorization: `Bearer ${token}`
@@ -153,11 +209,14 @@ const DocumentationPage: React.FC<DocumentationPageProps> = ({
         cache: 'no-store'
       });
 
+      console.log('Response status:', response.status, response.statusText);
+
       if (!response.ok) {
         throw new Error(`فشل تحميل الوثيقة: ${response.statusText}`);
       }
+
       const content = await response.text();
-      console.log(`Document loaded successfully, content length: ${content.length}`);
+      console.log('Content loaded, length:', content.length);
       setDocumentContent(content);
       setActiveDocument(doc);
       setRetryCount(0); // إعادة تعيين عداد المحاولات عند النجاح
@@ -191,15 +250,28 @@ const DocumentationPage: React.FC<DocumentationPageProps> = ({
 
   // تحديد الوثيقة النشطة عند تغيير المعرف
   useEffect(() => {
+    // منع التحميل أثناء عملية تحميل أخرى
+    if (loading) {
+      console.log('Skipping document loading as another loading is in progress');
+      return;
+    }
+
     // تخطي التحميل إذا كان المحتوى المبدئي متوفرًا وهو نفس الوثيقة النشطة
     if (initialDocContent && initialDocId && activeDocId === initialDocId && documentContent) {
       console.log('Skipping document loading as initial content is already set');
       return;
     }
 
+    // تخطي التحميل إذا كانت الوثيقة النشطة هي نفسها الوثيقة الحالية
+    if (activeDocument && activeDocument.id === activeDocId) {
+      console.log('Skipping document loading as active document is already set');
+      return;
+    }
+
     if (activeDocId) {
       const doc = documents.find(d => d.id === activeDocId);
       if (doc && canAccessDocument(doc)) {
+        console.log('Loading document:', doc.id, doc.title);
         loadDocumentContent(doc);
         setActiveCategory(doc.category);
       } else {
@@ -209,13 +281,21 @@ const DocumentationPage: React.FC<DocumentationPageProps> = ({
       // تحميل الوثيقة الافتراضية
       const accessibleDocs = getAccessibleDocuments();
       if (accessibleDocs.length > 0) {
+        console.log('Setting default document:', accessibleDocs[0].id);
         setActiveDocId(accessibleDocs[0].id);
       }
     }
-  }, [activeDocId, canAccessDocument, loadDocumentContent, initialDocContent, initialDocId, documentContent]);
+  }, [activeDocId, canAccessDocument, loadDocumentContent, initialDocContent, initialDocId, documentContent, loading, activeDocument]);
+
+  // إضافة سجلات تصحيح
+  console.log('DocumentationPage component rendering');
+  console.log('User:', user);
+  console.log('User claims:', userClaims);
+  console.log('Documents:', documents);
 
   // التحقق من تسجيل الدخول
   if (!user) {
+    console.log('User not logged in, showing login message');
     return (
       <Card className="w-full max-w-4xl mx-auto mt-8">
         <CardHeader>
@@ -240,6 +320,10 @@ const DocumentationPage: React.FC<DocumentationPageProps> = ({
 
   // التحقق من وجود وثائق متاحة
   const accessibleDocs = getAccessibleDocuments();
+  console.log('Available documents:', documents);
+  console.log('Accessible documents:', accessibleDocs);
+  console.log('User claims:', userClaims);
+
   if (accessibleDocs.length === 0) {
     return (
       <Card className="w-full max-w-4xl mx-auto mt-8">
