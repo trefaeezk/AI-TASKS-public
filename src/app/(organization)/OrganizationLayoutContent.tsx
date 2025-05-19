@@ -74,19 +74,23 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
             {/* Notifications Popover */}
             {user && <NotificationsPopover />}
 
-            {/* Suggestions Link */}
+            {/* Suggestions Button - Modified to show "Under Development" message */}
             {user && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
-                asChild
-                title="الاقتراحات الذكية"
+                className="h-8 w-8 relative group"
+                title="الاقتراحات الذكية - سيتم تطويره"
+                onClick={(e) => {
+                  e.preventDefault();
+                  // يمكن إضافة إشعار هنا إذا لزم الأمر
+                }}
               >
-                <Link href="/suggestions">
-                  <Wand2 className="h-4 w-4" />
-                  <span className="sr-only">الاقتراحات الذكية</span>
-                </Link>
+                <Wand2 className="h-4 w-4" />
+                <span className="sr-only">الاقتراحات الذكية</span>
+                <span className="absolute top-full right-0 mt-1 w-32 bg-popover text-popover-foreground text-xs p-1 rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50 text-center">
+                  سيتم تطويره
+                </span>
               </Button>
             )}
 

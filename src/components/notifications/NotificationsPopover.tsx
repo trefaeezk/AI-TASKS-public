@@ -187,7 +187,7 @@ export function NotificationsPopover() {
               asChild
               title="إعدادات الإشعارات"
             >
-              <Link href="/settings/notifications">
+              <Link href={userClaims?.accountType === 'organization' ? "/org/settings/notifications" : "/settings/notifications"}>
                 <Settings className="h-4 w-4" />
               </Link>
             </Button>

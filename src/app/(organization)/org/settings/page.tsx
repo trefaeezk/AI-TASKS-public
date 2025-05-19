@@ -22,7 +22,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, ArrowRight, Bell } from 'lucide-react';
+import Link from 'next/link';
 
 interface OrganizationSettings {
   name: string;
@@ -155,6 +156,7 @@ export default function OrganizationSettingsPage() {
           <TabsTrigger value="general">عام</TabsTrigger>
           <TabsTrigger value="permissions">الصلاحيات</TabsTrigger>
           <TabsTrigger value="features">الميزات</TabsTrigger>
+          <TabsTrigger value="notifications">الإشعارات</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
@@ -345,6 +347,33 @@ export default function OrganizationSettingsPage() {
                 حفظ التغييرات
               </Button>
             </CardFooter>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notifications">
+          <Card>
+            <CardHeader>
+              <CardTitle>إعدادات الإشعارات</CardTitle>
+              <CardDescription>
+                إدارة إعدادات الإشعارات وتفضيلات التنبيهات
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>إعدادات الإشعارات</Label>
+                  <p className="text-sm text-muted-foreground">
+                    تخصيص كيفية استلام الإشعارات وأنواعها
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/org/settings/notifications" className="flex items-center">
+                    <span>إدارة الإشعارات</span>
+                    <ArrowRight className="mr-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
