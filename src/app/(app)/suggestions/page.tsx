@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Wand2, ListChecks, Calendar, BarChart, RefreshCw, Clock, RotateCw, Database } from 'lucide-react';
+import { Wand2, ListChecks, Calendar, BarChart, RefreshCw, Clock, RotateCw, Database, Code, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,17 +16,19 @@ import {
   generateDailySummary,
   generateTaskPrioritization,
   generateDeadlineAdjustment,
-  generateWorkloadManagement
+  generateWorkloadManagement,
+  SmartSuggestionServiceOutput // Use the correct type name
 } from '@/services/smartSuggestions';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { collection, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
-import { TaskType } from '@/types/task';
+import { TaskType, PriorityLevel } from '@/types/task';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export default function SuggestionsPage() {
-  const { user } = useAuth();
+  const { user, userClaims } = useAuth(); // Get userClaims
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState<string | null>(null);
@@ -34,6 +36,9 @@ export default function SuggestionsPage() {
   const [activeTab, setActiveTab] = useState('all');
   const [userTasks, setUserTasks] = useState<TaskType[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
+  const [lastAiResponse, setLastAiResponse] = useState<SmartSuggestionServiceOutput | null>(null); // State for AI response
+
+  const isOwner = userClaims?.owner === true; // Check if user is owner
 
   // تحميل الاقتراحات
   const fetchSuggestions = async () => {
@@ -49,7 +54,6 @@ export default function SuggestionsPage() {
         limit: 50,
       });
 
-      // تصفية الإشعارات للحصول على الاقتراحات فقط
       const aiSuggestions = notifications.filter(
         notification => notification.type === 'ai_suggestion'
       );
@@ -68,7 +72,6 @@ export default function SuggestionsPage() {
     }
   };
 
-  // تحميل الاقتراحات عند تحميل الصفحة
   useEffect(() => {
     if (user) {
       fetchSuggestions();
@@ -77,13 +80,10 @@ export default function SuggestionsPage() {
     }
   }, [user]);
 
-  // تعليم الاقتراح كمقروء
   const handleSuggestionClick = async (suggestion: Notification) => {
     if (suggestion.status === 'unread') {
       try {
         await updateNotificationStatus(suggestion.id, 'read');
-
-        // تحديث حالة الاقتراح محليًا
         setSuggestions(prevSuggestions =>
           prevSuggestions.map(s =>
             s.id === suggestion.id
@@ -97,11 +97,10 @@ export default function SuggestionsPage() {
     }
   };
 
-  // توليد اقتراح جديد
   const handleGenerateSuggestion = async (type: string) => {
     if (!user) return;
+    setLastAiResponse(null); // Clear previous AI response
 
-    // التحقق من وجود مهام قبل توليد الاقتراح
     if (userTasks.length === 0) {
       toast({
         title: 'لا توجد مهام',
@@ -113,15 +112,11 @@ export default function SuggestionsPage() {
 
     try {
       setGenerating(type);
-
       const userName = user.displayName || user.email || 'المستخدم';
-
       console.log(`[SuggestionsPage] Generating ${type} suggestion for user ${user.uid} with ${userTasks.length} tasks`);
-
-      // عرض المهام التي سيتم استخدامها في توليد الاقتراح
       console.log('Tasks for suggestion generation:', userTasks);
 
-      let result;
+      let result: SmartSuggestionServiceOutput | undefined;
 
       switch (type) {
         case 'daily_summary':
@@ -138,14 +133,22 @@ export default function SuggestionsPage() {
           break;
       }
 
+      setLastAiResponse(result || null); // Store AI response
       console.log(`[SuggestionsPage] Suggestion generation result:`, result);
 
-      toast({
-        title: 'تم توليد الاقتراح',
-        description: 'تم توليد اقتراح جديد بنجاح. انتظر لحظة حتى يظهر في القائمة.',
-      });
+      if (result && result.suggestion) {
+        toast({
+          title: 'تم توليد الاقتراح',
+          description: 'تم توليد اقتراح جديد بنجاح. انتظر لحظة حتى يظهر في القائمة.',
+        });
+      } else {
+        toast({
+          title: 'لم يتم إنشاء اقتراح',
+          description: 'لم يتمكن الذكاء الاصطناعي من إنشاء اقتراح لهذه البيانات.',
+          variant: 'default',
+        });
+      }
 
-      // إعادة تحميل الاقتراحات بعد التوليد
       setTimeout(async () => {
         await fetchSuggestions();
         console.log('[SuggestionsPage] Suggestions refreshed after generation');
@@ -153,6 +156,15 @@ export default function SuggestionsPage() {
 
     } catch (error) {
       console.error('Error generating suggestion:', error);
+      setLastAiResponse({
+        suggestion: {
+          title: `خطأ في توليد اقتراح ${type}`,
+          description: 'حدث خطأ تقني.',
+          content: `Error: ${error instanceof Error ? error.message : String(error)}`,
+          priority: 'medium',
+          actionItems: []
+        }
+      });
       toast({
         title: 'خطأ',
         description: 'حدث خطأ أثناء توليد الاقتراح. تأكد من وجود مهام في حسابك.',
@@ -163,67 +175,60 @@ export default function SuggestionsPage() {
     }
   };
 
-  // تحديث الاقتراحات تلقائيًا عند توليد اقتراح جديد
   useEffect(() => {
     if (!generating && user) {
-      // إذا انتهى التوليد، قم بتحديث الاقتراحات
       console.log(`[SuggestionsPage] Generation completed, scheduling refresh...`);
-
-      // انتظر 3 ثوانٍ ثم قم بتحديث الاقتراحات
       const timer = setTimeout(() => {
         console.log(`[SuggestionsPage] Executing scheduled refresh...`);
         fetchSuggestions();
-      }, 3000); // انتظر 3 ثوانٍ للتأكد من اكتمال العملية في الخلفية
-
+      }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [generating]);
+  }, [generating, user]);
 
-  // دالة لجلب مهام المستخدم
   const fetchUserTasks = async () => {
     if (!user) return;
-
     setLoadingTasks(true);
-
     try {
-      // جلب المهام الحالية للمستخدم
       const tasksQuery = query(
         collection(db, 'tasks'),
         where('userId', '==', user.uid),
         orderBy('dueDate', 'asc')
       );
-
       const tasksSnapshot = await getDocs(tasksQuery);
       const tasks: TaskType[] = [];
-
       tasksSnapshot.forEach((doc) => {
         const data = doc.data();
-
-        // التحقق من وجود البيانات الأساسية
         if (!data.description || !data.status) {
           console.warn(`Task ${doc.id} is missing required fields. Skipping.`);
           return;
         }
-
         try {
           tasks.push({
             id: doc.id,
             description: data.description || '',
             details: data.details || undefined,
             status: data.status,
-            priority: data.priority !== undefined ? Number(data.priority) : undefined,
+            priority: data.priority !== undefined ? data.priority as PriorityLevel : undefined,
             startDate: data.startDate ? (data.startDate as Timestamp).toDate() : undefined,
             dueDate: data.dueDate ? (data.dueDate as Timestamp).toDate() : undefined,
             durationValue: data.durationValue,
             durationUnit: data.durationUnit,
             taskCategoryName: data.taskCategoryName || data.categoryName,
+            // userId is not part of TaskType, but we need it for reference
+            // @ts-ignore - userId is used in the application logic
             userId: data.userId,
+            // Add missing fields with default or undefined values if necessary
+            title: data.title || data.description,
+            completedDate: data.completedDate ? (data.completedDate as Timestamp).toDate() : undefined,
+            categoryId: data.categoryId,
+            createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate() : new Date(),
+            updatedAt: data.updatedAt ? (data.updatedAt as Timestamp).toDate() : new Date(),
           });
         } catch (error) {
           console.error(`Error processing task ${doc.id}:`, error);
         }
       });
-
       console.log(`[SuggestionsPage] Fetched ${tasks.length} tasks for user ${user.uid}`);
       setUserTasks(tasks);
     } catch (error) {
@@ -238,87 +243,61 @@ export default function SuggestionsPage() {
     }
   };
 
-  // تحميل مهام المستخدم عند تحميل الصفحة
   useEffect(() => {
     if (user) {
       fetchUserTasks();
     }
   }, [user]);
 
-  // استخدام subscribeToUserNotifications للاستماع للتغييرات في الوقت الفعلي
   useEffect(() => {
     if (!user) return;
-
     console.log(`[SuggestionsPage] Setting up real-time notifications listener for user ${user.uid}`);
-
-    // الاستماع للإشعارات في الوقت الفعلي
     const unsubscribe = subscribeToUserNotifications(
       user.uid,
       (notifications) => {
-        // تصفية الإشعارات للحصول على الاقتراحات فقط
         const aiSuggestions = notifications.filter(
           notification => notification.type === 'ai_suggestion'
         );
-
         console.log(`[SuggestionsPage] Real-time update: ${aiSuggestions.length} suggestions`);
         setSuggestions(aiSuggestions);
         setLoading(false);
       },
-      {
-        limit: 50,
-      }
+      { limit: 50 }
     );
-
-    // إلغاء الاشتراك عند تفكيك المكون
     return () => {
       console.log(`[SuggestionsPage] Unsubscribing from real-time notifications`);
       unsubscribe();
     };
   }, [user]);
 
-  // تصفية الاقتراحات حسب النوع
   const filteredSuggestions = suggestions.filter(suggestion => {
     if (activeTab === 'all') return true;
-
     const metadata = suggestion.metadata || {};
     const suggestionType = metadata.suggestionType || '';
-
     return suggestionType === activeTab;
   });
 
-  // الحصول على عنوان نوع الاقتراح
   const getSuggestionTypeTitle = (type: string) => {
     switch (type) {
-      case 'daily_summary':
-        return 'الملخص اليومي';
-      case 'task_prioritization':
-        return 'ترتيب أولويات المهام';
-      case 'deadline_adjustment':
-        return 'تعديل المواعيد النهائية';
-      case 'workload_management':
-        return 'إدارة عبء العمل';
-      default:
-        return 'اقتراح';
+      case 'daily_summary': return 'الملخص اليومي';
+      case 'task_prioritization': return 'ترتيب أولويات المهام';
+      case 'deadline_adjustment': return 'تعديل المواعيد النهائية';
+      case 'workload_management': return 'إدارة عبء العمل';
+      default: return 'اقتراح';
     }
   };
 
-  // الحصول على أيقونة نوع الاقتراح
   const getSuggestionTypeIcon = (type: string) => {
     switch (type) {
-      case 'daily_summary':
-        return <Clock className="h-5 w-5" />;
-      case 'task_prioritization':
-        return <ListChecks className="h-5 w-5" />;
-      case 'deadline_adjustment':
-        return <Calendar className="h-5 w-5" />;
-      case 'workload_management':
-        return <BarChart className="h-5 w-5" />;
-      default:
-        return <Wand2 className="h-5 w-5" />;
+      case 'daily_summary': return <Clock className="h-5 w-5" />;
+      case 'task_prioritization': return <ListChecks className="h-5 w-5" />;
+      case 'deadline_adjustment': return <Calendar className="h-5 w-5" />;
+      case 'workload_management': return <BarChart className="h-5 w-5" />;
+      default: return <Wand2 className="h-5 w-5" />;
     }
   };
 
-  if (loading) {
+  if (loading && suggestions.length === 0) { // Ensure loading state shows until initial suggestions are fetched
     return (
       <div className="container mx-auto p-4">
         <div className="flex items-center mb-6">
@@ -368,15 +347,14 @@ export default function SuggestionsPage() {
         </Alert>
       )}
 
-      {/* عرض مهام المستخدم للتحقق من البيانات */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center">
             <Database className="ml-2 h-5 w-5" />
-            مهام المستخدم ({userTasks.length})
+            مهام المستخدم الحالية ({userTasks.length})
           </CardTitle>
           <CardDescription>
-            عرض مؤقت لمهام المستخدم للتحقق من البيانات
+            عرض لمهام المستخدم التي سيتم استخدامها في توليد الاقتراحات.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -390,9 +368,18 @@ export default function SuggestionsPage() {
               </AlertDescription>
             </Alert>
           ) : (
-            <pre className="bg-muted p-4 rounded-md overflow-auto max-h-96 text-xs">
-              {JSON.stringify(userTasks, null, 2)}
-            </pre>
+             <Collapsible>
+                <CollapsibleTrigger asChild>
+                    <Button variant="outline" size="sm" className="mb-2">
+                        عرض/إخفاء قائمة المهام ({userTasks.length})
+                    </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                    <pre className="bg-muted p-4 rounded-md overflow-auto max-h-96 text-xs">
+                      {JSON.stringify(userTasks, null, 2)}
+                    </pre>
+                </CollapsibleContent>
+             </Collapsible>
           )}
         </CardContent>
         <CardFooter>
@@ -407,148 +394,77 @@ export default function SuggestionsPage() {
             ) : (
               <RotateCw className="ml-2 h-4 w-4" />
             )}
-            تحديث المهام
+            تحديث قائمة المهام
           </Button>
         </CardFooter>
       </Card>
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center">
-              <Clock className="ml-2 h-5 w-5 text-blue-500" />
-              الملخص اليومي
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pb-2">
-            <p className="text-sm text-muted-foreground">
-              ملخص للمهام المكتملة والمستحقة اليوم مع خطة عمل مقترحة.
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => handleGenerateSuggestion('daily_summary')}
-              disabled={generating !== null}
-            >
-              {generating === 'daily_summary' ? (
-                <>
-                  <RefreshCw className="ml-2 h-4 w-4 animate-spin" />
-                  جاري التوليد...
-                </>
-              ) : (
-                <>
-                  <Wand2 className="ml-2 h-4 w-4" />
-                  توليد ملخص
-                </>
-              )}
-            </Button>
-          </CardFooter>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center">
-              <ListChecks className="ml-2 h-5 w-5 text-green-500" />
-              ترتيب الأولويات
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pb-2">
-            <p className="text-sm text-muted-foreground">
-              اقتراحات لترتيب أولويات المهام بناءً على الاستعجال والأهمية.
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => handleGenerateSuggestion('task_prioritization')}
-              disabled={generating !== null}
-            >
-              {generating === 'task_prioritization' ? (
-                <>
-                  <RefreshCw className="ml-2 h-4 w-4 animate-spin" />
-                  جاري التوليد...
-                </>
-              ) : (
-                <>
-                  <Wand2 className="ml-2 h-4 w-4" />
-                  توليد اقتراح
-                </>
-              )}
-            </Button>
-          </CardFooter>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center">
-              <Calendar className="ml-2 h-5 w-5 text-amber-500" />
-              تعديل المواعيد
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pb-2">
-            <p className="text-sm text-muted-foreground">
-              اقتراحات لتعديل المواعيد النهائية بناءً على أدائك وعبء العمل.
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => handleGenerateSuggestion('deadline_adjustment')}
-              disabled={generating !== null}
-            >
-              {generating === 'deadline_adjustment' ? (
-                <>
-                  <RefreshCw className="ml-2 h-4 w-4 animate-spin" />
-                  جاري التوليد...
-                </>
-              ) : (
-                <>
-                  <Wand2 className="ml-2 h-4 w-4" />
-                  توليد اقتراح
-                </>
-              )}
-            </Button>
-          </CardFooter>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center">
-              <BarChart className="ml-2 h-5 w-5 text-purple-500" />
-              إدارة عبء العمل
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pb-2">
-            <p className="text-sm text-muted-foreground">
-              اقتراحات لتوزيع العمل بشكل أفضل وتجنب الإرهاق.
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => handleGenerateSuggestion('workload_management')}
-              disabled={generating !== null}
-            >
-              {generating === 'workload_management' ? (
-                <>
-                  <RefreshCw className="ml-2 h-4 w-4 animate-spin" />
-                  جاري التوليد...
-                </>
-              ) : (
-                <>
-                  <Wand2 className="ml-2 h-4 w-4" />
-                  توليد اقتراح
-                </>
-              )}
-            </Button>
-          </CardFooter>
-        </Card>
+        {/* Suggestion Generation Cards */}
+        {[
+          { type: 'daily_summary', title: 'الملخص اليومي', description: 'ملخص للمهام المكتملة والمستحقة اليوم مع خطة عمل مقترحة.', icon: Clock, color: 'text-blue-500' },
+          { type: 'task_prioritization', title: 'ترتيب الأولويات', description: 'اقتراحات لترتيب أولويات المهام بناءً على الاستعجال والأهمية.', icon: ListChecks, color: 'text-green-500' },
+          { type: 'deadline_adjustment', title: 'تعديل المواعيد', description: 'اقتراحات لتعديل المواعيد النهائية بناءً على أدائك وعبء العمل.', icon: Calendar, color: 'text-amber-500' },
+          { type: 'workload_management', title: 'إدارة عبء العمل', description: 'اقتراحات لتوزيع العمل بشكل أفضل وتجنب الإرهاق.', icon: BarChart, color: 'text-purple-500' },
+        ].map(sugg => (
+          <Card key={sugg.type} className="hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center">
+                <sugg.icon className={`ml-2 h-5 w-5 ${sugg.color}`} />
+                {sugg.title}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pb-2">
+              <p className="text-sm text-muted-foreground h-20 overflow-hidden">
+                {sugg.description}
+              </p>
+            </CardContent>
+            <CardFooter>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => handleGenerateSuggestion(sugg.type)}
+                disabled={generating !== null || loadingTasks}
+              >
+                {generating === sugg.type ? (
+                  <>
+                    <RefreshCw className="ml-2 h-4 w-4 animate-spin" />
+                    جاري التوليد...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="ml-2 h-4 w-4" />
+                    توليد اقتراح
+                  </>
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
       </div>
+
+      {isOwner && lastAiResponse && (
+        <Collapsible className="mb-6">
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" size="sm" className="w-full justify-start">
+              <Code className="ml-2 h-4 w-4" />
+              عرض استجابة JSON الأخيرة من الذكاء الاصطناعي (للمالك فقط)
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <Card className="mt-2">
+              <CardHeader>
+                <CardTitle className="text-sm">استجابة JSON</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <pre className="bg-muted p-4 rounded-md overflow-auto max-h-96 text-xs">
+                  {JSON.stringify(lastAiResponse, null, 2)}
+                </pre>
+              </CardContent>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
 
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="mb-6">
         <TabsList className="grid grid-cols-5 mb-4">
@@ -560,7 +476,11 @@ export default function SuggestionsPage() {
         </TabsList>
 
         <TabsContent value={activeTab}>
-          {filteredSuggestions.length === 0 ? (
+          {loading && filteredSuggestions.length === 0 ? (
+             <div className="flex items-center justify-center h-[200px]">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+             </div>
+           ) : filteredSuggestions.length === 0 ? (
             <Card>
               <CardContent className="pt-6 text-center">
                 <Wand2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -630,3 +550,4 @@ export default function SuggestionsPage() {
     </div>
   );
 }
+

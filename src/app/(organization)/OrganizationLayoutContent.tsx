@@ -18,6 +18,8 @@ import {
   SidebarTrigger,
   SidebarMenu,
   SidebarSeparator,
+  SidebarInset,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { SidebarMenuLink } from '@/components/ui/sidebar-menu-link';
 import { SignOutButton } from '@/components/auth/SignOutButton';
@@ -32,7 +34,7 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
   const { user, userClaims } = useAuth();
   const pathname = usePathname();
   const [currentDate, setCurrentDate] = useState(new Date());
-  // No usamos useTaskPageContext directamente aquí
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // تحديث التاريخ الحالي كل دقيقة
   useEffect(() => {
@@ -42,17 +44,24 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
     return () => clearInterval(interval);
   }, []);
 
+  // إغلاق الشريط الجانبي عند تغيير المسار (للأجهزة المحمولة)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
   // الحصول على اسم المؤسسة من userClaims
   const organizationName = userClaims?.organizationName || 'المؤسسة';
   const isOwner = userClaims?.owner === true;
   const isAdmin = userClaims?.admin === true;
 
+  const { isMobile, setOpenMobile } = useSidebar();
+
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex min-h-screen bg-background text-foreground">
+      {/* Main Content - Add padding-right to prevent content from going behind sidebar */}
+      <div className="flex-1 flex flex-col relative md:pr-64">
         {/* Top Navigation Bar */}
-        <header className="bg-background border-b h-14 flex items-center justify-between px-4">
+        <header className="sticky top-0 z-10 bg-background border-b h-14 flex items-center justify-between px-4">
           <div className="flex items-center">
             <h1 className="text-lg font-semibold">نظام المؤسسات</h1>
           </div>
@@ -82,22 +91,26 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
             )}
 
             {/* Sidebar Trigger for Mobile */}
-            <SidebarTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SidebarTrigger>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden h-8 w-8"
+              onClick={() => setOpenMobile(true)}
+              aria-label="فتح القائمة"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto p-4 md:p-6">
           {children}
         </main>
       </div>
 
-      {/* Sidebar - Moved to the right side */}
-      <Sidebar side="right" className="border-r">
+      {/* Sidebar - Fixed on the right side (hidden on mobile) */}
+      <div className={`fixed right-0 top-0 h-full w-64 border-l bg-sidebar text-sidebar-foreground z-20 transition-transform duration-300 ${isMobile ? 'translate-x-full' : ''} md:translate-x-0`}>
         <SidebarHeader className="py-4">
           <div className="flex items-center justify-between px-4">
             <div className="flex items-center">
@@ -140,7 +153,7 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
               <span>مؤشرات الأداء</span>
             </SidebarMenuLink>
 
-            <SidebarMenuLink href="/org/okr" active={pathname.startsWith('/org/okr')}>
+            <SidebarMenuLink href="/org/okr" active={pathname?.startsWith('/org/okr') || false}>
               <Target className="ml-2 h-5 w-5" />
               <span>التخطيط السنوي (OKRs)</span>
             </SidebarMenuLink>
@@ -187,9 +200,7 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
             </div>
           </div>
         </SidebarFooter>
-      </Sidebar>
-
-
+      </div>
     </div>
   );
 }

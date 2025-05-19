@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev --port 9003",
     "dev:turbo": "next dev --turbopack --port 9003",
-    "build": "next build",
+    "build": "node --max-old-space-size=4096 ./node_modules/next/dist/bin/next build",
+    "build:static": "node --max-old-space-size=4096 ./node_modules/next/dist/bin/next build",
     "start": "next start",
     "serve": "next start",
     "serve:static": "npx serve out",
