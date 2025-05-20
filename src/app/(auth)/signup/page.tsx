@@ -138,7 +138,7 @@ export default function SignupPage() {
       <div className="relative my-6">
         <Separator className="absolute left-0 top-1/2 w-full -translate-y-1/2" />
         <span className="relative z-10 bg-card px-2 text-xs uppercase text-muted-foreground">
-          أو استمر بواسطة
+          {t('auth.orContinueWith')}
         </span>
       </div>
 
@@ -149,7 +149,7 @@ export default function SignupPage() {
         disabled={loading}
       >
          {loading ? <Loader2 className="animate-spin h-5 w-5" /> : <GoogleIcon className="h-5 w-5" />}
-        <span>التسجيل باستخدام جوجل</span>
+        <span>{t('auth.signInWithGoogle')}</span>
       </Button>
     </AuthFormWrapper>
   );
