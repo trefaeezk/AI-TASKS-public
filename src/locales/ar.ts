@@ -23,6 +23,7 @@ const ar = {
     submit: "إرسال",
     success: "تم بنجاح",
     error: "حدث خطأ",
+    refresh: "تحديث",
     required: "مطلوب",
     optional: "اختياري",
     more: "المزيد",
@@ -129,6 +130,23 @@ const ar = {
     googleSignInFailed: "فشل تسجيل الدخول باستخدام جوجل.",
     orContinueWith: "أو استمر بواسطة",
     signInWithGoogle: "تسجيل الدخول باستخدام جوجل",
+  },
+
+  // الاقتراحات - Suggestions
+  suggestions: {
+    smartSuggestions: "الاقتراحات الذكية",
+    errorLoadingSuggestions: "حدث خطأ أثناء تحميل الاقتراحات",
+    errorLoadingTasks: "حدث خطأ أثناء تحميل المهام",
+    noSuggestions: "لا توجد اقتراحات",
+    generateNewSuggestion: "قم بتوليد اقتراح جديد باستخدام الأزرار أدناه. الاقتراحات تعتمد على مهامك الحالية.",
+    currentUserTasks: "مهام المستخدم الحالية ({count})",
+    tasksDescription: "عرض لمهام المستخدم التي سيتم استخدامها في توليد الاقتراحات.",
+    noTasks: "لا توجد مهام",
+    noTasksDescription: "لم يتم العثور على أي مهام للمستخدم الحالي. يجب إنشاء مهام أولاً قبل توليد الاقتراحات.",
+    showHideTasksList: "عرض/إخفاء قائمة المهام ({count})",
+    refreshTasksList: "تحديث قائمة المهام",
+    showLastAiResponse: "عرض استجابة JSON الأخيرة من الذكاء الاصطناعي (للمالك فقط)",
+    jsonResponse: "استجابة JSON",
   },
 
   // المهام - Tasks

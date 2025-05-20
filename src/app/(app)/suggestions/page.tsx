@@ -43,7 +43,7 @@ export default function SuggestionsPage() {
 
   const isOwner = userClaims?.owner === true; // Check if user is owner
 
-  // تحميل الاقتراحات
+  // Load suggestions
   const fetchSuggestions = async () => {
     if (!user) {
       setLoading(false);
@@ -66,8 +66,8 @@ export default function SuggestionsPage() {
     } catch (error) {
       console.error('Error fetching suggestions:', error);
       toast({
-        title: 'خطأ',
-        description: 'حدث خطأ أثناء تحميل الاقتراحات',
+        title: t('common.error'),
+        description: t('suggestions.errorLoadingSuggestions'),
         variant: 'destructive',
       });
     } finally {
@@ -247,8 +247,8 @@ export default function SuggestionsPage() {
     } catch (error) {
       console.error('Error fetching user tasks:', error);
       toast({
-        title: 'خطأ',
-        description: 'حدث خطأ أثناء تحميل المهام',
+        title: t('common.error'),
+        description: t('suggestions.errorLoadingTasks'),
         variant: 'destructive',
       });
     } finally {
@@ -324,8 +324,8 @@ export default function SuggestionsPage() {
     return (
       <div className="container mx-auto p-4">
         <div className="flex items-center mb-6">
-          <Wand2 className="ml-2 h-6 w-6" />
-          <h1 className="text-2xl font-bold">الاقتراحات الذكية</h1>
+          <Wand2 className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-6 w-6`} />
+          <h1 className="text-2xl font-bold">{t('suggestions.smartSuggestions')}</h1>
         </div>
         <div className="space-y-6">
           <Skeleton className="h-12 w-full" />
@@ -342,8 +342,8 @@ export default function SuggestionsPage() {
     <div className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
-          <Wand2 className="ml-2 h-6 w-6" />
-          <h1 className="text-2xl font-bold">الاقتراحات الذكية</h1>
+          <Wand2 className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-6 w-6`} />
+          <h1 className="text-2xl font-bold">{t('suggestions.smartSuggestions')}</h1>
         </div>
         <Button
           variant="outline"
@@ -352,20 +352,20 @@ export default function SuggestionsPage() {
           disabled={loading}
         >
           {loading ? (
-            <RotateCw className="ml-2 h-4 w-4 animate-spin" />
+            <RotateCw className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-4 w-4 animate-spin`} />
           ) : (
-            <RotateCw className="ml-2 h-4 w-4" />
+            <RotateCw className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-4 w-4`} />
           )}
-          تحديث
+          {t('common.refresh')}
         </Button>
       </div>
 
       {suggestions.length === 0 && !loading && (
         <Alert className="mb-6">
           <Wand2 className="h-4 w-4" />
-          <AlertTitle>لا توجد اقتراحات</AlertTitle>
+          <AlertTitle>{t('suggestions.noSuggestions')}</AlertTitle>
           <AlertDescription>
-            قم بتوليد اقتراح جديد باستخدام الأزرار أدناه. الاقتراحات تعتمد على مهامك الحالية.
+            {t('suggestions.generateNewSuggestion')}
           </AlertDescription>
         </Alert>
       )}
@@ -373,11 +373,11 @@ export default function SuggestionsPage() {
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center">
-            <Database className="ml-2 h-5 w-5" />
-            مهام المستخدم الحالية ({userTasks.length})
+            <Database className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-5 w-5`} />
+            {t('suggestions.currentUserTasks').replace('{count}', userTasks.length.toString())}
           </CardTitle>
           <CardDescription>
-            عرض لمهام المستخدم التي سيتم استخدامها في توليد الاقتراحات.
+            {t('suggestions.tasksDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -385,16 +385,16 @@ export default function SuggestionsPage() {
             <Skeleton className="h-40 w-full" />
           ) : userTasks.length === 0 ? (
             <Alert>
-              <AlertTitle>لا توجد مهام</AlertTitle>
+              <AlertTitle>{t('suggestions.noTasks')}</AlertTitle>
               <AlertDescription>
-                لم يتم العثور على أي مهام للمستخدم الحالي. يجب إنشاء مهام أولاً قبل توليد الاقتراحات.
+                {t('suggestions.noTasksDescription')}
               </AlertDescription>
             </Alert>
           ) : (
              <Collapsible>
                 <CollapsibleTrigger asChild>
                     <Button variant="outline" size="sm" className="mb-2">
-                        عرض/إخفاء قائمة المهام ({userTasks.length})
+                        {t('suggestions.showHideTasksList').replace('{count}', userTasks.length.toString())}
                     </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
@@ -413,11 +413,11 @@ export default function SuggestionsPage() {
             disabled={loadingTasks}
           >
             {loadingTasks ? (
-              <RotateCw className="ml-2 h-4 w-4 animate-spin" />
+              <RotateCw className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-4 w-4 animate-spin`} />
             ) : (
-              <RotateCw className="ml-2 h-4 w-4" />
+              <RotateCw className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-4 w-4`} />
             )}
-            تحديث قائمة المهام
+            {t('suggestions.refreshTasksList')}
           </Button>
         </CardFooter>
       </Card>
@@ -502,14 +502,14 @@ export default function SuggestionsPage() {
         <Collapsible className="mb-6">
           <CollapsibleTrigger asChild>
             <Button variant="outline" size="sm" className="w-full justify-start">
-              <Code className="ml-2 h-4 w-4" />
-              عرض استجابة JSON الأخيرة من الذكاء الاصطناعي (للمالك فقط)
+              <Code className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-4 w-4`} />
+              {t('suggestions.showLastAiResponse')}
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent>
             <Card className="mt-2">
               <CardHeader>
-                <CardTitle className="text-sm">استجابة JSON</CardTitle>
+                <CardTitle className="text-sm">{t('suggestions.jsonResponse')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <pre className="bg-muted p-4 rounded-md overflow-auto max-h-96 text-xs">

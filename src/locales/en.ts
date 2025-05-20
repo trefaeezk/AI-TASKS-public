@@ -22,6 +22,7 @@ const en = {
     submit: "Submit",
     success: "Success",
     error: "Error",
+    refresh: "Refresh",
     required: "Required",
     optional: "Optional",
     more: "More",
@@ -128,6 +129,23 @@ const en = {
     googleSignInFailed: "Failed to sign in with Google.",
     orContinueWith: "Or continue with",
     signInWithGoogle: "Sign in with Google",
+  },
+
+  // Suggestions
+  suggestions: {
+    smartSuggestions: "Smart Suggestions",
+    errorLoadingSuggestions: "An error occurred while loading suggestions",
+    errorLoadingTasks: "An error occurred while loading tasks",
+    noSuggestions: "No Suggestions",
+    generateNewSuggestion: "Generate a new suggestion using the buttons below. Suggestions are based on your current tasks.",
+    currentUserTasks: "Current User Tasks ({count})",
+    tasksDescription: "View of user tasks that will be used to generate suggestions.",
+    noTasks: "No Tasks",
+    noTasksDescription: "No tasks were found for the current user. You must create tasks first before generating suggestions.",
+    showHideTasksList: "Show/Hide Tasks List ({count})",
+    refreshTasksList: "Refresh Tasks List",
+    showLastAiResponse: "Show Last AI JSON Response (Owner Only)",
+    jsonResponse: "JSON Response",
   },
 
   // Tasks
