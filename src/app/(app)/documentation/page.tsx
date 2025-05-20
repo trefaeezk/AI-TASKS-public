@@ -17,47 +17,47 @@ export default function DocumentationPageApp() {
   const [initialDocId, setInitialDocId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
 
-  // التحقق من تسجيل الدخول
+  // Check login status
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login?redirect=/documentation');
     }
   }, [user, loading, router]);
 
-  // تحميل البيانات من API
+  // Load data from API
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
         const response = await fetch('/api/documentation');
-        
+
         if (!response.ok) {
           throw new Error(`Error fetching documentation data: ${response.statusText}`);
         }
-        
+
         const data = await response.json();
-        
+
         setDocuments(data.documents || []);
         setInitialDocContent(data.initialDocContent || '');
         setInitialDocId(data.initialDocId || 'general-overview');
       } catch (error) {
         console.error('Error fetching documentation data:', error);
-        setError('حدث خطأ أثناء تحميل البيانات من الخادم');
+        setError('Error loading data from server');
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     if (user) {
       fetchData();
     }
   }, [user]);
 
-  // معالجة الأخطاء
+  // Error handling
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
       console.error('Error caught by error handler:', event.error);
-      setError('حدث خطأ أثناء تحميل الصفحة. يرجى تحديث الصفحة أو المحاولة مرة أخرى لاحقًا.');
+      setError('An error occurred while loading the page. Please refresh the page or try again later.');
     };
 
     window.addEventListener('error', handleError);
@@ -83,14 +83,14 @@ export default function DocumentationPageApp() {
         <div className="container mx-auto py-8">
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>خطأ</AlertTitle>
+            <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
           <Button
             onClick={() => window.location.reload()}
             className="mt-4"
           >
-            تحديث الصفحة
+            Refresh Page
           </Button>
         </div>
       ) : (
