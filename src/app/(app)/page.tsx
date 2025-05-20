@@ -324,7 +324,7 @@ import { Button } from '@/components/ui/button';
     <div dir={direction} className="flex flex-col h-full">
         {/* Filter Components Removed from here - Moved to AppLayoutContent */}
 
-        {/* المهام المعينة للمستخدم */}
+        {/* Assigned Tasks */}
         <AssignedTasksList className="mb-8" />
 
         {/* Task Content Area */}
