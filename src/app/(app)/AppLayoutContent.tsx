@@ -121,14 +121,14 @@ function FilterPopover() {
     // Return null if user is not logged in
     if (!user) return null;
 
-    // تحديد نوع الفلتر حسب الصفحة الحالية
+    // Determine filter type based on current page
     const isTasksPage = pathname === '/';
     const isKpiPage = pathname === '/kpi';
     const isReportsPage = pathname.startsWith('/reports');
     const isDataManagementPage = pathname.startsWith('/data');
     const isSettingsPage = pathname.startsWith('/settings');
 
-    // تحديد حالة تنشيط الفلتر للصفحة الرئيسية
+    // Determine filter activation state for the home page
     let isFilterActive = false;
     if (isTasksPage && taskPageContext) {
         const { categoryFilter, dateFilter, okrFilter } = taskPageContext;
@@ -145,7 +145,7 @@ function FilterPopover() {
                         "h-8 w-8 relative",
                         isFilterActive && "text-primary hover:text-primary" // Highlight if filters are active
                     )}
-                    aria-label="تطبيق الفلاتر"
+                    aria-label={t('common.applyFilters')}
                 >
                     <Filter className="h-4 w-4" />
                     {/* Warning indicator */}
@@ -156,9 +156,9 @@ function FilterPopover() {
             </PopoverTrigger>
             <PopoverContent className="w-auto p-4" align="start">
                 <div className="space-y-4">
-                    <h4 className="font-medium leading-none">الفلاتر</h4>
+                    <h4 className="font-medium leading-none">{t('common.filters')}</h4>
 
-                    {/* فلاتر صفحة المهام */}
+                    {/* Task page filters */}
                     {isTasksPage && taskPageContext && (
                         <>
                             <CategoryFilter
@@ -170,7 +170,7 @@ function FilterPopover() {
                                 dateRange={taskPageContext.dateFilter}
                                 setDateRange={taskPageContext.setDateFilter}
                             />
-                            {/* فلتر OKR */}
+                            {/* OKR filter */}
                             <OkrTaskFilter
                                 value={taskPageContext.okrFilter}
                                 onChange={taskPageContext.setOkrFilter}
@@ -180,7 +180,7 @@ function FilterPopover() {
                                 variant="outline"
                                 onClick={() => {
                                     taskPageContext.setCategoryFilter(null);
-                                    // إعادة تعيين الفلتر إلى القيمة الافتراضية (شهر ماضي وشهر لاحق)
+                                    // Reset filter to default value (one month back and one month forward)
                                     const now = new Date();
                                     const thirtyDaysAgo = new Date();
                                     const thirtyDaysLater = new Date();
@@ -191,57 +191,57 @@ function FilterPopover() {
                                 }}
                                 disabled={!isFilterActive} // Disable if no filters are active
                             >
-                                إعادة تعيين الفلاتر
+                                {t('common.resetFilters')}
                             </Button>
                         </>
                     )}
 
-                    {/* فلاتر صفحة مؤشرات الأداء */}
+                    {/* KPI page filters */}
                     {isKpiPage && (
                         <div className="space-y-2">
                             <div className="flex flex-col space-y-1">
-                                <Label htmlFor="kpi-date-range" className="text-xs font-medium">الفترة الزمنية</Label>
+                                <Label htmlFor="kpi-date-range" className="text-xs font-medium">{t('reports.reportPeriod')}</Label>
                                 <Select defaultValue="month">
                                     <SelectTrigger id="kpi-date-range" className="h-9 text-xs">
-                                        <SelectValue placeholder="اختر الفترة" />
+                                        <SelectValue placeholder={t('reports.selectPeriod')} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="week">أسبوع</SelectItem>
-                                        <SelectItem value="month">شهر</SelectItem>
-                                        <SelectItem value="quarter">ربع سنة</SelectItem>
-                                        <SelectItem value="year">سنة</SelectItem>
+                                        <SelectItem value="week">{t('general.week')}</SelectItem>
+                                        <SelectItem value="month">{t('general.month')}</SelectItem>
+                                        <SelectItem value="quarter">{t('reports.quarter')}</SelectItem>
+                                        <SelectItem value="year">{t('general.year')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div className="flex flex-col space-y-1">
-                                <Label htmlFor="kpi-type" className="text-xs font-medium">نوع المؤشر</Label>
+                                <Label htmlFor="kpi-type" className="text-xs font-medium">{t('reports.kpiType')}</Label>
                                 <Select defaultValue="all">
                                     <SelectTrigger id="kpi-type" className="h-9 text-xs">
-                                        <SelectValue placeholder="اختر نوع المؤشر" />
+                                        <SelectValue placeholder={t('reports.selectKpiType')} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">جميع المؤشرات</SelectItem>
-                                        <SelectItem value="completion">معدل الإنجاز</SelectItem>
-                                        <SelectItem value="priority">حسب الأولوية</SelectItem>
+                                        <SelectItem value="all">{t('reports.allKpis')}</SelectItem>
+                                        <SelectItem value="completion">{t('reports.completionRate')}</SelectItem>
+                                        <SelectItem value="priority">{t('reports.byPriority')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                         </div>
                     )}
 
-                    {/* فلاتر صفحة التقارير */}
+                    {/* Reports page filters */}
                     {isReportsPage && (
                         <div className="space-y-2">
                             <div className="flex flex-col space-y-1">
-                                <Label htmlFor="report-type" className="text-xs font-medium">نوع التقرير</Label>
+                                <Label htmlFor="report-type" className="text-xs font-medium">{t('reports.reportType')}</Label>
                                 <Select defaultValue="summary">
                                     <SelectTrigger id="report-type" className="h-9 text-xs">
-                                        <SelectValue placeholder="اختر نوع التقرير" />
+                                        <SelectValue placeholder={t('reports.selectReportType')} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="summary">ملخص</SelectItem>
-                                        <SelectItem value="detailed">تفصيلي</SelectItem>
-                                        <SelectItem value="performance">الأداء</SelectItem>
+                                        <SelectItem value="summary">{t('reports.reportSummary')}</SelectItem>
+                                        <SelectItem value="detailed">{t('reports.reportDetails')}</SelectItem>
+                                        <SelectItem value="performance">{t('reports.performance')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -252,19 +252,19 @@ function FilterPopover() {
                         </div>
                     )}
 
-                    {/* فلاتر صفحة إدارة البيانات */}
+                    {/* Data management page filters */}
                     {isDataManagementPage && (
                         <div className="space-y-2">
                             <div className="flex flex-col space-y-1">
-                                <Label htmlFor="data-type" className="text-xs font-medium">نوع البيانات</Label>
+                                <Label htmlFor="data-type" className="text-xs font-medium">{t('dataManagement.dataType')}</Label>
                                 <Select defaultValue="tasks">
                                     <SelectTrigger id="data-type" className="h-9 text-xs">
-                                        <SelectValue placeholder="اختر نوع البيانات" />
+                                        <SelectValue placeholder={t('dataManagement.selectDataType')} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="tasks">المهام</SelectItem>
-                                        <SelectItem value="categories">الفئات</SelectItem>
-                                        <SelectItem value="settings">الإعدادات</SelectItem>
+                                        <SelectItem value="tasks">{t('tasks.tasks')}</SelectItem>
+                                        <SelectItem value="categories">{t('general.categories')}</SelectItem>
+                                        <SelectItem value="settings">{t('common.settings')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
