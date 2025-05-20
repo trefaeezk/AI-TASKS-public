@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * صفحة إعدادات المؤسسة
+ * Organization Settings Page
  *
- * تتيح هذه الصفحة للمستخدمين الذين لديهم صلاحيات مناسبة تعديل إعدادات المؤسسة.
+ * This page allows users with appropriate permissions to modify organization settings.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -64,10 +64,10 @@ export default function OrganizationSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
 
-  // التحقق من الصلاحيات
+  // Check permissions
   const canEdit = role === 'owner' || role === 'admin' || hasPermission('organization.edit');
 
-  // جلب إعدادات المؤسسة
+  // Fetch organization settings
   useEffect(() => {
     if (!user || !isOrganization || !organizationId) {
       router.push('/org');
@@ -84,8 +84,8 @@ export default function OrganizationSettingsPage() {
           setSettings(orgData);
         } else {
           toast({
-            title: 'خطأ',
-            description: 'لم يتم العثور على بيانات المؤسسة',
+            title: t('common.error'),
+            description: t('organization.organizationDataNotFound'),
             variant: 'destructive',
           });
           router.push('/org');
@@ -93,8 +93,8 @@ export default function OrganizationSettingsPage() {
       } catch (error) {
         console.error('Error fetching organization settings:', error);
         toast({
-          title: 'خطأ',
-          description: 'حدث خطأ أثناء جلب إعدادات المؤسسة',
+          title: t('common.error'),
+          description: t('organization.errorFetchingOrganizationSettings'),
           variant: 'destructive',
         });
       } finally {
@@ -105,7 +105,7 @@ export default function OrganizationSettingsPage() {
     fetchSettings();
   }, [user, isOrganization, organizationId, router]);
 
-  // حفظ إعدادات المؤسسة
+  // Save organization settings
   const handleSave = async () => {
     if (!organizationId) return;
 
@@ -118,14 +118,14 @@ export default function OrganizationSettingsPage() {
       });
 
       toast({
-        title: 'تم الحفظ',
-        description: 'تم حفظ إعدادات المؤسسة بنجاح',
+        title: t('settings.settingsSaved'),
+        description: t('organization.organizationSettingsSaved'),
       });
     } catch (error) {
       console.error('Error saving organization settings:', error);
       toast({
-        title: 'خطأ',
-        description: 'حدث خطأ أثناء حفظ إعدادات المؤسسة',
+        title: t('common.error'),
+        description: t('organization.errorSavingOrganizationSettings'),
         variant: 'destructive',
       });
     } finally {
@@ -133,7 +133,7 @@ export default function OrganizationSettingsPage() {
     }
   };
 
-  // تحديث قيمة في الإعدادات
+  // Update a value in settings
   const handleChange = (key: keyof OrganizationSettings, value: any) => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
@@ -169,15 +169,15 @@ export default function OrganizationSettingsPage() {
         <TabsContent value="general">
           <Card>
             <CardHeader>
-              <CardTitle>المعلومات الأساسية</CardTitle>
+              <CardTitle>{t('organization.basicInformation')}</CardTitle>
               <CardDescription>
-                المعلومات الأساسية عن المؤسسة
+                {t('organization.basicInformationDescription')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">اسم المؤسسة</Label>
+                  <Label htmlFor="name">{t('organization.organizationName')}</Label>
                   <Input
                     id="name"
                     value={settings.name}
@@ -186,7 +186,7 @@ export default function OrganizationSettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="contactEmail">البريد الإلكتروني للتواصل</Label>
+                  <Label htmlFor="contactEmail">{t('organization.organizationEmail')}</Label>
                   <Input
                     id="contactEmail"
                     type="email"
@@ -198,7 +198,7 @@ export default function OrganizationSettingsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">وصف المؤسسة</Label>
+                <Label htmlFor="description">{t('organization.organizationDescription')}</Label>
                 <Textarea
                   id="description"
                   value={settings.description}
@@ -210,7 +210,7 @@ export default function OrganizationSettingsPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="contactPhone">رقم الهاتف</Label>
+                  <Label htmlFor="contactPhone">{t('organization.organizationPhone')}</Label>
                   <Input
                     id="contactPhone"
                     value={settings.contactPhone || ''}
@@ -219,7 +219,7 @@ export default function OrganizationSettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="website">الموقع الإلكتروني</Label>
+                  <Label htmlFor="website">{t('organization.organizationWebsite')}</Label>
                   <Input
                     id="website"
                     value={settings.website || ''}
@@ -230,7 +230,7 @@ export default function OrganizationSettingsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="address">العنوان</Label>
+                <Label htmlFor="address">{t('organization.organizationAddress')}</Label>
                 <Textarea
                   id="address"
                   value={settings.address || ''}
@@ -245,9 +245,9 @@ export default function OrganizationSettingsPage() {
                 onClick={handleSave}
                 disabled={!canEdit || saving}
               >
-                {saving && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                <Save className="ml-2 h-4 w-4" />
-                حفظ التغييرات
+                {saving && <Loader2 className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-4 w-4 animate-spin`} />}
+                <Save className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-4 w-4`} />
+                {t('settings.saveSettings')}
               </Button>
             </CardFooter>
           </Card>
@@ -256,17 +256,17 @@ export default function OrganizationSettingsPage() {
         <TabsContent value="permissions">
           <Card>
             <CardHeader>
-              <CardTitle>إعدادات الصلاحيات</CardTitle>
+              <CardTitle>{t('organization.permissionsSettings')}</CardTitle>
               <CardDescription>
-                تحكم في صلاحيات أعضاء المؤسسة
+                {t('organization.permissionsSettingsDescription')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>السماح بدعوة أعضاء جدد</Label>
+                  <Label>{t('organization.allowMemberInvites')}</Label>
                   <p className="text-sm text-muted-foreground">
-                    السماح للمشرفين بدعوة أعضاء جدد للمؤسسة
+                    {t('organization.allowMemberInvitesDescription')}
                   </p>
                 </div>
                 <Switch
@@ -280,9 +280,9 @@ export default function OrganizationSettingsPage() {
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>السماح بإنشاء أقسام جديدة</Label>
+                  <Label>{t('organization.allowDepartmentCreation')}</Label>
                   <p className="text-sm text-muted-foreground">
-                    السماح للمشرفين بإنشاء أقسام جديدة في المؤسسة
+                    {t('organization.allowDepartmentCreationDescription')}
                   </p>
                 </div>
                 <Switch
@@ -296,9 +296,9 @@ export default function OrganizationSettingsPage() {
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>طلب موافقة على المهام</Label>
+                  <Label>{t('organization.requireTaskApproval')}</Label>
                   <p className="text-sm text-muted-foreground">
-                    طلب موافقة المشرف على المهام الجديدة قبل نشرها
+                    {t('organization.requireTaskApprovalDescription')}
                   </p>
                 </div>
                 <Switch
@@ -313,9 +313,9 @@ export default function OrganizationSettingsPage() {
                 onClick={handleSave}
                 disabled={!canEdit || saving}
               >
-                {saving && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                <Save className="ml-2 h-4 w-4" />
-                حفظ التغييرات
+                {saving && <Loader2 className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-4 w-4 animate-spin`} />}
+                <Save className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-4 w-4`} />
+                {t('settings.saveSettings')}
               </Button>
             </CardFooter>
           </Card>
@@ -324,17 +324,17 @@ export default function OrganizationSettingsPage() {
         <TabsContent value="features">
           <Card>
             <CardHeader>
-              <CardTitle>الميزات المتقدمة</CardTitle>
+              <CardTitle>{t('settings.advancedSettings')}</CardTitle>
               <CardDescription>
-                تفعيل أو تعطيل الميزات المتقدمة في النظام
+                {t('organization.advancedFeaturesDescription')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>ميزات الذكاء الاصطناعي</Label>
+                  <Label>{t('organization.aiFeatures')}</Label>
                   <p className="text-sm text-muted-foreground">
-                    تفعيل ميزات الذكاء الاصطناعي مثل اقتراح المهام وتوليد التقارير
+                    {t('organization.aiFeaturesDescription')}
                   </p>
                 </div>
                 <Switch
@@ -349,9 +349,9 @@ export default function OrganizationSettingsPage() {
                 onClick={handleSave}
                 disabled={!canEdit || saving}
               >
-                {saving && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                <Save className="ml-2 h-4 w-4" />
-                حفظ التغييرات
+                {saving && <Loader2 className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-4 w-4 animate-spin`} />}
+                <Save className={`${direction === 'rtl' ? 'ml-2' : 'mr-2'} h-4 w-4`} />
+                {t('settings.saveSettings')}
               </Button>
             </CardFooter>
           </Card>
@@ -360,23 +360,23 @@ export default function OrganizationSettingsPage() {
         <TabsContent value="notifications">
           <Card>
             <CardHeader>
-              <CardTitle>إعدادات الإشعارات</CardTitle>
+              <CardTitle>{t('notifications.notificationSettings')}</CardTitle>
               <CardDescription>
-                إدارة إعدادات الإشعارات وتفضيلات التنبيهات
+                {t('notifications.notificationSettingsDescription')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>إعدادات الإشعارات</Label>
+                  <Label>{t('notifications.notificationSettings')}</Label>
                   <p className="text-sm text-muted-foreground">
-                    تخصيص كيفية استلام الإشعارات وأنواعها
+                    {t('notifications.customizeNotifications')}
                   </p>
                 </div>
                 <Button variant="outline" size="sm" asChild>
                   <Link href="/org/settings/notifications" className="flex items-center">
-                    <span>إدارة الإشعارات</span>
-                    <ArrowRight className="mr-2 h-4 w-4" />
+                    <span>{t('notifications.manageNotifications')}</span>
+                    <ArrowRight className={`${direction === 'rtl' ? 'mr-2' : 'ml-2'} h-4 w-4`} />
                   </Link>
                 </Button>
               </div>
