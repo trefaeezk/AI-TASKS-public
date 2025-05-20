@@ -1,6 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
 
+  // تكوين i18n للتوجيه متعدد اللغات (يعمل فقط مع Pages Router)
+  // ملاحظة: في App Router، يتم التعامل مع اللغات بشكل مختلف
+  // https://nextjs.org/docs/app/building-your-application/routing/internationalization
+  i18n: {
+    // اللغات المدعومة
+    locales: ['ar', 'en'],
+    // اللغة الافتراضية
+    defaultLocale: 'ar',
+    // تمكين اكتشاف اللغة تلقائيًا
+    localeDetection: true,
+  },
+
   // تعطيل التحقق من الأنواع أثناء البناء
   typescript: {
     ignoreBuildErrors: true,
