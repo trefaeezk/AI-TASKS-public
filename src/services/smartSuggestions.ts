@@ -34,7 +34,8 @@ export interface SmartSuggestionServiceOutput {
 export async function generateUserSuggestions(
   userId: string,
   userName: string,
-  suggestionType: 'task_prioritization' | 'deadline_adjustment' | 'workload_management' | 'daily_summary'
+  suggestionType: 'task_prioritization' | 'deadline_adjustment' | 'workload_management' | 'daily_summary',
+  language?: string // إضافة معلمة اللغة
 ): Promise<SmartSuggestionServiceOutput> { // Changed return type to SmartSuggestionServiceOutput
   try {
     const settings = await getNotificationSettings(userId);
@@ -145,25 +146,40 @@ export async function generateUserSuggestions(
       overdueTasks: overdueTasksForAI as any,
       performance,
       suggestionType,
+      language, // تمرير معلمة اللغة
     };
 
-    console.log(`[SmartSuggestions] Sending request to AI service...`);
+    console.log(`[SmartSuggestions] Sending request to AI service with language: ${language || 'ar'}`);
     const result: AISuggestionOutput = await callAIService(aiInput); // Use the renamed import
     console.log(`[SmartSuggestions] AI service result:`, result);
 
     if (!result || !result.title || !result.content) { // Adjusted check to ensure title and content exist
       console.log(`[SmartSuggestions] Creating default suggestion for ${suggestionType} due to missing data from AI`);
+
+      // إنشاء اقتراح افتراضي بناءً على اللغة المحددة
       const defaultSuggestion: SmartSuggestionServiceOutput = {
         suggestion: {
-          title: `اقتراح ${getSuggestionTypeTitle(suggestionType)}`,
-          description: 'تم إنشاء اقتراح بسيط بناءً على مهامك الحالية.',
-          content: 'لا توجد مهام كافية لإنشاء اقتراح مفصل. يرجى إضافة المزيد من المهام.',
+          title: language === 'en'
+            ? `${getSuggestionTypeTitle(suggestionType, language)} suggestion`
+            : `اقتراح ${getSuggestionTypeTitle(suggestionType, language)}`,
+          description: language === 'en'
+            ? 'A simple suggestion was created based on your current tasks.'
+            : 'تم إنشاء اقتراح بسيط بناءً على مهامك الحالية.',
+          content: language === 'en'
+            ? 'Not enough tasks to create a detailed suggestion. Please add more tasks.'
+            : 'لا توجد مهام كافية لإنشاء اقتراح مفصل. يرجى إضافة المزيد من المهام.',
           priority: 'medium',
-          actionItems: [
-            { description: 'مراجعة المهام الحالية' },
-            { description: 'تحديد أولويات المهام' },
-            { description: 'التركيز على المهام ذات الأولوية العالية' }
-          ]
+          actionItems: language === 'en'
+            ? [
+                { description: 'Review current tasks' },
+                { description: 'Set task priorities' },
+                { description: 'Focus on high priority tasks' }
+              ]
+            : [
+                { description: 'مراجعة المهام الحالية' },
+                { description: 'تحديد أولويات المهام' },
+                { description: 'التركيز على المهام ذات الأولوية العالية' }
+              ]
         }
       };
       await createNotificationFromSuggestion(userId, defaultSuggestion.suggestion, suggestionType);
@@ -261,26 +277,36 @@ function calculatePerformanceMetrics(tasks: TaskType[]) {
   };
 }
 
-export async function generateDailySummary(userId: string, userName: string): Promise<SmartSuggestionServiceOutput> {
-  return await generateUserSuggestions(userId, userName, 'daily_summary');
+export async function generateDailySummary(userId: string, userName: string, language?: string): Promise<SmartSuggestionServiceOutput> {
+  return await generateUserSuggestions(userId, userName, 'daily_summary', language);
 }
-export async function generateTaskPrioritization(userId: string, userName: string): Promise<SmartSuggestionServiceOutput> {
-  return await generateUserSuggestions(userId, userName, 'task_prioritization');
+export async function generateTaskPrioritization(userId: string, userName: string, language?: string): Promise<SmartSuggestionServiceOutput> {
+  return await generateUserSuggestions(userId, userName, 'task_prioritization', language);
 }
-export async function generateDeadlineAdjustment(userId: string, userName: string): Promise<SmartSuggestionServiceOutput> {
-  return await generateUserSuggestions(userId, userName, 'deadline_adjustment');
+export async function generateDeadlineAdjustment(userId: string, userName: string, language?: string): Promise<SmartSuggestionServiceOutput> {
+  return await generateUserSuggestions(userId, userName, 'deadline_adjustment', language);
 }
-export async function generateWorkloadManagement(userId: string, userName: string): Promise<SmartSuggestionServiceOutput> {
-  return await generateUserSuggestions(userId, userName, 'workload_management');
+export async function generateWorkloadManagement(userId: string, userName: string, language?: string): Promise<SmartSuggestionServiceOutput> {
+  return await generateUserSuggestions(userId, userName, 'workload_management', language);
 }
 
-function getSuggestionTypeTitle(type: string): string {
-  switch (type) {
-    case 'daily_summary': return 'الملخص اليومي';
-    case 'task_prioritization': return 'ترتيب أولويات المهام';
-    case 'deadline_adjustment': return 'تعديل المواعيد النهائية';
-    case 'workload_management': return 'إدارة عبء العمل';
-    default: return 'اقتراح ذكي';
+function getSuggestionTypeTitle(type: string, language?: string): string {
+  if (language === 'en') {
+    switch (type) {
+      case 'daily_summary': return 'Daily Summary';
+      case 'task_prioritization': return 'Task Prioritization';
+      case 'deadline_adjustment': return 'Deadline Adjustment';
+      case 'workload_management': return 'Workload Management';
+      default: return 'Smart Suggestion';
+    }
+  } else {
+    switch (type) {
+      case 'daily_summary': return 'الملخص اليومي';
+      case 'task_prioritization': return 'ترتيب أولويات المهام';
+      case 'deadline_adjustment': return 'تعديل المواعيد النهائية';
+      case 'workload_management': return 'إدارة عبء العمل';
+      default: return 'اقتراح ذكي';
+    }
   }
 }
 

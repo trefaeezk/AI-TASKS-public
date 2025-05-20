@@ -13,6 +13,9 @@ import { usePathname } from 'next/navigation';
 import { format } from 'date-fns';
 import { PermissionSidebarItem } from '@/components/PermissionSidebarItem';
 import { AccountTypeGuard } from '@/components/auth/AccountTypeGuard';
+import { useLanguage } from '@/context/LanguageContext';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { Translate } from '@/components/Translate';
 
 import {
   Sidebar,
@@ -304,6 +307,7 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
     const { isMobile, setOpenMobile } = useSidebar();
     const { role, loading: loadingPermissions } = usePermissions(); // استخدام hook الصلاحيات
     const { accountType, isLoading: loadingAccountType } = useAccountType(); // استخدام hook نوع الحساب
+    const { t, direction } = useLanguage(); // استخدام سياق اللغة
 
     // التحقق مما إذا كان المستخدم مسؤولاً
     const isAdmin = role === 'admin';
@@ -323,11 +327,14 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen bg-background text-foreground">
         <Sidebar side="right" collapsible="icon"> {/* Sidebar on the right for RTL */}
             <SidebarHeader className="p-2 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-primary group-data-[collapsible=icon]:hidden">
-                 إدارة المهام
-                </h2>
-                 {/* Add a visually hidden title for accessibility in mobile view */}
-                 <span className="sr-only">القائمة الرئيسية</span>
+                <div className="flex justify-between items-center w-full">
+                  <h2 className="text-lg font-semibold text-primary group-data-[collapsible=icon]:hidden">
+                    <Translate text="general.appName" defaultValue="إدارة المهام" />
+                  </h2>
+                  <LanguageSwitcher variant="default" size="sm" className="group-data-[collapsible=icon]:hidden" />
+                </div>
+                {/* Add a visually hidden title for accessibility in mobile view */}
+                <span className="sr-only"><Translate text="general.menu" defaultValue="القائمة الرئيسية" /></span>
             </SidebarHeader>
 
             <SidebarContent className="flex-1 overflow-y-auto p-2">

@@ -26,15 +26,21 @@ import { SignOutButton } from '@/components/auth/SignOutButton';
 import { Button } from '@/components/ui/button';
 import { AddTaskSheet } from '@/components/AddTaskSheet';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { Translate } from '@/components/Translate';
 
 import { NotificationsPopover } from '@/components/notifications/NotificationsPopover';
 import Link from 'next/link';
 
 export function OrganizationLayoutContent({ children }: { children: ReactNode }) {
   const { user, userClaims } = useAuth();
+  const { t, direction } = useLanguage();
   const pathname = usePathname();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // الحصول على متغيرات الشريط الجانبي
+  const { isMobile, setOpenMobile } = useSidebar();
 
   // تحديث التاريخ الحالي كل دقيقة
   useEffect(() => {
@@ -46,15 +52,15 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
 
   // إغلاق الشريط الجانبي عند تغيير المسار (للأجهزة المحمولة)
   useEffect(() => {
-    setSidebarOpen(false);
-  }, [pathname]);
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }, [pathname, isMobile, setOpenMobile]);
 
   // الحصول على اسم المؤسسة من userClaims
-  const organizationName = userClaims?.organizationName || 'المؤسسة';
+  const organizationName = userClaims?.organizationName || t('organization.organization');
   const isOwner = userClaims?.owner === true;
   const isAdmin = userClaims?.admin === true;
-
-  const { isMobile, setOpenMobile } = useSidebar();
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -63,10 +69,11 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
         {/* Top Navigation Bar */}
         <header className="sticky top-0 z-10 bg-background border-b h-14 flex items-center justify-between px-4">
           <div className="flex items-center">
-            <h1 className="text-lg font-semibold">نظام المؤسسات</h1>
+            <h1 className="text-lg font-semibold"><Translate text="organization.organization" /></h1>
           </div>
 
           <div className="flex items-center gap-2">
+            <LanguageSwitcher variant="default" size="sm" />
             {pathname === '/org/tasks' && user && (
               <AddTaskSheet user={user} />
             )}
@@ -124,7 +131,7 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
             <SidebarTrigger asChild>
               <Button variant="ghost" size="icon">
                 <Menu className="h-5 w-5" />
-                <span className="sr-only">فتح/إغلاق الشريط الجانبي</span>
+                <span className="sr-only"><Translate text="general.menu" defaultValue="فتح/إغلاق الشريط الجانبي" /></span>
               </Button>
             </SidebarTrigger>
           </div>

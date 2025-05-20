@@ -6,6 +6,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { TaskCardTemp } from '@/components/TaskCardTemp';
 import { AssignedTasksList } from '@/components/AssignedTasksList';
 import type { TaskType, TaskStatus, TaskFirestoreData, DurationUnit, TaskCategoryDefinition, PriorityLevel } from '@/types/task';
@@ -39,6 +40,7 @@ import { Button } from '@/components/ui/button';
 // --- Main Page Content Component ---
  function HomePageContent() {
   const { user } = useAuth();
+  const { direction, t } = useLanguage();
   const taskPageContext = useTaskPageContext();
   const { toast } = useToast();
   const { getCategoryColor } = useTaskCategories(user?.uid);
@@ -97,7 +99,11 @@ import { Button } from '@/components/ui/button';
   const handleStatusChange = useCallback(async (taskId: string, newStatus: TaskStatus) => {
       if (!user || !taskId || !updateTaskOptimistic || !revertTaskOptimistic || !categoryInfo) {
           console.error("Cannot update status: Missing user, taskId, context functions, or categoryInfo.");
-          toast({ title: 'خطأ', description: 'لا يمكن تحديث الحالة.', variant: 'destructive' });
+          toast({
+            title: t('general.error'),
+            description: t('tasks.cannotUpdateStatus'),
+            variant: 'destructive'
+          });
           return;
       }
 
@@ -121,8 +127,8 @@ import { Button } from '@/components/ui/button';
           console.log(`Updating task ${taskId} status to ${newStatus}`);
           await updateDoc(taskDocRef, { status: newStatus });
           toast({
-              title: 'تم تحديث الحالة',
-              description: `تم تحديث حالة المهمة إلى ${categoryInfo[newStatus]?.title ?? newStatus}.`,
+              title: t('tasks.statusUpdated'),
+              description: t('tasks.taskStatusUpdatedTo', { status: categoryInfo[newStatus]?.title ?? newStatus }),
           });
           // No need to manually change category here, stay on the current one
           // const newCategory = getTaskCategory({ ...originalTask, status: newStatus });
@@ -131,8 +137,8 @@ import { Button } from '@/components/ui/button';
       } catch (error) {
           console.error("Error updating task status in Firestore:", error);
           toast({
-              title: 'خطأ في تحديث الحالة',
-              description: 'حدث خطأ أثناء محاولة تحديث حالة المهمة.',
+              title: t('tasks.statusUpdateError'),
+              description: t('tasks.errorUpdatingTaskStatus'),
               variant: 'destructive',
           });
           revertTaskOptimistic(taskId, { status: originalStatus });
@@ -156,7 +162,11 @@ import { Button } from '@/components/ui/button';
   const confirmDeleteTask = useCallback(async () => {
       if (!user || !deletingTaskId || !removeTaskOptimistic || !revertTaskOptimistic) {
            console.error("Cannot delete task: Missing user, taskId, or context functions.");
-           toast({ title: 'خطأ', description: 'معرف المهمة غير صالح أو لم يتم تسجيل الدخول.', variant: 'destructive' });
+           toast({
+             title: t('general.error'),
+             description: t('tasks.invalidTaskIdOrNotLoggedIn'),
+             variant: 'destructive'
+           });
           setIsDeleteDialogOpen(false);
           setDeletingTaskId(null);
           return;
@@ -181,16 +191,16 @@ import { Button } from '@/components/ui/button';
           console.log(`Deleting task ${deletingTaskId}`);
           await deleteDoc(taskDocRef);
           toast({
-              title: 'تم حذف المهمة',
-              description: 'تم حذف المهمة بنجاح.',
+              title: t('tasks.taskDeleted'),
+              description: t('tasks.taskDeletedSuccessfully'),
           });
            setDeletingTaskId(null);
            // No need to change category
       } catch (error) {
           console.error("Error deleting task from Firestore:", error);
           toast({
-              title: 'خطأ في حذف المهمة',
-              description: 'حدث خطأ أثناء محاولة حذف المهمة.',
+              title: t('tasks.taskDeleteError'),
+              description: t('tasks.errorDeletingTask'),
               variant: 'destructive',
           });
            revertTaskOptimistic(deletingTaskId, taskToDelete);
@@ -256,14 +266,14 @@ import { Button } from '@/components/ui/button';
                         console.log(`Updating task ${activeId} status to ${newStatus} via DND to category ${targetCategoryKey}`);
                         await updateDoc(taskDocRef, { status: newStatus });
                         toast({
-                            title: 'تم نقل المهمة',
-                            description: `تم نقل المهمة إلى ${categoryInfo[targetCategoryKey]?.title ?? targetCategoryKey}.`,
+                            title: t('tasks.taskMoved'),
+                            description: t('tasks.taskMovedTo', { category: categoryInfo[targetCategoryKey]?.title ?? targetCategoryKey }),
                         });
                     } catch (error) {
                         console.error("Error updating task status in Firestore after DND:", error);
                         toast({
-                            title: 'خطأ في نقل المهمة',
-                            description: 'حدث خطأ أثناء تحديث حالة المهمة.',
+                            title: t('tasks.taskMoveError'),
+                            description: t('tasks.errorMovingTask'),
                             variant: 'destructive',
                         });
                          console.warn("Reverting DND status change");
@@ -304,14 +314,14 @@ import { Button } from '@/components/ui/button';
 
   // --- Render Logic ---
   if (!taskPageContext || !user) {
-     return <div className="text-center p-4">خطأ في تحميل سياق الصفحة أو المستخدم.</div>;
+     return <div className="text-center p-4">{t('general.errorLoadingPageContextOrUser')}</div>;
   }
 
   const currentCategoryTasks = categorizedTasks[selectedCategory] ?? [];
 
 
   return (
-    <div dir="rtl" className="flex flex-col h-full">
+    <div dir={direction} className="flex flex-col h-full">
         {/* Filter Components Removed from here - Moved to AppLayoutContent */}
 
         {/* المهام المعينة للمستخدم */}
@@ -328,15 +338,15 @@ import { Button } from '@/components/ui/button';
                  {filteredTasks.length === 0 && (categoryFilter || dateFilter.startDate || dateFilter.endDate) ? (
                     <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-10">
                          <FileText className="w-16 h-16 mb-4" />
-                         <p className="text-lg">لا توجد مهام تطابق الفلاتر الحالية.</p>
-                         <Button variant="link" onClick={() => { setCategoryFilter(null); setDateFilter({ startDate: null, endDate: null }); }}>إزالة الفلاتر</Button>
+                         <p className="text-lg">{t('tasks.noTasksMatchCurrentFilters')}</p>
+                         <Button variant="link" onClick={() => { setCategoryFilter(null); setDateFilter({ startDate: null, endDate: null }); }}>{t('tasks.removeFilters')}</Button>
                      </div>
                  ) : tasks.length === 0 ? ( // Check original tasks length for the initial empty state
                      <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-10">
                          <FileText className="w-16 h-16 mb-4" />
-                         <p className="text-lg">لا توجد مهام لعرضها.</p>
+                         <p className="text-lg">{t('tasks.noTasksToDisplay')}</p>
                          <p className="text-sm mt-2">
-                             استخدم زر <kbd className="px-2 py-1 text-xs font-semibold text-foreground bg-muted border border-border rounded-md mx-1">+</kbd> في الأعلى لإضافة مهمة جديدة!
+                             {t('tasks.useButtonToAddNewTask', { button: <kbd className="px-2 py-1 text-xs font-semibold text-foreground bg-muted border border-border rounded-md mx-1">+</kbd> })}
                          </p>
                      </div>
                  ) : (
@@ -351,7 +361,10 @@ import { Button } from '@/components/ui/button';
                                      {/* Use currentCategoryTasks which is derived from filtered + categorized */}
                                      {categorizedTasks[categoryKey]?.length === 0 ? (
                                          <p className="text-center text-muted-foreground py-8 text-sm">
-                                             لا توجد مهام في هذه الفئة {categoryFilter ? `للفئة "${categoryFilter}"` : ''} {dateFilter.startDate || dateFilter.endDate ? 'ضمن نطاق التاريخ المحدد' : ''}.
+                                             {t('tasks.noTasksInCategory', {
+                                                category: categoryFilter ? t('tasks.forCategory', { category: categoryFilter }) : '',
+                                                dateRange: dateFilter.startDate || dateFilter.endDate ? t('tasks.withinSpecifiedDateRange') : ''
+                                             })}
                                          </p>
                                      ) : (
                                          <ul className="space-y-3">
@@ -389,20 +402,20 @@ import { Button } from '@/components/ui/button';
 
          {/* Delete Confirmation Dialog */}
          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-             <AlertDialogContent dir="rtl">
+             <AlertDialogContent dir={direction}>
                  <AlertDialogHeader>
-                 <AlertDialogTitle>هل أنت متأكد من الحذف؟</AlertDialogTitle>
+                 <AlertDialogTitle>{t('tasks.deleteTaskConfirmation')}</AlertDialogTitle>
                  <AlertDialogDescription>
-                     هذا الإجراء لا يمكن التراجع عنه. سيؤدي هذا إلى حذف مهمتك بشكل دائم.
+                     {t('tasks.deleteTaskWarning')}
                  </AlertDialogDescription>
                  </AlertDialogHeader>
                  <AlertDialogFooter>
-                 <AlertDialogCancel onClick={() => setDeletingTaskId(null)}>إلغاء</AlertDialogCancel>
+                 <AlertDialogCancel onClick={() => setDeletingTaskId(null)}>{t('general.cancel')}</AlertDialogCancel>
                  <AlertDialogAction
                      onClick={confirmDeleteTask}
                      asChild
                  >
-                      <Button variant="destructive">حذف</Button>
+                      <Button variant="destructive">{t('general.delete')}</Button>
                  </AlertDialogAction>
                  </AlertDialogFooter>
              </AlertDialogContent>

@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
+import { Translate } from '@/components/Translate';
 import { Wand2, ListChecks, Calendar, BarChart, RefreshCw, Clock, RotateCw, Database, Code, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +22,7 @@ import {
   SmartSuggestionServiceOutput // Use the correct type name
 } from '@/services/smartSuggestions';
 import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
+import { ar, enUS } from 'date-fns/locale';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { collection, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
@@ -30,6 +32,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 export default function SuggestionsPage() {
   const { user, userClaims } = useAuth(); // Get userClaims
   const { toast } = useToast();
+  const { t, language, direction } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<Notification[]>([]);
@@ -103,8 +106,10 @@ export default function SuggestionsPage() {
 
     if (userTasks.length === 0) {
       toast({
-        title: 'لا توجد مهام',
-        description: 'يجب إنشاء مهام أولاً قبل توليد الاقتراحات.',
+        title: language === 'en' ? 'No Tasks' : 'لا توجد مهام',
+        description: language === 'en'
+          ? 'You need to create tasks first before generating suggestions.'
+          : 'يجب إنشاء مهام أولاً قبل توليد الاقتراحات.',
         variant: 'destructive',
       });
       return;
@@ -120,16 +125,16 @@ export default function SuggestionsPage() {
 
       switch (type) {
         case 'daily_summary':
-          result = await generateDailySummary(user.uid, userName);
+          result = await generateDailySummary(user.uid, userName, language);
           break;
         case 'task_prioritization':
-          result = await generateTaskPrioritization(user.uid, userName);
+          result = await generateTaskPrioritization(user.uid, userName, language);
           break;
         case 'deadline_adjustment':
-          result = await generateDeadlineAdjustment(user.uid, userName);
+          result = await generateDeadlineAdjustment(user.uid, userName, language);
           break;
         case 'workload_management':
-          result = await generateWorkloadManagement(user.uid, userName);
+          result = await generateWorkloadManagement(user.uid, userName, language);
           break;
       }
 
@@ -138,13 +143,17 @@ export default function SuggestionsPage() {
 
       if (result && result.suggestion) {
         toast({
-          title: 'تم توليد الاقتراح',
-          description: 'تم توليد اقتراح جديد بنجاح. انتظر لحظة حتى يظهر في القائمة.',
+          title: language === 'en' ? 'Suggestion Generated' : 'تم توليد الاقتراح',
+          description: language === 'en'
+            ? 'A new suggestion has been successfully generated. Wait a moment for it to appear in the list.'
+            : 'تم توليد اقتراح جديد بنجاح. انتظر لحظة حتى يظهر في القائمة.',
         });
       } else {
         toast({
-          title: 'لم يتم إنشاء اقتراح',
-          description: 'لم يتمكن الذكاء الاصطناعي من إنشاء اقتراح لهذه البيانات.',
+          title: language === 'en' ? 'No Suggestion Created' : 'لم يتم إنشاء اقتراح',
+          description: language === 'en'
+            ? 'AI could not create a suggestion for this data.'
+            : 'لم يتمكن الذكاء الاصطناعي من إنشاء اقتراح لهذه البيانات.',
           variant: 'default',
         });
       }
@@ -158,16 +167,20 @@ export default function SuggestionsPage() {
       console.error('Error generating suggestion:', error);
       setLastAiResponse({
         suggestion: {
-          title: `خطأ في توليد اقتراح ${type}`,
-          description: 'حدث خطأ تقني.',
+          title: language === 'en'
+            ? `Error generating ${type} suggestion`
+            : `خطأ في توليد اقتراح ${type}`,
+          description: language === 'en' ? 'A technical error occurred.' : 'حدث خطأ تقني.',
           content: `Error: ${error instanceof Error ? error.message : String(error)}`,
           priority: 'medium',
           actionItems: []
         }
       });
       toast({
-        title: 'خطأ',
-        description: 'حدث خطأ أثناء توليد الاقتراح. تأكد من وجود مهام في حسابك.',
+        title: language === 'en' ? 'Error' : 'خطأ',
+        description: language === 'en'
+          ? 'An error occurred while generating the suggestion. Make sure you have tasks in your account.'
+          : 'حدث خطأ أثناء توليد الاقتراح. تأكد من وجود مهام في حسابك.',
         variant: 'destructive',
       });
     } finally {
@@ -278,12 +291,22 @@ export default function SuggestionsPage() {
   });
 
   const getSuggestionTypeTitle = (type: string) => {
-    switch (type) {
-      case 'daily_summary': return 'الملخص اليومي';
-      case 'task_prioritization': return 'ترتيب أولويات المهام';
-      case 'deadline_adjustment': return 'تعديل المواعيد النهائية';
-      case 'workload_management': return 'إدارة عبء العمل';
-      default: return 'اقتراح';
+    if (language === 'en') {
+      switch (type) {
+        case 'daily_summary': return 'Daily Summary';
+        case 'task_prioritization': return 'Task Prioritization';
+        case 'deadline_adjustment': return 'Deadline Adjustment';
+        case 'workload_management': return 'Workload Management';
+        default: return 'Suggestion';
+      }
+    } else {
+      switch (type) {
+        case 'daily_summary': return 'الملخص اليومي';
+        case 'task_prioritization': return 'ترتيب أولويات المهام';
+        case 'deadline_adjustment': return 'تعديل المواعيد النهائية';
+        case 'workload_management': return 'إدارة عبء العمل';
+        default: return 'اقتراح';
+      }
     }
   };
 
@@ -402,10 +425,42 @@ export default function SuggestionsPage() {
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 mb-6">
         {/* Suggestion Generation Cards */}
         {[
-          { type: 'daily_summary', title: 'الملخص اليومي', description: 'ملخص للمهام المكتملة والمستحقة اليوم مع خطة عمل مقترحة.', icon: Clock, color: 'text-blue-500' },
-          { type: 'task_prioritization', title: 'ترتيب الأولويات', description: 'اقتراحات لترتيب أولويات المهام بناءً على الاستعجال والأهمية.', icon: ListChecks, color: 'text-green-500' },
-          { type: 'deadline_adjustment', title: 'تعديل المواعيد', description: 'اقتراحات لتعديل المواعيد النهائية بناءً على أدائك وعبء العمل.', icon: Calendar, color: 'text-amber-500' },
-          { type: 'workload_management', title: 'إدارة عبء العمل', description: 'اقتراحات لتوزيع العمل بشكل أفضل وتجنب الإرهاق.', icon: BarChart, color: 'text-purple-500' },
+          {
+            type: 'daily_summary',
+            title: language === 'en' ? 'Daily Summary' : 'الملخص اليومي',
+            description: language === 'en'
+              ? 'Summary of completed and due tasks today with a suggested action plan.'
+              : 'ملخص للمهام المكتملة والمستحقة اليوم مع خطة عمل مقترحة.',
+            icon: Clock,
+            color: 'text-blue-500'
+          },
+          {
+            type: 'task_prioritization',
+            title: language === 'en' ? 'Task Prioritization' : 'ترتيب الأولويات',
+            description: language === 'en'
+              ? 'Suggestions for prioritizing tasks based on urgency and importance.'
+              : 'اقتراحات لترتيب أولويات المهام بناءً على الاستعجال والأهمية.',
+            icon: ListChecks,
+            color: 'text-green-500'
+          },
+          {
+            type: 'deadline_adjustment',
+            title: language === 'en' ? 'Deadline Adjustment' : 'تعديل المواعيد',
+            description: language === 'en'
+              ? 'Suggestions for adjusting deadlines based on your performance and workload.'
+              : 'اقتراحات لتعديل المواعيد النهائية بناءً على أدائك وعبء العمل.',
+            icon: Calendar,
+            color: 'text-amber-500'
+          },
+          {
+            type: 'workload_management',
+            title: language === 'en' ? 'Workload Management' : 'إدارة عبء العمل',
+            description: language === 'en'
+              ? 'Suggestions for better work distribution and avoiding burnout.'
+              : 'اقتراحات لتوزيع العمل بشكل أفضل وتجنب الإرهاق.',
+            icon: BarChart,
+            color: 'text-purple-500'
+          },
         ].map(sugg => (
           <Card key={sugg.type} className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
@@ -428,13 +483,13 @@ export default function SuggestionsPage() {
               >
                 {generating === sugg.type ? (
                   <>
-                    <RefreshCw className="ml-2 h-4 w-4 animate-spin" />
-                    جاري التوليد...
+                    <RefreshCw className={`${language === 'en' ? 'mr-2' : 'ml-2'} h-4 w-4 animate-spin`} />
+                    {language === 'en' ? 'Generating...' : 'جاري التوليد...'}
                   </>
                 ) : (
                   <>
-                    <Wand2 className="ml-2 h-4 w-4" />
-                    توليد اقتراح
+                    <Wand2 className={`${language === 'en' ? 'mr-2' : 'ml-2'} h-4 w-4`} />
+                    {language === 'en' ? 'Generate Suggestion' : 'توليد اقتراح'}
                   </>
                 )}
               </Button>
@@ -468,11 +523,11 @@ export default function SuggestionsPage() {
 
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="mb-6">
         <TabsList className="grid grid-cols-5 mb-4">
-          <TabsTrigger value="all">الكل</TabsTrigger>
-          <TabsTrigger value="daily_summary">الملخص اليومي</TabsTrigger>
-          <TabsTrigger value="task_prioritization">الأولويات</TabsTrigger>
-          <TabsTrigger value="deadline_adjustment">المواعيد</TabsTrigger>
-          <TabsTrigger value="workload_management">عبء العمل</TabsTrigger>
+          <TabsTrigger value="all">{language === 'en' ? 'All' : 'الكل'}</TabsTrigger>
+          <TabsTrigger value="daily_summary">{language === 'en' ? 'Daily Summary' : 'الملخص اليومي'}</TabsTrigger>
+          <TabsTrigger value="task_prioritization">{language === 'en' ? 'Priorities' : 'الأولويات'}</TabsTrigger>
+          <TabsTrigger value="deadline_adjustment">{language === 'en' ? 'Deadlines' : 'المواعيد'}</TabsTrigger>
+          <TabsTrigger value="workload_management">{language === 'en' ? 'Workload' : 'عبء العمل'}</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab}>
@@ -485,10 +540,16 @@ export default function SuggestionsPage() {
               <CardContent className="pt-6 text-center">
                 <Wand2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">
-                  لا توجد اقتراحات {activeTab !== 'all' ? `من نوع ${getSuggestionTypeTitle(activeTab)}` : ''}.
+                  {language === 'en'
+                    ? `No suggestions ${activeTab !== 'all' ? `of type ${getSuggestionTypeTitle(activeTab)}` : ''}.`
+                    : `لا توجد اقتراحات ${activeTab !== 'all' ? `من نوع ${getSuggestionTypeTitle(activeTab)}` : ''}.`
+                  }
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  قم بتوليد اقتراح جديد باستخدام الأزرار أعلاه.
+                  {language === 'en'
+                    ? 'Generate a new suggestion using the buttons above.'
+                    : 'قم بتوليد اقتراح جديد باستخدام الأزرار أعلاه.'
+                  }
                 </p>
               </CardContent>
             </Card>

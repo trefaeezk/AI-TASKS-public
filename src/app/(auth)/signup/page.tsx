@@ -16,108 +16,114 @@ import { Separator } from '@/components/ui/separator';
 import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { AuthFormWrapper } from '@/components/auth/AuthFormWrapper';
 import { GoogleIcon } from '@/components/icons/GoogleIcon'; // Assuming you create this icon component
+import { useLanguage } from '@/context/LanguageContext';
 
-const signupSchema = z.object({
-  email: z.string().email({ message: 'البريد الإلكتروني غير صالح' }),
-  password: z.string().min(6, { message: 'كلمة المرور يجب أن تكون على الأقل 6 أحرف' }),
-  confirmPassword: z.string().min(6, { message: 'تأكيد كلمة المرور مطلوب' }),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'كلمتا المرور غير متطابقتين', // Passwords do not match
-  path: ['confirmPassword'], // Set the error on the confirmPassword field
-});
-
-type SignupFormValues = z.infer<typeof signupSchema>;
+// سيتم تعريف signupSchema داخل المكون للوصول إلى دالة الترجمة t
 
 export default function SignupPage() {
+  const { t, direction } = useLanguage();
   const { signUp, signInWithGoogle, loading, error } = useFirebaseAuth();
   const router = useRouter();
-   const { register, handleSubmit, formState: { errors } } = useForm<SignupFormValues>({
+
+  // تعريف مخطط التحقق مع رسائل مترجمة
+  const signupSchema = z.object({
+    email: z.string().email({ message: t('auth.invalidEmail') }),
+    password: z.string().min(6, { message: t('auth.passwordMinLength', { length: '6' }) }),
+    confirmPassword: z.string().min(1, { message: t('auth.confirmPasswordRequired') }),
+  }).refine((data) => data.password === data.confirmPassword, {
+    message: t('auth.passwordsDoNotMatch'),
+    path: ['confirmPassword'],
+  });
+
+  type SignupFormValues = z.infer<typeof signupSchema>;
+
+  const { register, handleSubmit, formState: { errors } } = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
   });
-   const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const onSubmit = async (data: SignupFormValues) => {
-     setFormError(null);
+    setFormError(null);
     const success = await signUp(data.email, data.password);
     if (success) {
       router.push('/'); // Redirect to home page after successful signup
     } else {
       // Error handled by hook's toast
-       setFormError(error || 'فشل إنشاء الحساب. قد يكون البريد الإلكتروني مستخدمًا بالفعل.'); // Signup failed. Email might already be in use.
+      setFormError(error || t('auth.signupFailed'));
     }
   };
 
-   const handleGoogleSignIn = async () => {
-     setFormError(null);
+  const handleGoogleSignIn = async () => {
+    setFormError(null);
     const success = await signInWithGoogle();
     if (success) {
       router.push('/'); // Redirect to home page
     } else {
-       setFormError(error || 'فشل تسجيل الدخول باستخدام جوجل.'); // Failed to sign in with Google.
+      setFormError(error || t('auth.googleSignInFailed'));
     }
   };
 
   return (
     <AuthFormWrapper
-      title="إنشاء حساب جديد"
-      description="انضم إلينا لإدارة مهامك بذكاء."
+      title={t('auth.register')}
+      description={t('auth.registerDescription')}
       footer={
         <>
-          لديك حساب بالفعل؟{' '}
+          {t('auth.alreadyHaveAccount')}{' '}
           <Link href="/login" className="font-medium text-primary hover:underline">
-            تسجيل الدخول
+            {t('auth.login')}
           </Link>
         </>
       }
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" dir={direction}>
          {/* Display general form error */}
         {formError && !error && (
             <p className="text-sm font-medium text-destructive text-center">{formError}</p>
         )}
 
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Mail className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
           <Input
             id="email"
             type="email"
-            placeholder="البريد الإلكتروني"
+            placeholder={t('auth.emailPlaceholder')}
             {...register('email')}
-            className="pl-10 bg-input border-input focus:ring-primary"
-             aria-invalid={errors.email ? "true" : "false"}
-             aria-describedby="email-error"
-             required
+            className={`${direction === 'rtl' ? 'pr-10' : 'pl-10'} bg-input border-input focus:ring-primary`}
+            aria-invalid={errors.email ? "true" : "false"}
+            aria-describedby="email-error"
+            required
           />
         </div>
-         {errors.email && <p id="email-error" className="text-sm font-medium text-destructive">{errors.email.message}</p>}
+        {errors.email && <p id="email-error" className="text-sm font-medium text-destructive">{errors.email.message}</p>}
 
 
         <div className="relative">
-          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Lock className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
           <Input
             id="password"
             type="password"
-            placeholder="كلمة المرور"
+            placeholder={t('auth.passwordPlaceholder')}
             {...register('password')}
-            className="pl-10 bg-input border-input focus:ring-primary"
-             aria-invalid={errors.password ? "true" : "false"}
-             aria-describedby="password-error"
-             required
+            className={`${direction === 'rtl' ? 'pr-10' : 'pl-10'} bg-input border-input focus:ring-primary`}
+            aria-invalid={errors.password ? "true" : "false"}
+            aria-describedby="password-error"
+            required
           />
         </div>
          {errors.password && <p id="password-error" className="text-sm font-medium text-destructive">{errors.password.message}</p>}
 
         <div className="relative">
-          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Lock className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
           <Input
             id="confirmPassword"
             type="password"
-            placeholder="تأكيد كلمة المرور"
+            placeholder={t('auth.confirmPasswordPlaceholder')}
             {...register('confirmPassword')}
-            className="pl-10 bg-input border-input focus:ring-primary"
-             aria-invalid={errors.confirmPassword ? "true" : "false"}
-             aria-describedby="confirmPassword-error"
-             required
+            className={`${direction === 'rtl' ? 'pr-10' : 'pl-10'} bg-input border-input focus:ring-primary`}
+            aria-invalid={errors.confirmPassword ? "true" : "false"}
+            aria-describedby="confirmPassword-error"
+            required
           />
         </div>
          {errors.confirmPassword && <p id="confirmPassword-error" className="text-sm font-medium text-destructive">{errors.confirmPassword.message}</p>}
@@ -125,7 +131,7 @@ export default function SignupPage() {
 
         <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={loading}>
           {loading ? <Loader2 className="animate-spin h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
-          <span>إنشاء حساب</span>
+          <span>{t('auth.register')}</span>
         </Button>
       </form>
 

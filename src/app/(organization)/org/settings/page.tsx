@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAccountType } from '@/hooks/useAccountType';
+import { useLanguage } from '@/context/LanguageContext';
 import { db } from '@/config/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, ArrowRight, Bell } from 'lucide-react';
+import { Loader2, Save, ArrowRight, Bell, Languages } from 'lucide-react';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { Translate } from '@/components/Translate';
 import Link from 'next/link';
 
 interface OrganizationSettings {
@@ -45,6 +48,7 @@ export default function OrganizationSettingsPage() {
   const { role, hasPermission } = usePermissions();
   const { organizationId, isOrganization } = useAccountType();
   const { toast } = useToast();
+  const { t, direction } = useLanguage();
 
   const [settings, setSettings] = useState<OrganizationSettings>({
     name: '',
@@ -145,18 +149,21 @@ export default function OrganizationSettingsPage() {
   return (
     <div className="container py-6 space-y-6">
       <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">إعدادات المؤسسة</h1>
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold tracking-tight"><Translate text="organization.organizationSettings" /></h1>
+          <LanguageSwitcher variant="default" size="sm" />
+        </div>
         <p className="text-muted-foreground">
-          إدارة إعدادات المؤسسة والتفضيلات العامة
+          <Translate text="settings.generalSettings" defaultValue="إدارة إعدادات المؤسسة والتفضيلات العامة" />
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-4">
-          <TabsTrigger value="general">عام</TabsTrigger>
-          <TabsTrigger value="permissions">الصلاحيات</TabsTrigger>
-          <TabsTrigger value="features">الميزات</TabsTrigger>
-          <TabsTrigger value="notifications">الإشعارات</TabsTrigger>
+          <TabsTrigger value="general"><Translate text="general.general" defaultValue="عام" /></TabsTrigger>
+          <TabsTrigger value="permissions"><Translate text="organization.organizationPermissions" defaultValue="الصلاحيات" /></TabsTrigger>
+          <TabsTrigger value="features"><Translate text="settings.features" defaultValue="الميزات" /></TabsTrigger>
+          <TabsTrigger value="notifications"><Translate text="notifications.notifications" defaultValue="الإشعارات" /></TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">

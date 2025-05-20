@@ -7,6 +7,8 @@ import { Toaster } from '@/components/ui/toaster'; // Import Toaster
 import { AuthProvider } from '@/context/AuthContext'; // Import AuthProvider for SystemSetupCheck
 import SystemSetupCheck from '@/components/setup/SystemSetupCheck'; // Import SystemSetupCheck
 import { NotificationSettingsProvider } from '@/components/notifications/NotificationSettingsProvider'; // Import NotificationSettingsProvider
+import { LanguageProvider } from '@/context/LanguageContext'; // Import LanguageProvider
+import { ThemeProvider } from '@/context/ThemeContext'; // Import ThemeProvider
 // AuthProvider will be moved to the (app) group layout
 import './globals.css';
 import React, { useEffect } from 'react'; // Import useEffect
@@ -58,15 +60,19 @@ export default function RootLayout({
           {/* Add other head elements like favicon links here if needed */}
        </head>
       <body className={`${cairo.variable} font-sans antialiased bg-background text-foreground`}>
-         {/* Wrap children with AuthProvider, SystemSetupCheck, and NotificationSettingsProvider */}
-         <AuthProvider>
-            <SystemSetupCheck>
-               <NotificationSettingsProvider>
-                  {children}
-               </NotificationSettingsProvider>
-            </SystemSetupCheck>
-            <Toaster /> {/* Add Toaster component here */}
-         </AuthProvider>
+         {/* Wrap children with providers */}
+         <ThemeProvider>
+           <LanguageProvider>
+             <AuthProvider>
+                <SystemSetupCheck>
+                   <NotificationSettingsProvider>
+                      {children}
+                   </NotificationSettingsProvider>
+                </SystemSetupCheck>
+                <Toaster /> {/* Add Toaster component here */}
+             </AuthProvider>
+           </LanguageProvider>
+         </ThemeProvider>
       </body>
     </html>
   );

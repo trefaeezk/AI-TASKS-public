@@ -173,6 +173,7 @@ export interface GenerateSmartSuggestionsInput {
   overdueTasks: Task[];
   performance: UserPerformance;
   suggestionType: SuggestionType;
+  language?: string; // إضافة معلمة اللغة (ar أو en)
 }
 
 export interface GenerateSmartSuggestionsOutput {
@@ -357,7 +358,8 @@ export async function generateSmartSuggestions(input: GenerateSmartSuggestionsIn
       tasksCount: input.tasks.length,
       upcomingTasksCount: input.upcomingTasks.length,
       overdueTasksCount: input.overdueTasks.length,
-      performance: input.performance
+      performance: input.performance,
+      language: input.language || 'ar' // تسجيل اللغة المستخدمة
     });
 
     // تسجيل المهام للتحقق
@@ -366,11 +368,19 @@ export async function generateSmartSuggestions(input: GenerateSmartSuggestionsIn
     } else {
       console.log('[AI Service] No tasks provided in input!');
       // إذا لم تكن هناك مهام، نقوم بإنشاء اقتراح بسيط
+      const noTasksMessage = input.language === 'en'
+        ? 'Not enough tasks to create a detailed suggestion. Please add more tasks.'
+        : 'لا توجد مهام كافية لإنشاء اقتراح مفصل. يرجى إضافة المزيد من المهام.';
+
+      const suggestionTitle = input.language === 'en'
+        ? `${input.suggestionType} suggestion`
+        : `اقتراح ${input.suggestionType}`;
+
       return {
         suggestion: {
-          title: `اقتراح ${input.suggestionType}`,
-          description: 'لا توجد مهام كافية لإنشاء اقتراح مفصل. يرجى إضافة المزيد من المهام.',
-          content: 'لا توجد مهام كافية لإنشاء اقتراح مفصل. يرجى إضافة المزيد من المهام.',
+          title: suggestionTitle,
+          description: noTasksMessage,
+          content: noTasksMessage,
           priority: 'normal',
           actionItems: []
         }
@@ -390,20 +400,36 @@ export async function generateSmartSuggestions(input: GenerateSmartSuggestionsIn
   } catch (error) {
     console.error('[AI Service] Error in generateSmartSuggestions:', error);
 
-    // إنشاء اقتراح بسيط في حالة الخطأ
-    return {
-      suggestion: {
-        title: `اقتراح ${input.suggestionType} (تم إنشاؤه محليًا)`,
-        description: 'حدث خطأ أثناء توليد الاقتراح. هذا اقتراح بسيط تم إنشاؤه محليًا.',
-        content: 'حدث خطأ أثناء توليد الاقتراح. يرجى المحاولة مرة أخرى لاحقًا.',
-        priority: 'normal',
-        actionItems: [
-          { description: 'التحقق من اتصال الإنترنت' },
-          { description: 'التحقق من وجود مهام كافية' },
-          { description: 'المحاولة مرة أخرى لاحقًا' }
-        ]
-      }
-    };
+    // إنشاء اقتراح بسيط في حالة الخطأ بناءً على اللغة المحددة
+    if (input.language === 'en') {
+      return {
+        suggestion: {
+          title: `${input.suggestionType} suggestion (locally generated)`,
+          description: 'An error occurred while generating the suggestion. This is a simple suggestion generated locally.',
+          content: 'An error occurred while generating the suggestion. Please try again later.',
+          priority: 'normal',
+          actionItems: [
+            { description: 'Check your internet connection' },
+            { description: 'Make sure you have enough tasks' },
+            { description: 'Try again later' }
+          ]
+        }
+      };
+    } else {
+      return {
+        suggestion: {
+          title: `اقتراح ${input.suggestionType} (تم إنشاؤه محليًا)`,
+          description: 'حدث خطأ أثناء توليد الاقتراح. هذا اقتراح بسيط تم إنشاؤه محليًا.',
+          content: 'حدث خطأ أثناء توليد الاقتراح. يرجى المحاولة مرة أخرى لاحقًا.',
+          priority: 'normal',
+          actionItems: [
+            { description: 'التحقق من اتصال الإنترنت' },
+            { description: 'التحقق من وجود مهام كافية' },
+            { description: 'المحاولة مرة أخرى لاحقًا' }
+          ]
+        }
+      };
+    }
   }
 }
 
