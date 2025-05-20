@@ -77,7 +77,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* قسم إعدادات الإشعارات */}
+      {/* Notification Settings Section */}
       <Card>
         <CardHeader>
           <CardTitle>{t('notifications.notificationSettings')}</CardTitle>
@@ -100,14 +100,14 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* بطاقة خيارات متقدمة */}
+      {/* Advanced Options Card */}
       <Card>
         <CardHeader>
           <CardTitle>{t('settings.advancedSettings')}</CardTitle>
           <CardDescription>{t('settings.systemSettings')}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col space-y-4">
-          {/* يمكن إضافة خيارات متقدمة أخرى هنا */}
+          {/* Additional advanced options can be added here */}
         </CardContent>
         <CardFooter className="flex justify-end">
           <OrganizationRequestButton />
