@@ -2,8 +2,8 @@
 'use client';
 
 import type { FormEvent, MouseEvent } from 'react';
-import React, { useState, useCallback, useEffect } from 'react'; // Keep useCallback for handleSuggestDueDate/handleSuggestMilestones
-import { Calendar as CalendarIcon, PlusCircle, Loader2, Wand2, Settings, ListChecks } from 'lucide-react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Calendar as CalendarIcon, PlusCircle, Loader2, Wand2, Settings, ListChecks, Target } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import type { User } from 'firebase/auth';
@@ -31,13 +31,14 @@ import {
   SheetClose,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import type { TaskType, DurationUnit, TaskFirestoreData, PriorityLevel, TaskCategoryDefinition, Milestone, MilestoneFirestoreData } from '@/types/task'; // Import MilestoneFirestoreData
+import type { TaskType, DurationUnit, TaskFirestoreData, PriorityLevel, TaskCategoryDefinition, Milestone, MilestoneFirestoreData } from '@/types/task';
 import { useTaskCategories } from '@/hooks/useTaskCategories';
 import { MilestoneTracker } from './MilestoneTracker';
-import { ManageCategoriesDialog } from './ManageCategoriesDialog'; // Import the new dialog
-import { Separator } from '@/components/ui/separator'; // Import Separator
-import { TaskContextSelector } from './TaskContextSelector'; // Import the new TaskContextSelector
-import { TaskContext } from '@/types/task'; // Import TaskContext type
+import { ManageCategoriesDialog } from './ManageCategoriesDialog';
+import { Separator } from '@/components/ui/separator';
+import { TaskContextSelector } from './TaskContextSelector';
+import { TaskContext } from '@/types/task';
+import { useAuth } from '@/context/AuthContext'; // Import useAuth
 
 interface AddTaskSheetProps {
     user: User;
@@ -46,6 +47,7 @@ interface AddTaskSheetProps {
 export function AddTaskSheet({ user }: AddTaskSheetProps) {
   const { toast } = useToast();
   const { categories: userCategories, loading: categoriesLoading, addCategory, deleteCategory, editCategory, getCategoryColor } = useTaskCategories(user.uid);
+  const { userClaims } = useAuth(); // Get userClaims
 
   const [newTaskDescription, setNewTaskDescription] = useState('');
   const [newTaskDetails, setNewTaskDetails] = useState('');
@@ -71,12 +73,13 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
     departmentId: string | undefined;
     assignedToUserId: string | undefined;
   }>({
-    taskContext: 'individual',
+    taskContext: 'individual', // Default for org users if selector is shown
     departmentId: undefined,
     assignedToUserId: undefined
   });
 
-  const [organizationId, setOrganizationId] = useState<string | undefined>(undefined);
+  // User's organization ID from claims
+  const organizationIdFromClaims = userClaims?.organizationId;
 
   const [isSuggestingDate, setIsSuggestingDate] = useState(false);
   const [isSuggestingMilestones, setIsSuggestingMilestones] = useState(false);
@@ -168,7 +171,7 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
                     description: desc,
                     completed: false,
                     weight: 0,
-                    dueDate: undefined, // Initialize dueDate
+                    dueDate: undefined,
                 }));
                 setCurrentMilestones(suggested);
                 toast({ title: 'تم اقتراح نقاط تتبع جديدة', description: 'تم استبدال النقاط الحالية. يمكنك تعديلها وتوزيع الأوزان قبل الحفظ.' });
@@ -185,7 +188,6 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
     }, [newTaskDescription, newTaskDetails, toast]);
 
    const handleMilestonesChange = useCallback((updatedMilestones: Milestone[]) => {
-       console.log("AddTaskSheet: Received milestones update from tracker:", JSON.stringify(updatedMilestones));
        setCurrentMilestones(updatedMilestones);
    }, []);
 
@@ -202,7 +204,6 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
     }
 
     const validMilestones = currentMilestones.filter(m => m.description.trim() !== '');
-    console.log("AddTaskSheet: Valid milestones just before saving:", JSON.stringify(validMilestones));
 
     if (validMilestones.length > 0) {
         const totalWeight = validMilestones.reduce((sum, m) => sum + (m.weight || 0), 0);
@@ -222,18 +223,13 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
     let startTimestamp: Timestamp | null = null;
     if (newTaskStartDate instanceof Date && !isNaN(newTaskStartDate.getTime())) {
         startTimestamp = Timestamp.fromDate(newTaskStartDate);
-    } else {
-        startTimestamp = null;
     }
 
     let dueTimestamp: Timestamp | null = null;
     if (newTaskDueDate instanceof Date && !isNaN(newTaskDueDate.getTime())) {
          dueTimestamp = Timestamp.fromDate(newTaskDueDate);
-    } else {
-        dueTimestamp = null;
     }
 
-    // Ensure milestones saved are clean objects, save null if empty after cleaning
     const cleanMilestonesToSave: MilestoneFirestoreData[] = validMilestones
       .filter(m => m != null)
       .map(m => ({
@@ -241,10 +237,9 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
           description: m.description || '',
           completed: !!m.completed,
           weight: typeof m.weight === 'number' ? m.weight : 0,
-          dueDate: m.dueDate instanceof Date && !isNaN(m.dueDate.getTime()) ? Timestamp.fromDate(m.dueDate) : null, // Convert Date to Timestamp or null
+          dueDate: m.dueDate instanceof Date && !isNaN(m.dueDate.getTime()) ? Timestamp.fromDate(m.dueDate) : null,
       }));
      const milestonesToSave = cleanMilestonesToSave.length > 0 ? cleanMilestonesToSave : null;
-
 
     const newTaskData: Omit<TaskFirestoreData, 'userId'> & { userId: string } = {
         userId: user.uid,
@@ -258,24 +253,18 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
         priority: newTaskPriority ?? null,
         taskCategoryName: newTaskCategoryName ?? null,
         priorityReason: null,
-        milestones: milestonesToSave, // Use the processed milestones array or null
-
-        // Task context fields
-        taskContext: taskContext.taskContext || 'individual',
-        organizationId: organizationId || null,
-        departmentId: taskContext.taskContext === 'department' ? taskContext.departmentId || null : null,
-        assignedToUserId: taskContext.taskContext === 'individual' ? taskContext.assignedToUserId || null : null,
+        milestones: milestonesToSave,
+        taskContext: organizationIdFromClaims ? taskContext.taskContext || 'individual' : 'individual',
+        organizationId: organizationIdFromClaims || null,
+        departmentId: (organizationIdFromClaims && taskContext.taskContext === 'department') ? taskContext.departmentId || null : null,
+        assignedToUserId: (organizationIdFromClaims && taskContext.taskContext === 'individual') ? taskContext.assignedToUserId || null : (!organizationIdFromClaims ? user.uid : null),
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
     };
 
-    console.log("AddTaskSheet: Attempting to add task with FINAL milestones:", JSON.stringify(newTaskData.milestones));
-    console.log("AddTaskSheet: Full newTaskData being sent to Firestore:", newTaskData);
-
     try {
         const tasksColRef = collection(db, 'tasks');
         const docRef = await addDoc(tasksColRef, newTaskData);
-        console.log("AddTaskSheet: Task added successfully with ID:", docRef.id);
 
         setNewTaskDescription('');
         setNewTaskDetails('');
@@ -288,6 +277,8 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
         setNewTaskPriority(3);
         setNewTaskCategoryName(undefined);
         setCurrentMilestones([]);
+        setTaskContext({ taskContext: 'individual', departmentId: undefined, assignedToUserId: undefined });
+
 
         toast({
             title: 'تمت إضافة المهمة',
@@ -331,20 +322,8 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
      console.log("Categories updated in dialog, potentially refresh UI.");
   };
 
-  // Effect to get organization ID from user claims
-  useEffect(() => {
-    if (user && user.getIdTokenResult) {
-      user.getIdTokenResult().then((idTokenResult) => {
-        if (idTokenResult.claims.organizationId) {
-          setOrganizationId(idTokenResult.claims.organizationId as string);
-        }
-      });
-    }
-  }, [user]);
-
   useEffect(() => {
       if (isSheetOpen) {
-          console.log("AddTaskSheet: Sheet opened, resetting form state.");
           setNewTaskDescription('');
           setNewTaskDetails('');
           setNewTaskStartDate(undefined);
@@ -356,19 +335,16 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
           setNewTaskPriority(3);
           setNewTaskCategoryName(undefined);
           setCurrentMilestones([]);
-
-          // Reset task context
           setTaskContext({
-            taskContext: 'individual',
+            taskContext: organizationIdFromClaims ? 'individual' : 'individual', // Default to individual
             departmentId: undefined,
-            assignedToUserId: undefined
+            assignedToUserId: organizationIdFromClaims ? undefined : user.uid // Assign to self if individual
           });
-
           setIsAddingTask(false);
           setIsSuggestingDate(false);
           setIsSuggestingMilestones(false);
       }
-  }, [isSheetOpen]);
+  }, [isSheetOpen, organizationIdFromClaims, user.uid]);
 
   return (
     <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
@@ -378,7 +354,6 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
           <span className="sr-only">إضافة مهمة جديدة</span>
         </Button>
       </SheetTrigger>
-      {/* Adjusted sheet content width and added scroll */}
       <SheetContent side="left" className="w-full sm:max-w-lg overflow-y-auto p-4 sm:p-6">
         <SheetHeader className="mb-6">
           <SheetTitle className="text-xl">إضافة مهمة جديدة</SheetTitle>
@@ -387,7 +362,6 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
           </SheetDescription>
         </SheetHeader>
         <form onSubmit={handleAddTask} className="space-y-5">
-          {/* Task Description */}
           <div className="space-y-2">
              <Label htmlFor="new-task-desc" className="font-medium">وصف المهمة (العنوان)</Label>
             <Input
@@ -402,7 +376,6 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
             />
           </div>
 
-           {/* Task Details */}
            <div className="space-y-2">
              <Label htmlFor="new-task-details" className="font-medium">التفاصيل (اختياري)</Label>
             <Textarea
@@ -415,24 +388,26 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
             />
           </div>
 
-          {/* Task Context Section */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">سياق المهمة</h3>
-            <TaskContextSelector
-              value={taskContext}
-              onChange={setTaskContext}
-              organizationId={organizationId}
-              disabled={isAddingTask}
-            />
-          </div>
+          {organizationIdFromClaims && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">سياق المهمة</h3>
+                <TaskContextSelector
+                  value={taskContext}
+                  onChange={setTaskContext}
+                  organizationId={organizationIdFromClaims}
+                  disabled={isAddingTask}
+                />
+              </div>
+            </>
+          )}
+
 
           <Separator />
-
-          {/* Dates Section */}
           <div className="space-y-4">
              <h3 className="text-sm font-medium text-muted-foreground mb-2">التواريخ</h3>
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                {/* Start Date Picker */}
                  <div className="space-y-2">
                     <Label htmlFor="new-start-date">تاريخ البدء</Label>
                     <Popover open={isNewTaskStartPopoverOpen} onOpenChange={setIsNewTaskStartPopoverOpen} modal={true}>
@@ -472,7 +447,6 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
                     </Popover>
                 </div>
 
-                {/* Due Date Picker */}
                  <div className="space-y-2">
                      <Label htmlFor="new-due-date">تاريخ الاستحقاق</Label>
                      <Popover open={isNewTaskDuePopoverOpen} onOpenChange={setIsNewTaskDuePopoverOpen} modal={true}>
@@ -514,8 +488,6 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
             </div>
           </div>
 
-
-          {/* Suggest Due Date Button */}
           <div className="flex pt-1">
             <Button
               type="button"
@@ -535,8 +507,6 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
           </div>
 
            <Separator />
-
-          {/* Duration Input */}
             <div className="space-y-4">
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">المدة المقدرة</h3>
                 <div className="grid grid-cols-2 gap-4">
@@ -575,12 +545,9 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
             </div>
 
            <Separator />
-
-            {/* Priority and Category */}
              <div className="space-y-4">
                  <h3 className="text-sm font-medium text-muted-foreground mb-2">التصنيف والأولوية</h3>
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                     {/* Priority Select */}
                      <div className="space-y-2">
                         <Label htmlFor="new-priority">الأولوية</Label>
                         <Select
@@ -601,7 +568,6 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
                         </Select>
                     </div>
 
-                    {/* Category Select */}
                     <div className="space-y-2">
                        <div className="flex justify-between items-center">
                          <Label htmlFor="new-category">الفئة</Label>
@@ -645,8 +611,6 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
             </div>
 
              <Separator />
-
-             {/* Milestone Section */}
              <div className="space-y-3 pt-2">
                 <h3 className="text-sm font-medium text-muted-foreground">نقاط التتبع (اختياري)</h3>
                  <MilestoneTracker
@@ -658,8 +622,6 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
                  />
              </div>
 
-
-           {/* Footer Buttons */}
            <SheetFooter className="pt-6 mt-4 border-t">
              <SheetClose asChild>
                 <Button type="button" variant="outline">إلغاء</Button>
@@ -674,4 +636,3 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
     </Sheet>
   );
 }
-
