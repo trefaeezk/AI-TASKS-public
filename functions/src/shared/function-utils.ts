@@ -29,7 +29,7 @@ export interface LegacyCallableContext {
  * @param options خيارات الدالة (اختياري)
  * @returns دالة Firebase Callable
  */
-export interface CallableRequest<T> {
+export interface CallableRequest<T = any> {
   data: T;
   auth?: {
     uid: string;
@@ -40,12 +40,14 @@ export interface CallableRequest<T> {
 
 export function createCallableFunction<T = any, R = any>(
   handler: (request: CallableRequest<T>) => Promise<R> | R,
-  options: { region?: string; requireAuth?: boolean } = {}
+  options: { region?: string; requireAuth?: boolean; runWith?: functions.RuntimeOptions } = {}
 ) {
   const region = options.region || 'us-central1';
   const requireAuth = options.requireAuth !== false; // افتراضياً true إلا إذا تم تحديده صراحةً كـ false
+  // Ensure maxInstances is set to 10 by default for callable functions
+  const runWithOptions = { maxInstances: 10, ...options.runWith };
 
-  return functions.region(region).https.onCall(async (data, context) => {
+  return functions.region(region).runWith(runWithOptions).https.onCall(async (data, context) => {
     try {
       // التحقق من المصادقة إذا كانت مطلوبة
       if (requireAuth && !context.auth) {
@@ -93,12 +95,14 @@ export function createCallableFunction<T = any, R = any>(
  */
 export function createHttpFunction(
   handler: (req: functions.https.Request, res: any, userId?: string) => Promise<void> | void,
-  options: { region?: string; requireAuth?: boolean } = {}
+  options: { region?: string; requireAuth?: boolean; runWith?: functions.RuntimeOptions } = {}
 ) {
   const region = options.region || 'us-central1';
   const requireAuth = options.requireAuth !== false; // افتراضياً true إلا إذا تم تحديده صراحةً كـ false
+  // Ensure maxInstances is set to 10 by default for HTTP functions
+  const runWithOptions = { maxInstances: 10, ...options.runWith };
 
-  return functions.region(region).https.onRequest(async (req, res) => {
+  return functions.region(region).runWith(runWithOptions).https.onRequest(async (req, res) => {
     // التعامل مع CORS
     return corsHandler(req, res, async () => {
       try {
