@@ -1,23 +1,21 @@
+# apphosting.yaml
+
 # Settings for Backend (on Cloud Run).
 # See https://firebase.google.com/docs/app-hosting/configure#cloud-run
 runConfig:
-  minInstances: 0
-  # maxInstances: 100
-  # concurrency: 80
-  # cpu: 1
-  # memoryMiB: 512
+  minInstances: 0          # أقل عدد من النسخ (Cold starts عند الصفر)
+  maxInstances: 8          # عدّل هنا لتكون ≤ 10 حتى لا تتجاوز الحصة
+  concurrency: 80          # الطلبات المتزامنة لكل نسخة
+  cpu: 1                   # وحدات الـ CPU لكل نسخة
+  memoryMiB: 512           # الذاكرة (MiB) لكل نسخة
 
 # Environment variables and secrets.
 # env:
-  # Configure environment variables.
-  # See https://firebase.google.com/docs/app-hosting/configure#user-defined-environment
   # - variable: MESSAGE
-  #   value: Hello world!
-  #   availability:
-  #     - BUILD
-  #     - RUNTIME
+  #     value: Hello world!
+  #     availability:
+  #       - BUILD
+  #       - RUNTIME
 
-  # Grant access to secrets in Cloud Secret Manager.
-  # See https://firebase.google.com/docs/app-hosting/configure#secret-parameters
   # - variable: MY_SECRET
-  #   secret: mySecretRef
+  #     secret: mySecretRef
