@@ -2,15 +2,15 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import type { Milestone } from '@/types/task';
+import type { Milestone, TaskStatus } from '@/types/task'; // Added TaskStatus
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Trash2, GripVertical, Check, Calendar as CalendarIcon } from 'lucide-react';
+import { Trash2, GripVertical, Check, Calendar as CalendarIcon, Percent } from 'lucide-react'; // Added Percent
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, parseISO } from 'date-fns'; // Ensure parseISO is imported if needed elsewhere
+import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 
@@ -23,6 +23,7 @@ interface MilestoneItemProps {
   onDueDateChange: (id: string, date: Date | undefined) => void;
   onDelete: (id: string) => void;
   dragHandleProps?: any;
+  parentTaskStatus?: TaskStatus; // Added parentTaskStatus
 }
 
 export function MilestoneItem({
@@ -34,16 +35,13 @@ export function MilestoneItem({
   onDueDateChange,
   onDelete,
   dragHandleProps,
+  parentTaskStatus, // Destructure parentTaskStatus
 }: MilestoneItemProps) {
 
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-    // Use a separate state for the picker to avoid updating the main state until confirm
-    const [pickerDate, setPickerDate] = useState<Date | undefined>(undefined); // Initialize separately
+    const [pickerDate, setPickerDate] = useState<Date | undefined>(undefined);
 
-    // Sync pickerDate when milestone.dueDate changes externally or popover opens
     useEffect(() => {
-      // Ensure milestone.dueDate is a valid Date before setting
-       // Convert Firestore Timestamp (if received as string) back to Date for picker
         let initialDate: Date | undefined = undefined;
         if (milestone.dueDate) {
             try {
@@ -56,7 +54,6 @@ export function MilestoneItem({
             }
         }
         setPickerDate(initialDate);
-        console.log(`[MilestoneItem ${milestone.id}] Initialized pickerDate to:`, initialDate);
     }, [milestone.dueDate, milestone.id]);
 
     const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,21 +74,14 @@ export function MilestoneItem({
         onToggleComplete(milestone.id, !!checked);
     }
 
-    // Confirm the date selected in the picker
     const handleDateConfirm = useCallback(() => {
-        // Ensure pickerDate is valid before updating
         const dateToSave = (pickerDate instanceof Date && !isNaN(pickerDate.getTime())) ? pickerDate : undefined;
-
-        // Create a new Date object to ensure we're not passing a reference that might be modified elsewhere
         const dateToSaveCopy = dateToSave ? new Date(dateToSave.getTime()) : undefined;
-
-        onDueDateChange(milestone.id, dateToSaveCopy); // Update parent state with the copy
+        onDueDateChange(milestone.id, dateToSaveCopy);
         setIsPopoverOpen(false);
     }, [milestone.id, pickerDate, onDueDateChange]);
 
-    // Cancel date selection
     const handleDateCancel = useCallback(() => {
-        // Reset picker state to the original milestone date (if valid)
         let originalDate: Date | undefined = undefined;
         if (milestone.dueDate) {
             try {
@@ -100,7 +90,6 @@ export function MilestoneItem({
                     originalDate = dateObj;
                 }
             } catch (e) {
-                // Silently handle error
                 originalDate = undefined;
             }
         }
@@ -108,21 +97,18 @@ export function MilestoneItem({
         setIsPopoverOpen(false);
     }, [milestone.dueDate, milestone.id]);
 
-     // Memoized calculation for display date
      const displayDate = useMemo(() => {
-         // Ensure milestone.dueDate is correctly parsed into a Date object
          let dateObj: Date | undefined = undefined;
          if (milestone.dueDate) {
              try {
                  dateObj = new Date(milestone.dueDate);
                  if (isNaN(dateObj.getTime())) {
-                     dateObj = undefined; // Invalidate if parsing failed
+                     dateObj = undefined;
                  }
              } catch (e) {
                  dateObj = undefined;
              }
          }
-
          if (dateObj instanceof Date) {
              try {
                  return format(dateObj, 'd MMM', { locale: ar });
@@ -131,13 +117,11 @@ export function MilestoneItem({
              }
          }
          return null;
-     }, [milestone.dueDate, milestone.id]);
+     }, [milestone.dueDate]);
 
 
-    // Handle opening the popover
     const handleTriggerClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation();
-        // Set the picker's initial date to the current milestone due date (if valid) or today when opening
         let currentDate: Date | undefined = undefined;
         if (milestone.dueDate) {
              try {
@@ -149,14 +133,15 @@ export function MilestoneItem({
                  // Silently handle error
              }
         }
-        setPickerDate(currentDate || new Date()); // Default to today if no valid date
+        setPickerDate(currentDate || new Date());
         setIsPopoverOpen(true);
-    }, [milestone.dueDate, milestone.id]);
+    }, [milestone.dueDate]);
 
+    const showDetailsInDisplayMode = !isEditing && parentTaskStatus !== 'completed' && parentTaskStatus !== 'hold';
 
   return (
      <div className={cn(
-        "flex flex-wrap items-start sm:items-center gap-x-2 gap-y-1 py-1.5 group transition-opacity w-full border-b border-dashed border-muted/30", // Added border-b
+        "flex flex-wrap items-start sm:items-center gap-x-2 gap-y-1 py-1.5 group transition-opacity w-full border-b border-dashed border-muted/30",
         milestone.completed && !isEditing && "opacity-60"
         )}>
       {isEditing && dragHandleProps && (
@@ -166,7 +151,7 @@ export function MilestoneItem({
             size="icon"
             className="h-6 w-6 cursor-grab text-muted-foreground hover:bg-accent flex-shrink-0 order-first self-center sm:self-auto"
             aria-label="إعادة ترتيب النقطة"
-            onClick={(e) => e.stopPropagation()} // Prevent triggering other actions
+            onClick={(e) => e.stopPropagation()}
         >
             <GripVertical className="h-4 w-4" />
         </Button>
@@ -182,7 +167,6 @@ export function MilestoneItem({
             />
        </div>
 
-        {/* Use flex-grow for description input/label */}
         <div className="flex-grow min-w-[100px] sm:min-w-[120px] order-3 sm:order-none w-full sm:w-auto">
           {isEditing ? (
             <Input
@@ -203,7 +187,7 @@ export function MilestoneItem({
                 htmlFor={`milestone-${milestone.id}`}
                  className={cn(
                     "text-sm cursor-pointer py-0.5 px-1 block break-words text-right w-full",
-                    "text-foreground/90 line-clamp-2", // Use line-clamp-2 for better display
+                    "text-foreground/90 line-clamp-2",
                     milestone.completed && "line-through text-muted-foreground/70"
                 )}
                 title={milestone.description}
@@ -213,93 +197,97 @@ export function MilestoneItem({
           )}
         </div>
 
-        {/* Actions aligned to the end */}
-        <div className="flex items-center gap-x-1 sm:gap-x-1 flex-shrink-0 order-last ml-auto sm:ml-0">
-            {/* Due Date Picker (only in edit mode) */}
-            {isEditing && (
-                <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen} modal={true}>
-                    <PopoverTrigger asChild>
-                        <Button
-                            type="button"
-                            variant={'outline'}
-                            size="sm"
-                            // Adjusted padding, width auto, ensure proper vertical alignment
-                            className={cn(
-                                'h-8 w-auto px-1.5 text-xs font-normal flex items-center gap-1 flex-shrink-0',
-                                'border-input hover:bg-accent',
-                                // Style based on whether a date *is* set for the milestone
-                                (displayDate) // Check if displayDate is truthy (meaning a valid date exists)
-                                    ? 'bg-accent/50 text-accent-foreground border-accent'
-                                    : 'text-muted-foreground',
-                             )}
-                            onClick={handleTriggerClick} // Use the new handler
-                        >
-                            <CalendarIcon className="h-3 w-3 flex-shrink-0" />
-                            {/* Display formatted date if valid, otherwise placeholder */}
-                             {/* Adjusted width for better date display */}
-                            <span className="min-w-[45px] text-center">
-                                {displayDate ?? 'تاريخ؟'}
-                             </span>
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-popover border-border" align="start" collisionPadding={10}>
-                        <Calendar
-                            mode="single"
-                            selected={pickerDate} // Use pickerDate for selection
-                            onSelect={setPickerDate} // Update pickerDate directly
-                            initialFocus
-                            locale={ar}
-                            dir="rtl"
+        {/* Combined display/edit section for due date, weight, and delete button */}
+        <div className="flex items-center gap-x-1 sm:gap-x-1.5 flex-shrink-0 order-last ml-auto sm:ml-0 mt-1 sm:mt-0">
+            {isEditing ? (
+                <>
+                    {/* Due Date Picker (Edit Mode) */}
+                    <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen} modal={true}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                type="button"
+                                variant={'outline'}
+                                size="sm"
+                                className={cn(
+                                    'h-8 w-auto px-1.5 text-xs font-normal flex items-center gap-1 flex-shrink-0',
+                                    'border-input hover:bg-accent',
+                                    (displayDate)
+                                        ? 'bg-accent/50 text-accent-foreground border-accent'
+                                        : 'text-muted-foreground',
+                                 )}
+                                onClick={handleTriggerClick}
+                            >
+                                <CalendarIcon className="h-3 w-3 flex-shrink-0" />
+                                <span className="min-w-[45px] text-center">
+                                    {displayDate ?? 'تاريخ؟'}
+                                 </span>
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 bg-popover border-border" align="start" collisionPadding={10}>
+                            <Calendar
+                                mode="single"
+                                selected={pickerDate}
+                                onSelect={setPickerDate}
+                                initialFocus
+                                locale={ar}
+                                dir="rtl"
+                            />
+                            <div className="p-2 border-t border-border flex justify-end gap-2">
+                                <Button size="sm" type="button" variant="ghost" onClick={handleDateCancel}>إلغاء</Button>
+                                <Button size="sm" type="button" onClick={handleDateConfirm} className="bg-primary hover:bg-primary/90 text-primary-foreground">تأكيد</Button>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+
+                    {/* Weight Input (Edit Mode) */}
+                    <div className="flex items-center gap-0.5 w-auto flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <Input
+                            type="number"
+                            value={milestone.weight ?? 0}
+                            onChange={handleWeightChange}
+                            className="h-8 text-sm w-12 sm:w-14 text-center bg-input px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            min="0"
+                            max="100"
+                            aria-label={`وزن النقطة ${milestone.description || 'بدون عنوان'}`}
                         />
-                        <div className="p-2 border-t border-border flex justify-end gap-2">
-                            <Button size="sm" type="button" variant="ghost" onClick={handleDateCancel}>إلغاء</Button>
-                            <Button size="sm" type="button" onClick={handleDateConfirm} className="bg-primary hover:bg-primary/90 text-primary-foreground">تأكيد</Button>
-                        </div>
-                    </PopoverContent>
-                </Popover>
-            )}
+                        <span className="text-xs text-muted-foreground">%</span>
+                    </div>
 
-            {isEditing && (
-                 <div className="flex items-center gap-0.5 w-auto flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <Input
-                        type="number"
-                        value={milestone.weight ?? 0}
-                        onChange={handleWeightChange}
-                         // Slightly wider input for weight
-                        className="h-8 text-sm w-12 sm:w-14 text-center bg-input px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        min="0"
-                        max="100"
-                        aria-label={`وزن النقطة ${milestone.description || 'بدون عنوان'}`}
-                    />
-                    <span className="text-xs text-muted-foreground">%</span>
-                </div>
-            )}
-
-            {isEditing && (
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    // Reduced size and adjusted margin for delete button
-                    className="h-6 w-6 text-destructive opacity-50 hover:opacity-100 group-hover:opacity-100 flex-shrink-0"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(milestone.id);
-                    }}
-                    aria-label={`حذف النقطة ${milestone.description || 'بدون عنوان'}`}
-                >
-                    <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                    {/* Delete Button (Edit Mode) */}
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-destructive opacity-50 hover:opacity-100 group-hover:opacity-100 flex-shrink-0"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(milestone.id);
+                        }}
+                        aria-label={`حذف النقطة ${milestone.description || 'بدون عنوان'}`}
+                    >
+                        <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                </>
+            ) : (
+                // Display Mode Details
+                showDetailsInDisplayMode && (
+                    <div className="flex items-center gap-x-2 text-xs text-muted-foreground">
+                      {displayDate && (
+                        <span className="flex items-center whitespace-nowrap">
+                          <CalendarIcon className="h-3 w-3 ml-1" />
+                          {displayDate}
+                        </span>
+                      )}
+                      {milestone.weight > 0 && (
+                        <span className="flex items-center whitespace-nowrap">
+                          <Percent className="h-3 w-3 ml-0.5" />
+                          {milestone.weight}%
+                        </span>
+                      )}
+                    </div>
+                )
             )}
         </div>
-
-         {/* Show date in display mode if set */}
-        {!isEditing && displayDate && (
-           <span className="text-xs text-muted-foreground px-1 flex items-center flex-shrink-0 whitespace-nowrap order-last sm:order-none text-right mr-auto sm:mr-0">
-               <CalendarIcon className="h-3 w-3 ml-1" />
-               {displayDate}
-           </span>
-       )}
     </div>
   );
 }

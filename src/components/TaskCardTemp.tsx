@@ -1,11 +1,11 @@
 
 'use client';
 
-import type { TaskType, DurationUnit, TaskStatus, PriorityLevel, Milestone, MilestoneFirestoreData } from '@/types/task'; // Import MilestoneFirestoreData
+import type { TaskType, DurationUnit, TaskStatus, PriorityLevel, Milestone, MilestoneFirestoreData } from '@/types/task';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar as CalendarIcon, ChevronDown, ChevronUp, Clock, AlertTriangle, CheckCircle2, PauseCircle, MoreHorizontal, Edit, Trash2, GripVertical, Tag, CircleHelp, Info, ListChecks, Share2, Target, Percent } from 'lucide-react'; // Added Percent
+import { Calendar as CalendarIcon, ChevronDown, ChevronUp, Clock, AlertTriangle, CheckCircle2, PauseCircle, MoreHorizontal, Edit, Trash2, GripVertical, Tag, CircleHelp, Info, ListChecks, Share2, Target, Percent } from 'lucide-react';
 import { CreateSubtasksDialog } from './CreateSubtasksDialog';
 import { SubtasksList } from './SubtasksList';
 import { AssignTaskToMembersDialog } from './AssignTaskToMembersDialog';
@@ -71,30 +71,24 @@ const formatDuration = (value?: number, unit?: DurationUnit): string | null => {
 // Helper function to truncate text to the first line or a certain length
 const getFirstLine = (text?: string): string => {
     if (!text) return '';
-    const maxLength = 80; // Limit first line preview length
+    const maxLength = 80;
     const firstNewlineIndex = text.indexOf('\n');
 
     if (firstNewlineIndex === -1) {
-        // No newline, just truncate if needed
         return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
     } else {
-        // Get content of the first line
         const firstLineContent = text.substring(0, firstNewlineIndex);
-        // Truncate first line if it's too long
          const truncatedFirstLine = firstLineContent.length > maxLength ? firstLineContent.substring(0, maxLength) + '...' : firstLineContent;
-        // Check if there's more content after the first newline
         const hasMoreContent = text.length > firstNewlineIndex + 1;
-        // Add ellipsis if truncated OR if there's more content on subsequent lines
         return (hasMoreContent || firstLineContent.length > maxLength) ? truncatedFirstLine + '...' : truncatedFirstLine;
     }
 };
-
 
 // Function to calculate overall task progress based on milestones
 const calculateTaskProgress = (milestones?: Milestone[]): number => {
     if (!milestones || milestones.length === 0) return 0;
     const totalWeight = milestones.reduce((sum, m) => sum + (m.weight || 0), 0);
-    if (totalWeight === 0) return 0; // Avoid division by zero
+    if (totalWeight === 0) return 0;
     const completedWeight = milestones.reduce((sum, m) => sum + (m.completed ? (m.weight || 0) : 0), 0);
     return Math.round((completedWeight / totalWeight) * 100);
 };
@@ -102,8 +96,8 @@ const calculateTaskProgress = (milestones?: Milestone[]): number => {
 
 export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCategoryColor, aiReasoning }: TaskCardTempProps) {
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
-  const [isMilestonesExpanded, setIsMilestonesExpanded] = useState(false); // State for milestone visibility
-  const [showSubtasks, setShowSubtasks] = useState(false); // State for showing subtasks
+  const [isMilestonesExpanded, setIsMilestonesExpanded] = useState(false);
+  const [showSubtasks, setShowSubtasks] = useState(false);
   const { toast } = useToast();
 
   const {
@@ -123,7 +117,6 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
       cursor: isDragging ? 'grabbing' : 'grab',
   };
 
-
   const startDateFormatted = formatDateSafe(task.startDate);
   const dueDateFormatted = formatDateSafe(task.dueDate);
   const durationFormatted = formatDuration(task.durationValue, task.durationUnit);
@@ -134,28 +127,23 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
   const hasMilestones = initialMilestonesForTracker.length > 0;
   const milestoneProgress = useMemo(() => calculateTaskProgress(initialMilestonesForTracker), [initialMilestonesForTracker]);
 
-
-   // Determine if the details need an expand button
    const needsExpand = useMemo(() => {
        if (!taskDetails) return false;
        const lines = taskDetails.split('\n');
-       return lines.length > 1 || (lines[0] && lines[0].length > 80); // Expand if multiline OR first line > 80 chars
+       return lines.length > 1 || (lines[0] && lines[0].length > 80);
    }, [taskDetails]);
 
-  // Determine the text to display based on expansion state
   const displayDetails = useMemo(() => {
     if (!taskDetails) return null;
     return isDetailsExpanded ? taskDetails : getFirstLine(taskDetails);
   }, [isDetailsExpanded, taskDetails]);
 
-
   const isOverdue = task.status !== 'completed' && task.status !== 'hold' && task.dueDate && task.dueDate < new Date(new Date().setHours(0,0,0,0));
   const isCompleted = task.status === 'completed';
   const isOnHold = task.status === 'hold';
 
-  // Toggle function for details expansion
   const toggleDetailsExpand = (e: React.MouseEvent) => {
-      e.stopPropagation(); // Prevent card click or other parent events
+      e.stopPropagation();
       setIsDetailsExpanded(!isDetailsExpanded);
   };
 
@@ -172,6 +160,9 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
     3: 'متوسطة',
     4: 'منخفضة',
     5: 'الأدنى',
+    'high': 'عالية',
+    'medium': 'متوسطة',
+    'low': 'منخفضة'
   };
   const priorityText = priority ? priorityTextMap[priority] : 'غير محددة';
 
@@ -216,18 +207,14 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
       }
   };
 
-  // --- Handle Milestone Changes from Tracker ---
    const handleMilestonesChange = useCallback(async (updatedMilestones: Milestone[]) => {
        if (!task?.id) return;
 
        const taskDocRef = doc(db, 'tasks', task.id);
        try {
-             // Ensure clean objects and filter out null/undefined
-             // Convert JS Date objects back to Firestore Timestamps or null
              const cleanMilestones: MilestoneFirestoreData[] = updatedMilestones
-                 .filter(m => m != null && m.description?.trim() !== '') // Filter empty descriptions before saving
+                 .filter(m => m != null && m.description?.trim() !== '')
                  .map(m => {
-                     // Handle dueDate conversion carefully
                      let firestoreDueDate = null;
                      if (m.dueDate instanceof Date && !isNaN(m.dueDate.getTime())) {
                          try {
@@ -237,7 +224,6 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
                              firestoreDueDate = null;
                          }
                      }
-
                      return {
                          id: m.id || uuidv4(),
                          description: m.description || '',
@@ -246,14 +232,9 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
                          dueDate: firestoreDueDate,
                      };
                  });
-
-             // Save null if the array is empty after cleaning
              const milestonesToSave = cleanMilestones.length > 0 ? cleanMilestones : null;
-
              await updateDoc(taskDocRef, { milestones: milestonesToSave });
              console.log(`[TaskCardTemp ${task.id}] Milestones updated successfully in Firestore.`);
-
-             // Show success toast
              toast({
                  title: 'تم تحديث نقاط التتبع',
                  duration: 2000
@@ -266,21 +247,17 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
                variant: 'destructive',
            });
        }
-   }, [task?.id, toast]); // Depend on task.id and toast
+   }, [task?.id, toast]);
 
-
-  // Add logging to verify the task data received by the component
   useEffect(() => {
     console.log(`[TaskCardTemp ${task?.id}] Rendering task, Description: ${task?.description}`);
-    // console.log(`[TaskCardTemp ${task?.id}] Task data being passed to MilestoneTracker:`, task); // Reduced logging
-  }, [task]); // Log when task prop changes
+  }, [task]);
 
 
   if (!task) {
       console.warn("TaskCardTemp rendered without a task object.");
       return null;
   }
-
 
   return (
     <li ref={setNodeRef} style={style} {...attributes} >
@@ -302,7 +279,7 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
              <GripVertical className="h-4 w-4" />
          </button>
 
-        <CardHeader className="pb-2 pt-3 px-4 pr-8 flex flex-row items-start justify-between"> {/* Added pr-8 for handle */}
+        <CardHeader className="pb-2 pt-3 px-4 pr-8 flex flex-row items-start justify-between">
            <div className="flex-1 mr-2 space-y-1 min-w-0">
               <CardTitle className={cn("text-base font-semibold break-words", isCompleted && "line-through text-muted-foreground")}>
               {task.description}
@@ -331,7 +308,6 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
                           <Tooltip>
                               <TooltipTrigger asChild>
                                    <Badge variant="outline" className="py-0.5 px-1.5 h-auto text-xs cursor-default border-none">
-                                       {/* Use a colored span for priority */}
                                        <span className={cn('priority-badge ml-1', priorityClass)}></span>
                                       {priorityText}
                                    </Badge>
@@ -342,7 +318,6 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
                           </Tooltip>
                       </TooltipProvider>
                  )}
-                 {/* شارة OKR */}
                  {task.linkedToOkr ? (
                    <TaskKeyResultBadge taskId={task.id} size="sm" />
                  ) : (
@@ -435,8 +410,6 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
                     {taskCategoryName}
                   </Badge>
                )}
-
-               {/* زر إنشاء المهام الفرعية - يظهر فقط للمهام على مستوى المؤسسة */}
                {task.taskContext === 'organization' && task.organizationId && (
                   <div className="flex-shrink-0">
                     <CreateSubtasksDialog
@@ -450,8 +423,6 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
                     />
                   </div>
                )}
-
-               {/* زر تعيين المهمة للأعضاء - يظهر فقط للمهام على مستوى القسم */}
                {task.taskContext === 'department' && task.departmentId && task.organizationId && (
                   <div className="flex-shrink-0">
                     <AssignTaskToMembersDialog
@@ -467,17 +438,14 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
                )}
            </div>
 
-          {/* Conditional Rendering for Details */}
           {taskDetails && (
               <div className="pt-1">
                   <p className={cn(
                       "whitespace-pre-wrap text-foreground/90 text-sm break-words",
-                       // Apply line-clamp only when not expanded
                       !isDetailsExpanded && "line-clamp-1"
                    )}>
                       {taskDetails}
                   </p>
-                  {/* Show expand/collapse button only if needed */}
                   {needsExpand && (
                       <Button
                           variant="link"
@@ -502,17 +470,14 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
               </div>
           )}
 
-           {/* Milestone Section */}
-           {hasMilestones && !isCompleted && !isOnHold && (
+           {hasMilestones && ( // Always show milestone section if milestones exist
                <div className="pt-2 border-t border-border mt-2">
-                    {/* Progress Bar and Percentage - Show only when not expanded */}
-                    {!isMilestonesExpanded && (
+                    {!isMilestonesExpanded && !isCompleted && !isOnHold && ( // Show progress only if not expanded and task is active
                         <div className="flex items-center gap-2 mb-1">
                             <Progress value={milestoneProgress} className="h-1.5 flex-1 bg-secondary/20 dark:bg-secondary/30" indicatorClassName="bg-primary" />
                             <span className="text-xs font-medium text-muted-foreground">{milestoneProgress}%</span>
                         </div>
                     )}
-                   {/* Toggle Button */}
                    <Button
                        variant="ghost"
                        size="sm"
@@ -528,20 +493,18 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
                            <ChevronDown className="h-3 w-3 mr-1" />
                        )}
                    </Button>
-
-                   {/* Conditionally render MilestoneTracker */}
                    {isMilestonesExpanded && (
                        <MilestoneTracker
                            taskId={task.id}
                            taskDescription={task.description}
                            taskDetails={task.details}
-                           initialMilestones={initialMilestonesForTracker} // Pass the memoized array
+                           initialMilestones={initialMilestonesForTracker}
                            onMilestonesChange={handleMilestonesChange}
+                           parentTaskStatus={task.status} // Pass parent task status
                        />
                    )}
                </div>
            )}
-
 
           {task.priorityReason && !isCompleted && !isOnHold && (
             <TooltipProvider delayDuration={100}>
@@ -568,8 +531,6 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
                      <p className="flex-1"><strong className="font-medium">{isOverdue ? 'تحذير:' : 'ملاحظة الخطة:'}</strong> {aiReasoning}</p>
                  </div>
             )}
-
-            {/* زر عرض المهام الفرعية - يظهر فقط للمهام على مستوى المؤسسة */}
             {task.taskContext === 'organization' && task.organizationId && (
               <div className="pt-2 border-t border-border mt-2">
                 <Button
@@ -589,8 +550,6 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
                     <ChevronDown className="h-3 w-3 mr-1" />
                   )}
                 </Button>
-
-                {/* عرض المهام الفرعية */}
                 {showSubtasks && (
                   <SubtasksList parentTaskId={task.id} />
                 )}

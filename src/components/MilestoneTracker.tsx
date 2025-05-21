@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { Milestone } from '@/types/task';
+import type { Milestone, TaskStatus } from '@/types/task'; // Added TaskStatus
 import { MilestoneItem } from './MilestoneItem';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Edit, Save, Loader2, Wand2, AlertTriangle, Percent, Calendar } from 'lucide-react';
@@ -30,6 +30,7 @@ interface MilestoneTrackerProps {
   taskDetails?: string;
   initialMilestones?: Milestone[];
   onMilestonesChange: (milestones: Milestone[]) => void;
+  parentTaskStatus?: TaskStatus; // Added parentTaskStatus
 }
 
 export function MilestoneTracker({
@@ -38,6 +39,7 @@ export function MilestoneTracker({
   taskDetails,
   initialMilestones = [],
   onMilestonesChange,
+  parentTaskStatus, // Destructure parentTaskStatus
 }: MilestoneTrackerProps) {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -49,10 +51,8 @@ export function MilestoneTracker({
   useEffect(() => {
     const safeInitialMilestones = Array.isArray(initialMilestones) ? initialMilestones : [];
 
-    // Deep copy with special handling for Date objects
     const deepCopyWithDates = safeInitialMilestones.map(milestone => {
       const copy = { ...milestone };
-      // Ensure dueDate is properly copied as a Date object if it exists
       if (milestone.dueDate instanceof Date && !isNaN(milestone.dueDate.getTime())) {
         copy.dueDate = new Date(milestone.dueDate.getTime());
       } else if (milestone.dueDate) {
@@ -110,7 +110,6 @@ export function MilestoneTracker({
       const updatedMilestones = milestones.map(m =>
           m.id === id ? { ...m, description } : m
       );
-       // No need to log excessively here, maybe only on blur if needed
       setMilestones(updatedMilestones);
       onMilestonesChange(updatedMilestones);
   };
@@ -127,21 +126,16 @@ export function MilestoneTracker({
 
   const handleDueDateChange = (id: string, date: Date | undefined) => {
       if (!Array.isArray(milestones)) return;
-
-      // Create a deep copy of the date to avoid reference issues
       let dateCopy: Date | undefined = undefined;
       if (date instanceof Date && !isNaN(date.getTime())) {
           dateCopy = new Date(date.getTime());
       }
-
       const updatedMilestones = milestones.map(m =>
           m.id === id ? { ...m, dueDate: dateCopy } : m
       );
-
       setMilestones(updatedMilestones);
       onMilestonesChange(updatedMilestones);
   };
-
 
   const handleDeleteMilestone = (id: string) => {
      if (!Array.isArray(milestones)) return;
@@ -186,7 +180,7 @@ export function MilestoneTracker({
        } finally {
            setIsSuggestingMilestones(false);
        }
-   }, [taskId, taskDescription, taskDetails, toast, onMilestonesChange]); // Added taskId
+   }, [taskId, taskDescription, taskDetails, toast, onMilestonesChange]);
 
     const handleSuggestWeights = useCallback(async () => {
          if (!Array.isArray(milestones) || milestones.length === 0) {
@@ -206,7 +200,6 @@ export function MilestoneTracker({
                 return;
             }
 
-
             const input: SuggestMilestoneWeightsInput = {
                 taskDescription,
                 taskDetails,
@@ -218,12 +211,10 @@ export function MilestoneTracker({
 
             if (result.weightedMilestones && result.weightedMilestones.length > 0) {
                  const suggestedWeightMap = new Map(result.weightedMilestones.map(m => [m.id, m.weight]));
-
                  const updatedMilestones = milestones.map(m => ({
                      ...m,
                      weight: suggestedWeightMap.get(m.id) ?? m.weight ?? 0,
                  }));
-
                  setMilestones(updatedMilestones);
                  setIsEditing(true);
                 toast({ title: 'تم اقتراح الأوزان', description: 'تم توزيع 100% على نقاط التتبع. يمكنك تعديلها إذا لزم الأمر.' });
@@ -237,7 +228,7 @@ export function MilestoneTracker({
         } finally {
             setIsSuggestingWeights(false);
         }
-    }, [taskId, milestones, taskDescription, taskDetails, toast, onMilestonesChange]); // Added taskId
+    }, [taskId, milestones, taskDescription, taskDetails, toast, onMilestonesChange]);
 
     const handleSuggestDueDates = useCallback(async () => {
         if (!Array.isArray(milestones) || milestones.length === 0) {
@@ -245,7 +236,6 @@ export function MilestoneTracker({
             return;
         }
 
-        // تحقق من وجود أوزان لنقاط التتبع
         const milestonesWithoutWeights = milestones.filter(m => m.description.trim() !== '' && (!m.weight || m.weight === 0));
         if (milestonesWithoutWeights.length > 0) {
             toast({
@@ -260,7 +250,6 @@ export function MilestoneTracker({
         setIsSuggestingDueDates(true);
 
         try {
-            // جمع نقاط التتبع مع أوزانها
             const milestonesToSchedule = milestones
                 .filter(m => m.description.trim() !== '')
                 .map(m => ({
@@ -269,17 +258,14 @@ export function MilestoneTracker({
                     weight: m.weight || 0
                 }));
 
-            // الحصول على تاريخ بدء المهمة وتاريخ استحقاقها إن وجدا
             let taskStartDate: string | undefined = undefined;
             let taskDueDate: string | undefined = undefined;
 
-            // البحث عن تاريخ البدء وتاريخ الاستحقاق في DOM
             const startDateElement = document.getElementById('edit-start-date') || document.getElementById('task-start-date');
             const dueDateElement = document.getElementById('edit-due-date') || document.getElementById('task-due-date');
 
             if (startDateElement && startDateElement.textContent && !startDateElement.textContent.includes('اختر تاريخًا')) {
                 try {
-                    // محاولة استخراج التاريخ من النص
                     const dateText = startDateElement.textContent.trim();
                     const date = new Date(dateText);
                     if (!isNaN(date.getTime())) {
@@ -292,7 +278,6 @@ export function MilestoneTracker({
 
             if (dueDateElement && dueDateElement.textContent && !dueDateElement.textContent.includes('اختر تاريخًا')) {
                 try {
-                    // محاولة استخراج التاريخ من النص
                     const dateText = dueDateElement.textContent.trim();
                     const date = new Date(dateText);
                     if (!isNaN(date.getTime())) {
@@ -315,7 +300,6 @@ export function MilestoneTracker({
             console.log(`[MilestoneTracker ${taskId}] AI Suggest Due Dates Result:`, result);
 
             if (result.milestonesWithDueDates && result.milestonesWithDueDates.length > 0) {
-                // إنشاء خريطة للتواريخ المقترحة
                 const suggestedDueDateMap = new Map(
                     result.milestonesWithDueDates.map(m => [
                         m.id,
@@ -326,7 +310,6 @@ export function MilestoneTracker({
                     ])
                 );
 
-                // تحديث نقاط التتبع بالتواريخ المقترحة
                 const updatedMilestones = milestones.map(m => {
                     const suggestion = suggestedDueDateMap.get(m.id);
                     if (suggestion && !isNaN(suggestion.date.getTime())) {
@@ -341,7 +324,6 @@ export function MilestoneTracker({
                 setMilestones(updatedMilestones);
                 setIsEditing(true);
 
-                // إنشاء رسالة تأكيد مع تفاصيل التواريخ المقترحة
                 const firstSuggestion = result.milestonesWithDueDates[0];
                 const message = firstSuggestion ?
                     `مثال: "${firstSuggestion.dueDate}" لـ "${milestones.find(m => m.id === firstSuggestion.id)?.description}". السبب: ${firstSuggestion.reasoning || ''}` :
@@ -387,7 +369,6 @@ export function MilestoneTracker({
                 });
                 return;
           }
-          // Filter out empty description milestones *before* calling onMilestonesChange
           const finalMilestones = milestones.filter(m => m.description.trim() !== '');
           setMilestones(finalMilestones);
           onMilestonesChange(finalMilestones);
@@ -497,13 +478,14 @@ export function MilestoneTracker({
                 onWeightChange={handleWeightChange}
                 onDueDateChange={handleDueDateChange}
                 onDelete={handleDeleteMilestone}
+                parentTaskStatus={parentTaskStatus} // Pass down parentTaskStatus
               />
             ))}
              {currentMilestonesArray.length === 0 && !isEditing && (
                  <p className="text-xs text-muted-foreground text-center py-3">لا توجد نقاط تتبع لهذه المهمة.</p>
              )}
           </div>
-          <ScrollBar orientation="vertical" /> {/* Ensure scrollbar is present */}
+          <ScrollBar orientation="vertical" />
         </ScrollArea>
 
       {isEditing && (
