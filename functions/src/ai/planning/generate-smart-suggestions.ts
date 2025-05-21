@@ -67,8 +67,11 @@ export const generateSmartSuggestions = createCallableFunction<GenerateSmartSugg
     }
 
     // إنشاء نص الطلب بناءً على اللغة المحددة
-    const prompt = language === 'en'
-      ? `
+    let prompt = '';
+
+    // الجزء الأول من الطلب - المقدمة
+    if (language === 'en') {
+      prompt = `
 You are an AI assistant specialized in task management and productivity improvement. Your task is to provide smart suggestions for ${userName} based on their performance and current tasks.
 
 **User Information:**
@@ -87,8 +90,9 @@ ${JSON.stringify(upcomingTasks, null, 2)}
 **Overdue Tasks:**
 ${JSON.stringify(overdueTasks, null, 2)}
 
-**Requested Suggestion Type: ${suggestionType}**`
-      : `
+**Requested Suggestion Type: ${suggestionType}**`;
+    } else {
+      prompt = `
 أنت مساعد ذكي متخصص في إدارة المهام وتحسين الإنتاجية. مهمتك هي تقديم اقتراحات ذكية لـ ${userName} بناءً على أدائه ومهامه الحالية.
 
 **معلومات المستخدم:**
@@ -108,101 +112,55 @@ ${JSON.stringify(upcomingTasks, null, 2)}
 ${JSON.stringify(overdueTasks, null, 2)}
 
 **نوع الاقتراح المطلوب: ${suggestionType}**`;
+    }
 
-${language === 'en'
-  ? (suggestionType === 'task_prioritization'
-    ? `
+    // الجزء الثاني من الطلب - تعليمات خاصة بنوع الاقتراح
+    if (language === 'en') {
+      if (suggestionType === 'task_prioritization') {
+        prompt += `
+
 Create a suggestion for task prioritization based on:
 - Deadlines
 - Importance and priority
 - Dependencies between tasks
 - Current workload
 
-Suggest a logical order for tasks and provide convincing reasons for this order.
-` : '')
-  : (suggestionType === 'task_prioritization'
-    ? `
-قم بإنشاء اقتراح لإعادة ترتيب أولويات المهام بناءً على:
-- المواعيد النهائية
-- الأهمية والأولوية
-- الاعتماديات بين المهام
-- عبء العمل الحالي
+Suggest a logical order for tasks and provide convincing reasons for this order.`;
+      } else if (suggestionType === 'deadline_adjustment') {
+        prompt += `
 
-اقترح ترتيباً منطقياً للمهام وقدم أسباباً مقنعة لهذا الترتيب.
-` : '')
-}
-
-${language === 'en'
-  ? (suggestionType === 'deadline_adjustment'
-    ? `
 Create a suggestion for adjusting task deadlines based on:
 - Realism of current deadlines
 - Overall workload
 - Previous completion patterns
 - Competing priorities
 
-Identify tasks that may need deadline extensions and suggest more realistic new deadlines.
-` : '')
-  : (suggestionType === 'deadline_adjustment'
-    ? `
-قم بإنشاء اقتراح لتعديل المواعيد النهائية للمهام بناءً على:
-- واقعية المواعيد الحالية
-- عبء العمل الإجمالي
-- أنماط الإكمال السابقة
-- الأولويات المتنافسة
+Identify tasks that may need deadline extensions and suggest more realistic new deadlines.`;
+      } else if (suggestionType === 'workload_management') {
+        prompt += `
 
-حدد المهام التي قد تحتاج إلى تمديد مواعيدها النهائية واقترح مواعيد جديدة أكثر واقعية.
-` : '')
-}
-
-${language === 'en'
-  ? (suggestionType === 'workload_management'
-    ? `
 Create a suggestion for better workload management based on:
 - Current task distribution
 - Overlapping deadlines
 - Priority levels
 - Productivity patterns
 
-Suggest strategies for more balanced work distribution and avoiding burnout.
-` : '')
-  : (suggestionType === 'workload_management'
-    ? `
-قم بإنشاء اقتراح لإدارة عبء العمل بشكل أفضل بناءً على:
-- توزيع المهام الحالي
-- المواعيد النهائية المتداخلة
-- مستويات الأولوية
-- أنماط الإنتاجية
+Suggest strategies for more balanced work distribution and avoiding burnout.`;
+      } else if (suggestionType === 'daily_summary') {
+        prompt += `
 
-اقترح استراتيجيات لتوزيع العمل بشكل أكثر توازناً وتجنب الإرهاق.
-` : '')
-}
-
-${language === 'en'
-  ? (suggestionType === 'daily_summary'
-    ? `
 Create a daily summary that includes:
 - Overview of recently completed tasks
 - Tasks due today
 - Overdue tasks that need attention
 - Suggested action plan for the day
 
-Provide a concise and useful summary that helps the user plan their day.
-` : '')
-  : (suggestionType === 'daily_summary'
-    ? `
-قم بإنشاء ملخص يومي يتضمن:
-- نظرة عامة على المهام المكتملة مؤخراً
-- المهام المستحقة اليوم
-- المهام المتأخرة التي تحتاج اهتماماً
-- اقتراح خطة عمل لليوم
+Provide a concise and useful summary that helps the user plan their day.`;
+      }
 
-قدم ملخصاً موجزاً ومفيداً يساعد المستخدم على التخطيط ليومه.
-` : '')
-}
+      // إضافة تعليمات المخرجات باللغة الإنجليزية
+      prompt += `
 
-${language === 'en'
-  ? `
 **Required Output:**
 Create output in JSON format as follows:
 {
@@ -223,9 +181,54 @@ Important notes:
 - Use clear and professional language in English
 - Provide practical and actionable suggestions
 - Focus on improving productivity and reducing stress
-- Be as specific as possible with reference to actual tasks when appropriate
-`
-  : `
+- Be as specific as possible with reference to actual tasks when appropriate`;
+    } else {
+      // تعليمات باللغة العربية
+      if (suggestionType === 'task_prioritization') {
+        prompt += `
+
+قم بإنشاء اقتراح لإعادة ترتيب أولويات المهام بناءً على:
+- المواعيد النهائية
+- الأهمية والأولوية
+- الاعتماديات بين المهام
+- عبء العمل الحالي
+
+اقترح ترتيباً منطقياً للمهام وقدم أسباباً مقنعة لهذا الترتيب.`;
+      } else if (suggestionType === 'deadline_adjustment') {
+        prompt += `
+
+قم بإنشاء اقتراح لتعديل المواعيد النهائية للمهام بناءً على:
+- واقعية المواعيد الحالية
+- عبء العمل الإجمالي
+- أنماط الإكمال السابقة
+- الأولويات المتنافسة
+
+حدد المهام التي قد تحتاج إلى تمديد مواعيدها النهائية واقترح مواعيد جديدة أكثر واقعية.`;
+      } else if (suggestionType === 'workload_management') {
+        prompt += `
+
+قم بإنشاء اقتراح لإدارة عبء العمل بشكل أفضل بناءً على:
+- توزيع المهام الحالي
+- المواعيد النهائية المتداخلة
+- مستويات الأولوية
+- أنماط الإنتاجية
+
+اقترح استراتيجيات لتوزيع العمل بشكل أكثر توازناً وتجنب الإرهاق.`;
+      } else if (suggestionType === 'daily_summary') {
+        prompt += `
+
+قم بإنشاء ملخص يومي يتضمن:
+- نظرة عامة على المهام المكتملة مؤخراً
+- المهام المستحقة اليوم
+- المهام المتأخرة التي تحتاج اهتماماً
+- اقتراح خطة عمل لليوم
+
+قدم ملخصاً موجزاً ومفيداً يساعد المستخدم على التخطيط ليومه.`;
+      }
+
+      // إضافة تعليمات المخرجات باللغة العربية
+      prompt += `
+
 **المخرجات المطلوبة:**
 قم بإنشاء مخرجات بتنسيق JSON كالتالي:
 {
@@ -246,9 +249,8 @@ Important notes:
 - استخدم لغة واضحة ومهنية باللغة العربية
 - قدم اقتراحات عملية وقابلة للتنفيذ
 - ركز على تحسين الإنتاجية وتقليل التوتر
-- كن محدداً قدر الإمكان مع الإشارة إلى المهام الفعلية عند الاقتضاء
-`}
-`;
+- كن محدداً قدر الإمكان مع الإشارة إلى المهام الفعلية عند الاقتضاء`;
+    }
 
     // استدعاء الذكاء الاصطناعي
     console.log(`[AI] Generating ${suggestionType} suggestion for user ${userName}`);
@@ -273,11 +275,11 @@ Important notes:
     if (error instanceof functions.https.HttpsError) {
       throw error;
     }
-    throw new functions.https.HttpsError(
-      'internal',
-      language === 'en'
-        ? `Failed to create smart suggestion: ${error.message || 'Unknown internal error.'}`
-        : `فشل في إنشاء اقتراح ذكي: ${error.message || 'خطأ داخلي غير معروف.'}`
-    );
+    // استخدام متغير اللغة من request.data أو الافتراضي 'ar'
+    const lang = request.data.language || 'ar';
+    const errorMessage = lang === 'en'
+      ? `Failed to create smart suggestion: ${error.message || 'Unknown internal error.'}`
+      : `فشل في إنشاء اقتراح ذكي: ${error.message || 'خطأ داخلي غير معروف.'}`;
+    throw new functions.https.HttpsError('internal', errorMessage);
   }
 });
