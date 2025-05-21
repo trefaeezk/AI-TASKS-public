@@ -1,18 +1,17 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import type { Milestone, TaskStatus } from '@/types/task'; // Added TaskStatus
+import React, { useState, useEffect, useCallback } from 'react';
+import type { Milestone, TaskStatus } from '@/types/task';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Trash2, GripVertical, Check, Calendar as CalendarIcon, Percent } from 'lucide-react'; // Added Percent
+import { Trash2, GripVertical, Check, Calendar as CalendarIcon, Percent } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
-
 
 interface MilestoneItemProps {
   milestone: Milestone;
@@ -23,7 +22,7 @@ interface MilestoneItemProps {
   onDueDateChange: (id: string, date: Date | undefined) => void;
   onDelete: (id: string) => void;
   dragHandleProps?: any;
-  parentTaskStatus?: TaskStatus; // Added parentTaskStatus
+  parentTaskStatus?: TaskStatus;
 }
 
 export function MilestoneItem({
@@ -35,9 +34,8 @@ export function MilestoneItem({
   onDueDateChange,
   onDelete,
   dragHandleProps,
-  parentTaskStatus, // Destructure parentTaskStatus
+  parentTaskStatus,
 }: MilestoneItemProps) {
-
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     const [pickerDate, setPickerDate] = useState<Date | undefined>(undefined);
 
@@ -45,9 +43,10 @@ export function MilestoneItem({
         let initialDate: Date | undefined = undefined;
         if (milestone.dueDate) {
             try {
-                const dateObj = new Date(milestone.dueDate);
-                if (!isNaN(dateObj.getTime())) {
-                    initialDate = dateObj;
+                // Ensure milestone.dueDate is treated as a Date object or a string that can be parsed
+                const dateInput = milestone.dueDate instanceof Date ? milestone.dueDate : new Date(milestone.dueDate);
+                if (!isNaN(dateInput.getTime())) {
+                    initialDate = dateInput;
                 }
             } catch (e) {
                 console.error(`[MilestoneItem ${milestone.id}] Error parsing initial dueDate:`, e, "Value:", milestone.dueDate);
@@ -85,9 +84,9 @@ export function MilestoneItem({
         let originalDate: Date | undefined = undefined;
         if (milestone.dueDate) {
             try {
-                const dateObj = new Date(milestone.dueDate);
-                if (!isNaN(dateObj.getTime())) {
-                    originalDate = dateObj;
+                const dateInput = milestone.dueDate instanceof Date ? milestone.dueDate : new Date(milestone.dueDate);
+                if (!isNaN(dateInput.getTime())) {
+                    originalDate = dateInput;
                 }
             } catch (e) {
                 originalDate = undefined;
@@ -97,41 +96,16 @@ export function MilestoneItem({
         setIsPopoverOpen(false);
     }, [milestone.dueDate, milestone.id]);
 
-     const displayDate = useMemo(() => {
-         let dateObj: Date | undefined = undefined;
-         if (milestone.dueDate) {
-             try {
-                 dateObj = new Date(milestone.dueDate);
-                 if (isNaN(dateObj.getTime())) {
-                     dateObj = undefined;
-                 }
-             } catch (e) {
-                 dateObj = undefined;
-             }
-         }
-         if (dateObj instanceof Date) {
-             try {
-                 return format(dateObj, 'd MMM', { locale: ar });
-             } catch (e) {
-                 return null;
-             }
-         }
-         return null;
-     }, [milestone.dueDate]);
-
-
     const handleTriggerClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation();
         let currentDate: Date | undefined = undefined;
         if (milestone.dueDate) {
              try {
-                 const dateObj = new Date(milestone.dueDate);
-                 if (!isNaN(dateObj.getTime())) {
-                     currentDate = dateObj;
+                 const dateInput = milestone.dueDate instanceof Date ? milestone.dueDate : new Date(milestone.dueDate);
+                 if (!isNaN(dateInput.getTime())) {
+                     currentDate = dateInput;
                  }
-             } catch (e) {
-                 // Silently handle error
-             }
+             } catch (e) { /* Silently handle error */ }
         }
         setPickerDate(currentDate || new Date());
         setIsPopoverOpen(true);
@@ -197,11 +171,9 @@ export function MilestoneItem({
           )}
         </div>
 
-        {/* Combined display/edit section for due date, weight, and delete button */}
         <div className="flex items-center gap-x-1 sm:gap-x-1.5 flex-shrink-0 order-last ml-auto sm:ml-0 mt-1 sm:mt-0">
             {isEditing ? (
                 <>
-                    {/* Due Date Picker (Edit Mode) */}
                     <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen} modal={true}>
                         <PopoverTrigger asChild>
                             <Button
@@ -211,7 +183,7 @@ export function MilestoneItem({
                                 className={cn(
                                     'h-8 w-auto px-1.5 text-xs font-normal flex items-center gap-1 flex-shrink-0',
                                     'border-input hover:bg-accent',
-                                    (displayDate)
+                                    (milestone.dueDate && typeof milestone.dueDate.getMonth === 'function' && !isNaN(milestone.dueDate.getTime()))
                                         ? 'bg-accent/50 text-accent-foreground border-accent'
                                         : 'text-muted-foreground',
                                  )}
@@ -219,7 +191,9 @@ export function MilestoneItem({
                             >
                                 <CalendarIcon className="h-3 w-3 flex-shrink-0" />
                                 <span className="min-w-[45px] text-center">
-                                    {displayDate ?? 'تاريخ؟'}
+                                    {milestone.dueDate && typeof milestone.dueDate.getMonth === 'function' && !isNaN(milestone.dueDate.getTime())
+                                        ? format(milestone.dueDate, 'd MMM', { locale: ar })
+                                        : 'تاريخ؟'}
                                  </span>
                             </Button>
                         </PopoverTrigger>
@@ -239,7 +213,6 @@ export function MilestoneItem({
                         </PopoverContent>
                     </Popover>
 
-                    {/* Weight Input (Edit Mode) */}
                     <div className="flex items-center gap-0.5 w-auto flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                         <Input
                             type="number"
@@ -253,7 +226,6 @@ export function MilestoneItem({
                         <span className="text-xs text-muted-foreground">%</span>
                     </div>
 
-                    {/* Delete Button (Edit Mode) */}
                     <Button
                         type="button"
                         variant="ghost"
@@ -269,21 +241,22 @@ export function MilestoneItem({
                     </Button>
                 </>
             ) : (
-                // Display Mode Details
                 showDetailsInDisplayMode && (
                     <div className="flex items-center gap-x-2 text-xs text-muted-foreground">
-                      {displayDate && (
-                        <span className="flex items-center whitespace-nowrap">
-                          <CalendarIcon className="h-3 w-3 ml-1" />
-                          {displayDate}
-                        </span>
-                      )}
-                      {milestone.weight > 0 && (
-                        <span className="flex items-center whitespace-nowrap">
-                          <Percent className="h-3 w-3 ml-0.5" />
-                          {milestone.weight}%
-                        </span>
-                      )}
+                        {/* Display logic for due date */}
+                        {milestone.dueDate && typeof milestone.dueDate.getMonth === 'function' && !isNaN(milestone.dueDate.getTime()) ? (
+                            <span className="flex items-center whitespace-nowrap">
+                                <CalendarIcon className="h-3 w-3 ml-1" />
+                                {format(milestone.dueDate, 'd MMM', { locale: ar })}
+                            </span>
+                        ) : null}
+                        {/* Display logic for weight */}
+                        {milestone.weight > 0 && (
+                            <span className="flex items-center whitespace-nowrap">
+                                <Percent className="h-3 w-3 ml-0.5" />
+                                {milestone.weight}%
+                            </span>
+                        )}
                     </div>
                 )
             )}
