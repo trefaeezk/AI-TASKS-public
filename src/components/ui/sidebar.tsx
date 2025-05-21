@@ -4,14 +4,14 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { VariantProps, cva } from "class-variance-authority"
-import { PanelLeft, X } from "lucide-react" // Added X for consistency if needed, PanelLeft is fine for toggle
+import { PanelLeft, X } from "lucide-react" 
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet" // Import SheetHeader and SheetTitle
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
@@ -70,12 +70,7 @@ const SidebarProvider = React.forwardRef<
   ) => {
     const isMobile = useIsMobile()
     const [openMobile, setOpenMobile] = React.useState(false)
-    const [hasMounted, setHasMounted] = React.useState(false);
-
-    React.useEffect(() => {
-      setHasMounted(true);
-    }, []);
-
+    
 
     const [_open, _setOpen] = React.useState(defaultOpen)
     const open = openProp ?? _open
@@ -174,7 +169,13 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
-    const { isMobile, state, openMobile, setOpenMobile, hasMounted } = useSidebar() as SidebarContext & { hasMounted?: boolean }; // Cast for hasMounted if not in original context
+    const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+    const [mounted, setMounted] = React.useState(false);
+
+    React.useEffect(() => {
+      setMounted(true);
+    }, []);
+
 
     if (collapsible === "none") {
       return (
@@ -191,18 +192,17 @@ const Sidebar = React.forwardRef<
       )
     }
     
-    // Render placeholder or null on server and initial client render for mobile sheet
-    if (isMobile && !hasMounted) {
-      return null; // Or a placeholder like <div className="md:hidden w-[--sidebar-width-mobile]" />
-    }
-
-    if (isMobile && hasMounted) {
+    if (isMobile) {
+      if (!mounted) {
+        // Render a placeholder or null on the server and initial client render for mobile
+        return <div className="md:hidden w-[var(--sidebar-width-mobile)]" />; 
+      }
       return (
         <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground shadow-lg flex flex-col" // Added flex flex-col
+            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground shadow-lg flex flex-col" 
             style={
               {
                 "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -210,7 +210,7 @@ const Sidebar = React.forwardRef<
             }
             side={side}
           >
-            <SheetHeader className="p-3 border-b border-sidebar-border">
+            <SheetHeader className="p-3 border-b border-sidebar-border"> 
               <div className="flex items-center justify-between">
                 <SheetTitle className="text-base font-semibold">إدارة المهام</SheetTitle>
                 <Button
@@ -294,7 +294,7 @@ const SidebarTrigger = React.forwardRef<
         triggerChildren.props.onClick?.(event);
         toggleSidebar();
       },
-      ...props, // Pass down other props like className
+      ...props, 
       className: cn(className, triggerChildren.props.className),
     } as React.Attributes & React.DOMAttributes<Element>);
   }
@@ -578,7 +578,7 @@ const SidebarMenuButton = React.forwardRef<
       size = "default",
       tooltip,
       className,
-      children, // Explicitly include children here
+      children, 
       ...props
     },
     ref
@@ -781,7 +781,7 @@ export {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  // SidebarMenuSkeleton, // This was the undefined export
+  SidebarMenuSkeleton,
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
@@ -789,6 +789,6 @@ export {
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,
-  SidebarMenuAction, // Added missing exports
-  SidebarMenuBadge,   // Added missing exports
+  SidebarMenuAction,
+  SidebarMenuBadge,
 };
