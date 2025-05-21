@@ -13,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { functions } from '@/config/firebase';
 import { httpsCallable } from 'firebase/functions';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { Target, Link as LinkIcon, Unlink, ExternalLink, PlusCircle, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -101,7 +101,7 @@ export function TaskKeyResultsSection({
     };
     
     fetchLinkedKeyResults();
-  }, [taskId, organizationId]);
+  }, [taskId, organizationId, toast]); // Added toast to dependency array
   
   // إلغاء ربط النتيجة الرئيسية بالمهمة
   const handleUnlinkKeyResult = async () => {
@@ -316,7 +316,7 @@ export function TaskKeyResultsSection({
                     asChild
                     className="h-7 px-2 text-xs"
                   >
-                    <Link href={`/org/okr/${keyResult.periodId}/objective/${keyResult.objectiveId}/key-result/${keyResult.id}`} target="_blank">
+                    <Link href={`/org/okr/objective/${keyResult.objectiveId}/key-result/${keyResult.id}`} target="_blank">
                       <ExternalLink className="ml-1 h-3 w-3" />
                       عرض
                     </Link>
