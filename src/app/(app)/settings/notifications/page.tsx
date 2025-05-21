@@ -14,10 +14,13 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NotificationSettings, NotificationType } from '@/types/notification';
 import { getUserNotificationSettings, updateUserNotificationSettings } from '@/services/notifications';
+import { useLanguage } from '@/context/LanguageContext';
+import { Translate } from '@/components/Translate';
 
 export default function NotificationSettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
@@ -36,8 +39,8 @@ export default function NotificationSettingsPage() {
       } catch (error) {
         console.error('Error fetching notification settings:', error);
         toast({
-          title: 'خطأ',
-          description: 'حدث خطأ أثناء تحميل إعدادات الإشعارات',
+          title: t('errors.error'),
+          description: t('notifications.errorLoadingSettings', 'حدث خطأ أثناء تحميل إعدادات الإشعارات'),
           variant: 'destructive',
         });
       } finally {
@@ -56,14 +59,14 @@ export default function NotificationSettingsPage() {
       setSaving(true);
       await updateUserNotificationSettings(user.uid, settings);
       toast({
-        title: 'تم الحفظ',
-        description: 'تم حفظ إعدادات الإشعارات بنجاح',
+        title: t('general.success'),
+        description: t('notifications.settingsSaved', 'تم حفظ إعدادات الإشعارات بنجاح'),
       });
     } catch (error) {
       console.error('Error updating notification settings:', error);
       toast({
-        title: 'خطأ',
-        description: 'حدث خطأ أثناء حفظ إعدادات الإشعارات',
+        title: t('errors.error'),
+        description: t('notifications.errorSavingSettings', 'حدث خطأ أثناء حفظ إعدادات الإشعارات'),
         variant: 'destructive',
       });
     } finally {
@@ -104,7 +107,9 @@ export default function NotificationSettingsPage() {
   if (loading) {
     return (
       <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-6">إعدادات الإشعارات</h1>
+        <h1 className="text-2xl font-bold mb-6">
+          <Translate text="notifications.notificationSettings" defaultValue="إعدادات الإشعارات" />
+        </h1>
         <div className="space-y-6">
           <Skeleton className="h-[200px] w-full" />
           <Skeleton className="h-[300px] w-full" />
@@ -116,11 +121,13 @@ export default function NotificationSettingsPage() {
   if (!settings) {
     return (
       <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-6">إعدادات الإشعارات</h1>
+        <h1 className="text-2xl font-bold mb-6">
+          <Translate text="notifications.notificationSettings" defaultValue="إعدادات الإشعارات" />
+        </h1>
         <Card>
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">
-              يرجى تسجيل الدخول لعرض إعدادات الإشعارات.
+              <Translate text="notifications.pleaseLoginToView" defaultValue="يرجى تسجيل الدخول لعرض إعدادات الإشعارات." />
             </p>
           </CardContent>
         </Card>
@@ -132,23 +139,29 @@ export default function NotificationSettingsPage() {
     <div className="container mx-auto p-4">
       <div className="flex items-center mb-6">
         <Bell className="ml-2 h-6 w-6" />
-        <h1 className="text-2xl font-bold">إعدادات الإشعارات</h1>
+        <h1 className="text-2xl font-bold">
+          <Translate text="notifications.notificationSettings" defaultValue="إعدادات الإشعارات" />
+        </h1>
       </div>
 
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>إعدادات عامة</CardTitle>
+            <CardTitle>
+              <Translate text="notifications.generalSettings" defaultValue="إعدادات عامة" />
+            </CardTitle>
             <CardDescription>
-              تخصيص كيفية استلام الإشعارات
+              <Translate text="notifications.customizeNotifications" defaultValue="تخصيص كيفية استلام الإشعارات" />
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label htmlFor="enablePushNotifications">إشعارات التطبيق</Label>
+                <Label htmlFor="enablePushNotifications">
+                  <Translate text="notifications.inAppNotifications" defaultValue="إشعارات التطبيق" />
+                </Label>
                 <p className="text-sm text-muted-foreground">
-                  استلام إشعارات داخل التطبيق
+                  <Translate text="notifications.receiveInAppNotifications" defaultValue="استلام إشعارات داخل التطبيق" />
                 </p>
               </div>
               <Switch
@@ -160,9 +173,11 @@ export default function NotificationSettingsPage() {
             <Separator />
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label htmlFor="enableEmailNotifications">إشعارات البريد الإلكتروني</Label>
+                <Label htmlFor="enableEmailNotifications">
+                  <Translate text="notifications.emailNotifications" defaultValue="إشعارات البريد الإلكتروني" />
+                </Label>
                 <p className="text-sm text-muted-foreground">
-                  استلام إشعارات عبر البريد الإلكتروني
+                  <Translate text="notifications.receiveEmailNotifications" defaultValue="استلام إشعارات عبر البريد الإلكتروني" />
                 </p>
               </div>
               <Switch
@@ -173,19 +188,21 @@ export default function NotificationSettingsPage() {
             </div>
             {settings.enableEmailNotifications && (
               <div className="pr-8">
-                <Label htmlFor="emailFrequency">تكرار البريد الإلكتروني</Label>
+                <Label htmlFor="emailFrequency">
+                  <Translate text="notifications.notificationFrequency" defaultValue="تكرار البريد الإلكتروني" />
+                </Label>
                 <Select
                   value={settings.emailFrequency}
                   onValueChange={(value) => updateSetting('emailFrequency', value as any)}
                 >
                   <SelectTrigger id="emailFrequency" className="mt-1">
-                    <SelectValue placeholder="اختر تكرار البريد الإلكتروني" />
+                    <SelectValue placeholder={t('notifications.selectEmailFrequency', 'اختر تكرار البريد الإلكتروني')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="immediate">فوري</SelectItem>
-                    <SelectItem value="daily">يومي (ملخص)</SelectItem>
-                    <SelectItem value="weekly">أسبوعي (ملخص)</SelectItem>
-                    <SelectItem value="never">أبدًا</SelectItem>
+                    <SelectItem value="immediate">{t('notifications.immediate', 'فوري')}</SelectItem>
+                    <SelectItem value="daily">{t('notifications.daily', 'يومي (ملخص)')}</SelectItem>
+                    <SelectItem value="weekly">{t('notifications.weekly', 'أسبوعي (ملخص)')}</SelectItem>
+                    <SelectItem value="never">{t('notifications.never', 'أبدًا')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -193,9 +210,11 @@ export default function NotificationSettingsPage() {
             <Separator />
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label htmlFor="enableAiSuggestions">اقتراحات الذكاء الاصطناعي</Label>
+                <Label htmlFor="enableAiSuggestions">
+                  <Translate text="notifications.aiSuggestions" defaultValue="اقتراحات الذكاء الاصطناعي" />
+                </Label>
                 <p className="text-sm text-muted-foreground">
-                  استلام اقتراحات ذكية لتحسين الإنتاجية
+                  <Translate text="notifications.receiveAiSuggestions" defaultValue="استلام اقتراحات ذكية لتحسين الإنتاجية" />
                 </p>
               </div>
               <Switch
@@ -209,9 +228,11 @@ export default function NotificationSettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>أنواع الإشعارات</CardTitle>
+            <CardTitle>
+              <Translate text="notifications.notificationTypes" defaultValue="أنواع الإشعارات" />
+            </CardTitle>
             <CardDescription>
-              اختر أنواع الإشعارات التي ترغب في استلامها
+              <Translate text="notifications.chooseNotificationTypes" defaultValue="اختر أنواع الإشعارات التي ترغب في استلامها" />
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -219,9 +240,11 @@ export default function NotificationSettingsPage() {
               <div className="flex items-center space-x-2">
                 <CheckCircle className="ml-2 h-4 w-4 text-primary" />
                 <div>
-                  <Label>إشعارات المهام</Label>
+                  <Label>
+                    <Translate text="notifications.taskNotifications" defaultValue="إشعارات المهام" />
+                  </Label>
                   <p className="text-sm text-muted-foreground">
-                    إنشاء المهام، تعيين المهام، تغيير الحالة
+                    <Translate text="notifications.taskNotificationsDescription" defaultValue="إنشاء المهام، تعيين المهام، تغيير الحالة" />
                   </p>
                 </div>
               </div>
@@ -235,9 +258,11 @@ export default function NotificationSettingsPage() {
               <div className="flex items-center space-x-2">
                 <Calendar className="ml-2 h-4 w-4 text-blue-500" />
                 <div>
-                  <Label>إشعارات الاجتماعات</Label>
+                  <Label>
+                    <Translate text="notifications.meetingNotifications" defaultValue="إشعارات الاجتماعات" />
+                  </Label>
                   <p className="text-sm text-muted-foreground">
-                    إنشاء الاجتماعات، تذكيرات، تحديثات
+                    <Translate text="notifications.meetingNotificationsDescription" defaultValue="إنشاء الاجتماعات، تذكيرات، تحديثات" />
                   </p>
                 </div>
               </div>
@@ -251,9 +276,11 @@ export default function NotificationSettingsPage() {
               <div className="flex items-center space-x-2">
                 <Info className="ml-2 h-4 w-4 text-muted-foreground" />
                 <div>
-                  <Label>إشعارات النظام</Label>
+                  <Label>
+                    <Translate text="notifications.systemNotifications" defaultValue="إشعارات النظام" />
+                  </Label>
                   <p className="text-sm text-muted-foreground">
-                    تحديثات النظام، إضافة أعضاء، إنشاء أقسام
+                    <Translate text="notifications.systemNotificationsDescription" defaultValue="تحديثات النظام، إضافة أعضاء، إنشاء أقسام" />
                   </p>
                 </div>
               </div>
@@ -267,14 +294,18 @@ export default function NotificationSettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>وقت عدم الإزعاج</CardTitle>
+            <CardTitle>
+              <Translate text="notifications.doNotDisturb" defaultValue="وقت عدم الإزعاج" />
+            </CardTitle>
             <CardDescription>
-              تعيين فترة زمنية لا ترغب في استلام إشعارات خلالها
+              <Translate text="notifications.doNotDisturbDescription" defaultValue="تعيين فترة زمنية لا ترغب في استلام إشعارات خلالها" />
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label htmlFor="doNotDisturb">تفعيل وقت عدم الإزعاج</Label>
+              <Label htmlFor="doNotDisturb">
+                <Translate text="notifications.enableDoNotDisturb" defaultValue="تفعيل وقت عدم الإزعاج" />
+              </Label>
               <Switch
                 id="doNotDisturb"
                 checked={!!settings.doNotDisturbStart && !!settings.doNotDisturbEnd}
@@ -292,7 +323,9 @@ export default function NotificationSettingsPage() {
             {settings.doNotDisturbStart && settings.doNotDisturbEnd && (
               <div className="grid grid-cols-2 gap-4 mt-2">
                 <div>
-                  <Label htmlFor="doNotDisturbStart">من</Label>
+                  <Label htmlFor="doNotDisturbStart">
+                    <Translate text="notifications.doNotDisturbFrom" defaultValue="من" />
+                  </Label>
                   <Input
                     id="doNotDisturbStart"
                     type="time"
@@ -302,7 +335,9 @@ export default function NotificationSettingsPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="doNotDisturbEnd">إلى</Label>
+                  <Label htmlFor="doNotDisturbEnd">
+                    <Translate text="notifications.doNotDisturbTo" defaultValue="إلى" />
+                  </Label>
                   <Input
                     id="doNotDisturbEnd"
                     type="time"
@@ -316,7 +351,10 @@ export default function NotificationSettingsPage() {
           </CardContent>
           <CardFooter className="flex justify-end">
             <Button onClick={handleUpdateSettings} disabled={saving}>
-              {saving ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
+              {saving ?
+                t('general.saving', 'جاري الحفظ...') :
+                t('settings.saveSettings', 'حفظ الإعدادات')
+              }
             </Button>
           </CardFooter>
         </Card>

@@ -15,6 +15,7 @@
 |--------|--------|---------|
 | src/app/layout.tsx | ✅ | الصفحة الرئيسية |
 | src/app/(app)/settings/page.tsx | ✅ | صفحة الإعدادات |
+| src/app/(app)/settings/notifications/page.tsx | ✅ | صفحة إعدادات الإشعارات |
 | src/app/(auth)/login/page.tsx | ✅ | صفحة تسجيل الدخول |
 | src/app/(auth)/register/page.tsx | ✅ | صفحة التسجيل |
 | src/app/(app)/tasks/page.tsx | ✅ | صفحة المهام |
