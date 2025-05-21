@@ -501,7 +501,7 @@ export default function DebugPage() {
                         toast({
                           title: 'لم يتم العثور على المستخدم',
                           description: 'سيتم استخدام القيم الافتراضية. يمكنك المتابعة لإنشاء سجل جديد لهذا المستخدم.',
-                          variant: 'warning',
+                          variant: 'default',
                         });
                       }
                     }}

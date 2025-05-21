@@ -109,6 +109,7 @@ function TaskTabsHeader() {
 function FilterPopover() {
     const { user } = useAuth();
     const pathname = usePathname();
+    const { t } = useLanguage(); // استخدام سياق اللغة للترجمة
     let taskPageContext: ReturnType<typeof useTaskPageContext> | null = null;
 
     try {
@@ -275,15 +276,15 @@ function FilterPopover() {
                     {isSettingsPage && (
                         <div className="space-y-2">
                             <div className="flex flex-col space-y-1">
-                                <Label htmlFor="settings-section" className="text-xs font-medium">القسم</Label>
+                                <Label htmlFor="settings-section" className="text-xs font-medium">{t('settings.section')}</Label>
                                 <Select defaultValue="general">
                                     <SelectTrigger id="settings-section" className="h-9 text-xs">
-                                        <SelectValue placeholder="اختر القسم" />
+                                        <SelectValue placeholder={t('settings.selectSection')} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="general">عام</SelectItem>
-                                        <SelectItem value="appearance">المظهر</SelectItem>
-                                        <SelectItem value="notifications">الإشعارات</SelectItem>
+                                        <SelectItem value="general">{t('general.general')}</SelectItem>
+                                        <SelectItem value="appearance">{t('settings.appearance')}</SelectItem>
+                                        <SelectItem value="notifications">{t('settings.notifications')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -292,7 +293,7 @@ function FilterPopover() {
 
                     {/* رسالة إذا لم تكن هناك فلاتر متاحة للصفحة الحالية */}
                     {!isTasksPage && !isKpiPage && !isReportsPage && !isDataManagementPage && !isSettingsPage && (
-                        <p className="text-sm text-muted-foreground">لا توجد فلاتر متاحة لهذه الصفحة.</p>
+                        <p className="text-sm text-muted-foreground">{t('common.noFiltersAvailable')}</p>
                     )}
                 </div>
             </PopoverContent>
