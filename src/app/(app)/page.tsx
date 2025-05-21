@@ -1,7 +1,8 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Loader2, FileText, Edit, Trash2, AlertTriangle, CalendarDays, CalendarCheck2, ListTodo, PauseCircle, CheckCircle2, Settings, Filter } from 'lucide-react';
+import { Loader2, FileText, Edit, Trash2, AlertTriangle, CalendarDays, CalendarCheck2, ListTodo, PauseCircle, CheckCircle2, Settings, Filter, Percent } from 'lucide-react';
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -9,7 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { TaskCardTemp } from '@/components/TaskCardTemp';
 import { AssignedTasksList } from '@/components/AssignedTasksList';
-import type { TaskType, TaskStatus, TaskFirestoreData, DurationUnit, TaskCategoryDefinition, PriorityLevel } from '@/types/task';
+import type { TaskType, TaskStatus, TaskFirestoreData, DurationUnit, TaskCategoryDefinition, PriorityLevel, Milestone } from '@/types/task';
 import { useTaskPageContext, type TaskCategory, categoryInfo, categoryOrder } from '@/context/TaskPageContext';
 import { db } from '@/config/firebase';
 import { collection, query, where, onSnapshot, orderBy, Timestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -39,7 +40,7 @@ import { Button } from '@/components/ui/button';
 
 // --- Main Page Content Component ---
  function HomePageContent() {
-  const { user } = useAuth();
+  const { user, userClaims } = useAuth(); // Added userClaims
   const { direction, t } = useLanguage();
   const taskPageContext = useTaskPageContext();
   const { toast } = useToast();
@@ -144,7 +145,7 @@ import { Button } from '@/components/ui/button';
           revertTaskOptimistic(taskId, { status: originalStatus });
           setSelectedCategory(currentSelectedCategory); // Revert category if needed
       }
-  }, [user, tasks, updateTaskOptimistic, revertTaskOptimistic, toast, categoryInfo, selectedCategory, setSelectedCategory]);
+  }, [user, tasks, updateTaskOptimistic, revertTaskOptimistic, toast, categoryInfo, selectedCategory, setSelectedCategory, t]);
 
 
   // --- Handle Edit Task ---
@@ -207,7 +208,7 @@ import { Button } from '@/components/ui/button';
            setDeletingTaskId(null);
            setSelectedCategory(currentSelectedCategory); // Revert category if needed
       }
-  }, [user, deletingTaskId, tasks, removeTaskOptimistic, revertTaskOptimistic, toast, selectedCategory, setSelectedCategory]);
+  }, [user, deletingTaskId, tasks, removeTaskOptimistic, revertTaskOptimistic, toast, selectedCategory, setSelectedCategory, t]);
 
 
    // --- Handle Drag and Drop End ---
@@ -309,7 +310,7 @@ import { Button } from '@/components/ui/button';
              // Stay on the current category
              setSelectedCategory(currentSelectedCategory);
         }
-    }, [user, tasks, moveTaskOptimistic, toast, categoryInfo, setTasksDirectly, revertTaskOptimistic, categorizedTasks, updateTaskOptimistic, selectedCategory, setSelectedCategory]);
+    }, [user, tasks, moveTaskOptimistic, toast, categoryInfo, setTasksDirectly, revertTaskOptimistic, categorizedTasks, updateTaskOptimistic, selectedCategory, setSelectedCategory, t]);
 
 
   // --- Render Logic ---
@@ -322,10 +323,10 @@ import { Button } from '@/components/ui/button';
 
   return (
     <div dir={direction} className="flex flex-col h-full">
-        {/* Filter Components Removed from here - Moved to AppLayoutContent */}
-
-        {/* Assigned Tasks */}
-        <AssignedTasksList className="mb-8" />
+        {/* Assigned Tasks - Conditionally render based on account type */}
+        {userClaims?.accountType === 'organization' && userClaims?.organizationId && (
+          <AssignedTasksList className="mb-8" />
+        )}
 
         {/* Task Content Area */}
         <DndContext
@@ -429,3 +430,4 @@ import { Button } from '@/components/ui/button';
 export default function HomePage() {
     return <HomePageContent />;
 }
+
