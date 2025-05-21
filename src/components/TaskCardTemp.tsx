@@ -5,7 +5,7 @@ import type { TaskType, DurationUnit, TaskStatus, PriorityLevel, Milestone, Mile
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar as CalendarIcon, ChevronDown, ChevronUp, Clock, AlertTriangle, CheckCircle2, PauseCircle, MoreHorizontal, Edit, Trash2, GripVertical, Tag, CircleHelp, Info, ListChecks, Share2, Target } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronDown, ChevronUp, Clock, AlertTriangle, CheckCircle2, PauseCircle, MoreHorizontal, Edit, Trash2, GripVertical, Tag, CircleHelp, Info, ListChecks, Share2, Target, Percent } from 'lucide-react'; // Added Percent
 import { CreateSubtasksDialog } from './CreateSubtasksDialog';
 import { SubtasksList } from './SubtasksList';
 import { AssignTaskToMembersDialog } from './AssignTaskToMembersDialog';
@@ -272,7 +272,7 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
   // Add logging to verify the task data received by the component
   useEffect(() => {
     console.log(`[TaskCardTemp ${task?.id}] Rendering task, Description: ${task?.description}`);
-    console.log(`[TaskCardTemp ${task?.id}] Task data being passed to MilestoneTracker:`, task);
+    // console.log(`[TaskCardTemp ${task?.id}] Task data being passed to MilestoneTracker:`, task); // Reduced logging
   }, [task]); // Log when task prop changes
 
 
@@ -412,8 +412,14 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
               )}
               {dueDateFormatted && (
                   <span className={cn("flex items-center whitespace-nowrap", isOverdue && "text-destructive font-medium")}>
-                  <CalendarIcon className="h-3 w-3 ml-1" />
-                  الاستحقاق: {dueDateFormatted}
+                    <CalendarIcon className="h-3 w-3 ml-1" />
+                    الاستحقاق: {dueDateFormatted}
+                  </span>
+              )}
+              {hasMilestones && !isCompleted && !isOnHold && (
+                  <span className="flex items-center whitespace-nowrap text-primary">
+                      <Percent className="h-3 w-3 ml-1" />
+                      نقاط التتبع: {milestoneProgress}%
                   </span>
               )}
               {durationFormatted && (
@@ -499,11 +505,13 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
            {/* Milestone Section */}
            {hasMilestones && !isCompleted && !isOnHold && (
                <div className="pt-2 border-t border-border mt-2">
-                    {/* Progress Bar and Percentage */}
-                    <div className="flex items-center gap-2 mb-1">
-                        <Progress value={milestoneProgress} className="h-1.5 flex-1 bg-secondary/20 dark:bg-secondary/30" indicatorClassName="bg-primary" />
-                        <span className="text-xs font-medium text-muted-foreground">{milestoneProgress}%</span>
-                    </div>
+                    {/* Progress Bar and Percentage - Show only when not expanded */}
+                    {!isMilestonesExpanded && (
+                        <div className="flex items-center gap-2 mb-1">
+                            <Progress value={milestoneProgress} className="h-1.5 flex-1 bg-secondary/20 dark:bg-secondary/30" indicatorClassName="bg-primary" />
+                            <span className="text-xs font-medium text-muted-foreground">{milestoneProgress}%</span>
+                        </div>
+                    )}
                    {/* Toggle Button */}
                    <Button
                        variant="ghost"
