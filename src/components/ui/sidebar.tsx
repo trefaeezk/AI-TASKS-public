@@ -4,14 +4,14 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { VariantProps, cva } from "class-variance-authority"
-import { PanelLeft, X } from "lucide-react" 
+import { PanelLeft, X } from "lucide-react"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet" // Ensure SheetHeader and SheetTitle are imported
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
@@ -19,7 +19,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Translate } from "@/components/Translate" // Corrected import path
+import { Translate } from "@/components/Translate"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -28,7 +28,7 @@ const SIDEBAR_WIDTH_MOBILE = "85vw"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
-type SidebarContext = {
+type SidebarContextValue = {
   state: "expanded" | "collapsed"
   open: boolean
   setOpen: (open: boolean) => void
@@ -38,7 +38,7 @@ type SidebarContext = {
   toggleSidebar: () => void
 }
 
-const SidebarContext = React.createContext<SidebarContext | null>(null)
+const SidebarContext = React.createContext<SidebarContextValue | null>(null)
 
 function useSidebar() {
   const context = React.useContext(SidebarContext)
@@ -71,7 +71,6 @@ const SidebarProvider = React.forwardRef<
   ) => {
     const isMobile = useIsMobile()
     const [openMobile, setOpenMobile] = React.useState(false)
-    
 
     const [_open, _setOpen] = React.useState(defaultOpen)
     const open = openProp ?? _open
@@ -114,7 +113,7 @@ const SidebarProvider = React.forwardRef<
 
     const state = open ? "expanded" : "collapsed"
 
-    const contextValue = React.useMemo<SidebarContext>(
+    const contextValue = React.useMemo<SidebarContextValue>(
       () => ({
         state,
         open,
@@ -173,13 +172,13 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
-    const { isMobile: contextIsMobile, openMobile: contextOpenMobile, setOpenMobile: contextSetOpenMobile } = useSidebar();
+    const { isMobile, openMobile: contextOpenMobile, setOpenMobile: contextSetOpenMobile } = useSidebar();
     const [mounted, setMounted] = React.useState(false);
 
     React.useEffect(() => {
       setMounted(true);
     }, []);
-    
+
     if (collapsible === "none") {
       return (
         <div
@@ -194,10 +193,11 @@ const Sidebar = React.forwardRef<
         </div>
       )
     }
-    
-    if (contextIsMobile) {
+
+    if (isMobile) {
       if (!mounted) {
-        return <div className="md:hidden w-[var(--sidebar-width-mobile)]" />; 
+        // Render a placeholder or null during initial client render before hydration to match server
+        return <div className="md:hidden w-0" />; // Adjusted placeholder for mobile
       }
       return (
         <Sheet open={contextOpenMobile} onOpenChange={contextSetOpenMobile}>
@@ -206,26 +206,26 @@ const Sidebar = React.forwardRef<
             data-mobile="true"
             className={cn(
               "w-[var(--sidebar-width)] bg-sidebar p-0 text-sidebar-foreground shadow-lg flex flex-col",
-              className 
+              className
             )}
             style={
               {
-                "--sidebar-width": SIDEBAR_WIDTH_MOBILE, 
+                "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
               } as React.CSSProperties
             }
-            side={side}
+            side={side} // Use the passed side prop or default
           >
-            {/* Accessibility Fix: Add a visually hidden title for the Sheet/Dialog */}
             <SheetHeader className="sr-only">
               <SheetTitle><Translate text="general.menu" defaultValue="القائمة الرئيسية" /></SheetTitle>
             </SheetHeader>
-            {children} 
+            {children}
           </SheetContent>
         </Sheet>
       )
     }
 
-    const { state } = useSidebar(); 
+    // Desktop view
+    const { state } = useSidebar();
     return (
       <div
         ref={ref}
@@ -234,12 +234,13 @@ const Sidebar = React.forwardRef<
         data-collapsible={state === "collapsed" ? collapsible : ""}
         data-variant={variant}
         data-side={side}
+        {...props} // Spread remaining props here
       >
         <div
           className={cn(
             "duration-200 relative h-svh w-[--sidebar-width] bg-transparent transition-[width] ease-linear",
             "group-data-[collapsible=offcanvas]:w-0",
-            "group-data-[side=right]:rotate-180",
+            "group-data-[side=right]:rotate-180", // Apply rotation for RTL
             variant === "floating" || variant === "inset"
               ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
               : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]"
@@ -256,7 +257,6 @@ const Sidebar = React.forwardRef<
               : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
             className
           )}
-          {...props}
         >
           <div
             data-sidebar="sidebar"
@@ -283,17 +283,20 @@ const SidebarTrigger = React.forwardRef<
   };
 
   if (asChild && React.isValidElement(triggerChildren)) {
-    return React.cloneElement(triggerChildren, {
+    const childProps = {
+      ...triggerChildren.props,
       ref,
       'data-sidebar': 'trigger',
-      onClick: (event: React.MouseEvent) => {
+      onClick: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
         triggerChildren.props.onClick?.(event);
         toggleSidebar();
       },
-      ...props, 
       className: cn(className, triggerChildren.props.className),
-    } as React.Attributes & React.DOMAttributes<Element>);
+      ...props
+    };
+    return React.cloneElement(triggerChildren, childProps);
   }
+
 
   return (
     <Button
@@ -305,7 +308,7 @@ const SidebarTrigger = React.forwardRef<
       onClick={handleClick}
       {...props}
     >
-      {triggerChildren || <PanelLeft />} 
+      {triggerChildren || <PanelLeft />}
     </Button>
   )
 })
@@ -574,7 +577,7 @@ const SidebarMenuButton = React.forwardRef<
       size = "default",
       tooltip,
       className,
-      children, 
+      children,
       ...props
     },
     ref
@@ -620,21 +623,6 @@ const SidebarMenuButton = React.forwardRef<
   }
 );
 SidebarMenuButton.displayName = "SidebarMenuButton";
-
-const SidebarMenuStub = React.forwardRef<
-  HTMLDivElement,
-  React.ComponentProps<"div">
->(({ className, ...props }, ref) => {
-  return (
-    <div
-      ref={ref}
-      className={cn("flex flex-col gap-1", className)}
-      {...props}
-    />
-  );
-});
-SidebarMenuStub.displayName = "SidebarMenuStub";
-
 
 const SidebarMenuAction = React.forwardRef<
   HTMLButtonElement,
@@ -791,7 +779,7 @@ export {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarMenuSkeleton, 
+  SidebarMenuSkeleton,
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,

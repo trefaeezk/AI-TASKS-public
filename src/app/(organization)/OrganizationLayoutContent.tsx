@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { format } from 'date-fns';
-import { ar } from 'date-fns/locale'; // Added import for Arabic locale
+import { ar } from 'date-fns/locale';
 
 import {
   Sidebar,
@@ -21,7 +21,7 @@ import {
   SidebarMenu,
   SidebarSeparator,
   SidebarInset,
-  useSidebar, // Import useSidebar hook
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { SidebarMenuLink } from '@/components/ui/sidebar-menu-link';
 import { SignOutButton } from '@/components/auth/SignOutButton';
@@ -41,10 +41,8 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
   const pathname = usePathname();
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  // Get sidebar state and setters from the useSidebar hook
   const { isMobile, openMobile, setOpenMobile } = useSidebar();
 
-  // تحديث التاريخ الحالي كل دقيقة
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentDate(new Date());
@@ -52,23 +50,20 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
     return () => clearInterval(interval);
   }, []);
 
-  // إغلاق الشريط الجانبي عند تغيير المسار (للأجهزة المحمولة)
   useEffect(() => {
-    if (isMobile && openMobile) { // Close only if mobile and sidebar is open
-      setOpenMobile(false);
+    if (isMobile && openMobile) {
+      // No automatic close on path change, user explicitly closes via X or by clicking a link
     }
   }, [pathname, isMobile, openMobile, setOpenMobile]);
 
-  // الحصول على اسم المؤسسة من userClaims
   const organizationName = userClaims?.organizationName || t('organization.organization');
   const isOwner = userClaims?.owner === true;
   const isAdmin = userClaims?.admin === true;
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      {/* Sidebar component - relies on context for mobile state */}
       <Sidebar
-        side="right"
+        side="right" // For RTL
         collapsible="icon"
       >
         <SidebarHeader className="py-4">
@@ -79,11 +74,11 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
                 {organizationName}
               </h2>
             </div>
-            {/* This trigger is for desktop icon collapse, not mobile sheet opening */}
+            {/* Desktop collapse trigger */}
             <SidebarTrigger asChild className="hidden md:flex">
               <Button variant="ghost" size="icon">
                 <Menu className="h-5 w-5" />
-                <span className="sr-only"><Translate text="sidebar.toggleSidebar" defaultValue="فتح/إغلاق الشريط الجانبي" /></span>
+                <span className="sr-only"><Translate text="sidebar.toggleSidebar" /></span>
               </Button>
             </SidebarTrigger>
           </div>
@@ -93,50 +88,50 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
           <SidebarMenu>
             <SidebarMenuLink href="/org" active={pathname === '/org'}>
               <Home className="ml-2 h-5 w-5" />
-              <span><Translate text="sidebar.dashboard" defaultValue="الرئيسية" /></span>
+              <span><Translate text="sidebar.dashboard" /></span>
             </SidebarMenuLink>
 
             <SidebarMenuLink href="/org/tasks" active={pathname === '/org/tasks'}>
               <ListTodo className="ml-2 h-5 w-5" />
-              <span><Translate text="sidebar.tasks" defaultValue="المهام" /></span>
+              <span><Translate text="sidebar.tasks" /></span>
             </SidebarMenuLink>
 
             <SidebarMenuLink href="/org/reports" active={pathname.startsWith('/org/reports')}>
               <FileText className="ml-2 h-5 w-5" />
-              <span><Translate text="sidebar.reports" defaultValue="التقارير" /></span>
+              <span><Translate text="sidebar.reports" /></span>
             </SidebarMenuLink>
 
             <SidebarMenuLink href="/org/meetings" active={pathname.startsWith('/org/meetings')}>
               <Calendar className="ml-2 h-5 w-5" />
-              <span><Translate text="sidebar.meetings" defaultValue="الاجتماعات" /></span>
+              <span><Translate text="sidebar.meetings" /></span>
             </SidebarMenuLink>
 
             <SidebarMenuLink href="/org/kpi" active={pathname === '/org/kpi'}>
               <BarChart3 className="ml-2 h-5 w-5" />
-              <span><Translate text="sidebar.kpi" defaultValue="مؤشرات الأداء" /></span>
+              <span><Translate text="sidebar.kpi" /></span>
             </SidebarMenuLink>
 
             <SidebarMenuLink href="/org/okr" active={pathname?.startsWith('/org/okr') || false}>
               <Target className="ml-2 h-5 w-5" />
-              <span><Translate text="sidebar.okr" defaultValue="التخطيط السنوي (OKRs)" /></span>
+              <span><Translate text="sidebar.okr" /></span>
             </SidebarMenuLink>
 
             <SidebarSeparator />
 
             <SidebarMenuLink href="/org/members" active={pathname === '/org/members'}>
               <Users className="ml-2 h-5 w-5" />
-              <span><Translate text="sidebar.members" defaultValue="الأعضاء" /></span>
+              <span><Translate text="sidebar.members" /></span>
             </SidebarMenuLink>
 
             <SidebarMenuLink href="/org/departments" active={pathname.startsWith('/org/departments')}>
               <FolderTree className="ml-2 h-5 w-5" />
-              <span><Translate text="sidebar.departments" defaultValue="الأقسام" /></span>
+              <span><Translate text="sidebar.departments" /></span>
             </SidebarMenuLink>
 
             {(isOwner || isAdmin) && (
               <SidebarMenuLink href="/org/settings" active={pathname.startsWith('/org/settings')}>
                 <Settings className="ml-2 h-5 w-5" />
-                <span><Translate text="sidebar.organizationSettings" defaultValue="إعدادات المؤسسة" /></span>
+                <span><Translate text="sidebar.organizationSettings" /></span>
               </SidebarMenuLink>
             )}
 
@@ -144,7 +139,7 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
 
             <SidebarMenuLink href="/org/data" active={pathname === '/org/data'}>
               <Database className="ml-2 h-5 w-5" />
-              <span><Translate text="sidebar.organizationDataManagement" defaultValue="إدارة بيانات المؤسسة" /></span>
+              <span><Translate text="sidebar.organizationDataManagement" /></span>
             </SidebarMenuLink>
           </SidebarMenu>
         </SidebarContent>
@@ -165,23 +160,20 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
         </SidebarFooter>
       </Sidebar>
 
-
-      {/* Main Content Area */}
-      <SidebarInset className="flex-1 flex flex-col relative"> {/* SidebarInset handles padding */}
-        {/* Top Navigation Bar */}
+      <SidebarInset className="flex-1 flex flex-col relative">
         <header className="sticky top-0 z-10 bg-background border-b h-14 flex items-center justify-between px-4">
           <div className="flex items-center">
-             {/* Mobile Sidebar Trigger - This button opens the Sheet */}
+            {/* Mobile menu button in header */}
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden h-8 w-8 mr-2" // Show only on mobile, add margin
-              onClick={() => setOpenMobile(true)} // Correctly use setOpenMobile from useSidebar
+              className="md:hidden h-8 w-8 mr-2" // Only show on mobile
+              onClick={() => setOpenMobile(true)} // Action to open the mobile sidebar (Sheet)
               aria-label={t('sidebar.toggleSidebar')}
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <h1 className="text-lg font-semibold hidden md:block"><Translate text="organization.organization" /></h1>
+            <h2 className="text-lg font-semibold hidden md:block"><Translate text="organization.organization" /></h2>
             <h2 className="text-lg font-semibold md:hidden">{organizationName}</h2>
           </div>
 
@@ -197,7 +189,7 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
                 size="icon"
                 className="h-8 w-8 relative group"
                 title={t('sidebar.smartSuggestionsTooltip')}
-                onClick={(e) => e.preventDefault()} // Keep as non-functional for now
+                onClick={(e) => e.preventDefault()}
               >
                 <Wand2 className="h-4 w-4" />
                 <span className="sr-only"><Translate text="sidebar.smartSuggestions" /></span>
@@ -209,7 +201,6 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
           </div>
         </header>
 
-        {/* Page Content */}
         <main className="flex-1 overflow-auto p-4 md:p-6">
           {children}
         </main>

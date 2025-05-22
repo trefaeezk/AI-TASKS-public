@@ -5,11 +5,11 @@
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged, getIdTokenResult } from 'firebase/auth';
 import type { ReactNode } from 'react';
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/config/firebase';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot, getDoc, setDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { SystemType } from '@/types/system';
 
@@ -20,6 +20,7 @@ interface UserClaims {
   individual_admin?: boolean;
   accountType?: SystemType;
   organizationId?: string;
+  organizationName?: string;
   departmentId?: string;
   [key: string]: any;
 }
@@ -28,7 +29,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   userClaims: UserClaims | null;
-  refreshUserData: () => Promise<void>;
+  refreshUserData: (forceRefresh?: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -42,214 +43,209 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [userClaims, setUserClaims] = useState<UserClaims | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Stays true until initial auth & account type check is done
   const [firestoreListener, setFirestoreListener] = useState<(() => void) | null>(null);
-  const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
-  const [initialCheckDone, setInitialCheckDone] = useState(false);
+  const lastRefreshTimeRef = useRef<number>(0);
+  const isDeterminingAccountTypeRef = useRef<boolean>(false); // To prevent race conditions
 
   const refreshUserData = useCallback(async (forceRefresh = false) => {
     console.log("[AuthContext] refreshUserData called, forceRefresh:", forceRefresh);
-
     if (!auth.currentUser) {
       console.log("[AuthContext] No current user in auth, skipping refresh");
-      setUserClaims(null);
-      setUser(null); // Ensure user state is also cleared if auth.currentUser is null
+      setUserClaims(null); // Clear claims if no user
+      setUser(null);
       return;
     }
 
     const now = Date.now();
-    const minRefreshInterval = forceRefresh ? 0 : 1000; // Allow forced refresh
+    const minRefreshInterval = forceRefresh ? 0 : 5000; // Only refresh if forced or 5s passed
 
-    if (now - lastRefreshTime < minRefreshInterval) {
-      console.log("[AuthContext] Skipping refresh, too soon since last refresh or not forced.");
+    if (!forceRefresh && (now - lastRefreshTimeRef.current < minRefreshInterval)) {
+      console.log("[AuthContext] Skipping refresh, too soon or not forced.");
       return;
     }
 
     try {
-      setLastRefreshTime(now);
-      console.log("[AuthContext] Last refresh time updated to:", now);
-
+      lastRefreshTimeRef.current = now;
+      console.log("[AuthContext] Refreshing user token and data...");
       await auth.currentUser.reload();
-      console.log("[AuthContext] User reloaded");
-
-      const tokenResult = await getIdTokenResult(auth.currentUser, true); // force refresh
-      console.log("[AuthContext] ID token result received in refreshUserData:", tokenResult.claims);
-
+      const tokenResult = await getIdTokenResult(auth.currentUser, true); // force token refresh
       const claims = tokenResult.claims as UserClaims;
       setUserClaims(claims);
       setUser(auth.currentUser); // Update user state with potentially reloaded user
-      console.log("[AuthContext] User claims updated in refreshUserData:", claims);
+      console.log("[AuthContext] User claims updated via refreshUserData:", claims);
     } catch (error) {
       console.error("[AuthContext] Error refreshing user data:", error);
-       // If token is invalid (e.g., user deleted), sign out
-       if ((error as any).code === 'auth/user-token-expired' || (error as any).code === 'auth/id-token-revoked' || (error as any).code === 'auth/user-not-found') {
-        console.warn("[AuthContext] User token invalid or user not found, signing out.");
-        await auth.signOut();
-        setUser(null);
-        setUserClaims(null);
-        router.push('/login');
+      if ((error as any).code === 'auth/user-token-expired' || (error as any).code === 'auth/id-token-revoked' || (error as any).code === 'auth/user-not-found') {
+        console.warn("[AuthContext] User token invalid during refresh, signing out.");
+        await auth.signOut(); // This will trigger onAuthStateChanged
       }
     }
-  }, [lastRefreshTime, router]);
+  }, []);
 
+  const determineAndSetAccountType = useCallback(async (currentUser: User, currentAuthClaims: UserClaims): Promise<UserClaims> => {
+    if (isDeterminingAccountTypeRef.current) {
+      console.log("[AuthContext] determineAndSetAccountType already in progress, skipping.");
+      return currentAuthClaims;
+    }
+    isDeterminingAccountTypeRef.current = true;
+    console.log("[AuthContext] Starting determineAndSetAccountType for user:", currentUser.uid);
+    let finalClaims = { ...currentAuthClaims };
+    let claimsNeedBackendUpdate = false;
 
-  const determineAndSetAccountType = useCallback(async (currentUser: User, currentClaims: UserClaims): Promise<SystemType | null> => {
-    console.log("[AuthContext] determineAndSetAccountType for user:", currentUser.uid, "Current claims:", currentClaims);
+    try {
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
 
-    // 1. Check if user is explicitly part of an organization via 'users' collection
-    const userDocRef = doc(db, 'users', currentUser.uid);
-    const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists() && userDocSnap.data()?.organizationId) {
+        const orgIdFromUserDoc = userDocSnap.data().organizationId;
+        const orgNameFromUserDoc = userDocSnap.data().organizationName || 'المؤسسة';
+        const memberDocRef = doc(db, 'organizations', orgIdFromUserDoc, 'members', currentUser.uid);
+        const memberDocSnap = await getDoc(memberDocRef);
 
-    if (userDocSnap.exists() && userDocSnap.data()?.organizationId) {
-      const orgIdFromUserDoc = userDocSnap.data().organizationId;
-      console.log(`[AuthContext] User doc exists with organizationId: ${orgIdFromUserDoc}`);
-      // Verify membership in that organization's 'members' subcollection
-      const memberDocRef = doc(db, 'organizations', orgIdFromUserDoc, 'members', currentUser.uid);
-      const memberDocSnap = await getDoc(memberDocRef);
-      if (memberDocSnap.exists()) {
-        console.log(`[AuthContext] User is a member of organization ${orgIdFromUserDoc}. Setting type to 'organization'.`);
-        if (currentClaims.accountType !== 'organization' || currentClaims.organizationId !== orgIdFromUserDoc) {
-          const { httpsCallable } = await import('firebase/functions');
-          const { functions } = await import('@/lib/firebase');
-          const updateAccountTypeFunc = httpsCallable(functions, 'updateAccountType');
-          await updateAccountTypeFunc({ accountType: 'organization', organizationId: orgIdFromUserDoc });
-          await refreshUserData(true); // Force refresh claims
+        if (memberDocSnap.exists()) {
+          console.log(`[AuthContext] User is member of org ${orgIdFromUserDoc}. Verified type: 'organization'.`);
+          if (finalClaims.accountType !== 'organization' || finalClaims.organizationId !== orgIdFromUserDoc || finalClaims.organizationName !== orgNameFromUserDoc) {
+            finalClaims.accountType = 'organization';
+            finalClaims.organizationId = orgIdFromUserDoc;
+            finalClaims.organizationName = orgNameFromUserDoc;
+            finalClaims.role = userDocSnap.data().role || memberDocSnap.data()?.role || finalClaims.role; // Prioritize user doc role
+            claimsNeedBackendUpdate = true;
+          }
+        } else {
+          console.log(`[AuthContext] User doc has orgId ${orgIdFromUserDoc}, but not in members. Setting type to 'individual'.`);
+          if (finalClaims.accountType !== 'individual' || finalClaims.organizationId) {
+            finalClaims.accountType = 'individual';
+            finalClaims.organizationId = undefined;
+            finalClaims.organizationName = undefined;
+            finalClaims.role = 'independent';
+            claimsNeedBackendUpdate = true;
+          }
         }
-        return 'organization';
       } else {
-        console.log(`[AuthContext] User doc has orgId ${orgIdFromUserDoc}, but not found in its members subcollection. Potential data inconsistency.`);
-        // Fall through to check 'individuals' or default to individual
-      }
-    }
-
-    // 2. Check if user is in the 'individuals' collection
-    const individualDocRef = doc(db, 'individuals', currentUser.uid);
-    const individualDocSnap = await getDoc(individualDocRef);
-    if (individualDocSnap.exists()) {
-      console.log("[AuthContext] User found in 'individuals' collection. Setting type to 'individual'.");
-      if (currentClaims.accountType !== 'individual') {
-        const { httpsCallable } = await import('firebase/functions');
-        const { functions } = await import('@/lib/firebase');
-        const updateAccountTypeFunc = httpsCallable(functions, 'updateAccountType');
-        await updateAccountTypeFunc({ accountType: 'individual' });
-        await refreshUserData(true); // Force refresh claims
-      }
-      return 'individual';
-    }
-
-    // 3. Fallback: If not found in 'users' with an org or in 'individuals', default to 'individual'
-    // This could be a new user or a user whose data structure isn't fully formed yet.
-    console.log("[AuthContext] User not found in 'users' with org or in 'individuals'. Defaulting to 'individual'.");
-    if (currentClaims.accountType !== 'individual') { // Only update if it's not already individual
-        const { httpsCallable } = await import('firebase/functions');
-        const { functions } = await import('@/lib/firebase');
-        const updateAccountTypeFunc = httpsCallable(functions, 'updateAccountType');
-        try {
-            await updateAccountTypeFunc({ accountType: 'individual' });
-            // Attempt to create the individual document if it doesn't exist
-            if (!individualDocSnap.exists()) {
+        const individualDocRef = doc(db, 'individuals', currentUser.uid);
+        const individualDocSnap = await getDoc(individualDocRef);
+        if (individualDocSnap.exists()) {
+          console.log("[AuthContext] User found in 'individuals'. Verified type: 'individual'.");
+          if (finalClaims.accountType !== 'individual' || finalClaims.organizationId) {
+            finalClaims.accountType = 'individual';
+            finalClaims.organizationId = undefined;
+            finalClaims.organizationName = undefined;
+            finalClaims.role = 'independent';
+            claimsNeedBackendUpdate = true;
+          }
+        } else {
+          console.log("[AuthContext] User not in 'users' with org or 'individuals'. Defaulting to 'individual'.");
+          if (finalClaims.accountType !== 'individual') {
+            finalClaims.accountType = 'individual';
+            finalClaims.organizationId = undefined;
+            finalClaims.organizationName = undefined;
+            finalClaims.role = 'independent';
+            claimsNeedBackendUpdate = true;
+            try {
               await setDoc(individualDocRef, {
-                name: currentUser.displayName || currentUser.email || '',
-                email: currentUser.email,
-                role: 'independent',
-                accountType: 'individual',
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
+                name: currentUser.displayName || currentUser.email || '', email: currentUser.email,
+                role: 'independent', accountType: 'individual',
+                createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
               });
-              console.log("[AuthContext] Created document in 'individuals' for new individual user.");
-            }
-            await refreshUserData(true); // Force refresh claims
-        } catch(error) {
-            console.error("[AuthContext] Error setting default account type to individual:", error);
-            // If setting type fails, return current claim's type or null
-            return currentClaims.accountType || null;
+            } catch (docError) { console.error("[AuthContext] Error creating 'individuals' doc:", docError); }
+          }
         }
+      }
+
+      if (claimsNeedBackendUpdate) {
+        console.log("[AuthContext] Account type claims changed, updating Firebase Auth claims:", finalClaims);
+        const { httpsCallable } = await import('firebase/functions');
+        const { functions: firebaseFunctions } = await import('@/lib/firebase');
+        const updateAccountTypeFunc = httpsCallable(firebaseFunctions, 'updateAccountType');
+        await updateAccountTypeFunc({
+          accountType: finalClaims.accountType,
+          organizationId: finalClaims.organizationId,
+        });
+        // Crucially, refresh token to get the *new* claims from backend
+        const refreshedTokenResult = await getIdTokenResult(currentUser, true);
+        finalClaims = refreshedTokenResult.claims as UserClaims;
+        console.log("[AuthContext] Claims refreshed after backend update:", finalClaims);
+      }
+    } catch (error) {
+      console.error("[AuthContext] Error in determineAndSetAccountType:", error);
+      // Fallback to current auth claims if determination fails
+      finalClaims = currentAuthClaims;
+    } finally {
+      isDeterminingAccountTypeRef.current = false;
     }
-    return 'individual';
-
-  }, [refreshUserData]);
-
+    return finalClaims;
+  }, []);
 
   useEffect(() => {
-    console.log("[AuthContext] Setting up auth state listener");
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    console.log("[AuthContext] Setting up auth state listener.");
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       console.log("[AuthContext] Auth state changed, user:", currentUser?.uid);
-      setLoading(true); // Set loading true at the start of auth state change
-      setUser(currentUser);
+      setLoading(true); // Ensure loading is true during this process
 
       if (currentUser) {
         try {
-          console.log("[AuthContext] User authenticated. Forcing token refresh for claims.");
-          const tokenResult = await getIdTokenResult(currentUser, true); // Force refresh
-          const claims = tokenResult.claims as UserClaims;
-          console.log("[AuthContext] Initial claims from token:", claims);
-          setUserClaims(claims);
+          const initialTokenResult = await getIdTokenResult(currentUser, true); // Force refresh for initial claims
+          const initialClaims = initialTokenResult.claims as UserClaims;
+          console.log("[AuthContext] Initial claims from token for user:", currentUser.uid, initialClaims);
 
-          if (!initialCheckDone) {
-            const determinedAccountType = await determineAndSetAccountType(currentUser, claims);
-            console.log("[AuthContext] Determined account type:", determinedAccountType);
+          const finalProcessedClaims = await determineAndSetAccountType(currentUser, initialClaims);
+          setUser(currentUser);
+          setUserClaims(finalProcessedClaims);
+          console.log("[AuthContext] Final claims set for user:", currentUser.uid, finalProcessedClaims);
 
-            // Re-fetch claims after potential update
-            const finalTokenResult = await getIdTokenResult(currentUser, true);
-            const finalClaims = finalTokenResult.claims as UserClaims;
-            setUserClaims(finalClaims);
-            console.log("[AuthContext] Final claims after account type determination:", finalClaims);
-
-            // Routing logic
-            const pathname = window.location.pathname;
-            if (finalClaims.accountType === 'organization' && finalClaims.organizationId) {
-              if (!pathname.startsWith('/org')) {
-                console.log("[AuthContext] Redirecting to /org for organization user.");
-                router.replace('/org');
-              }
-            } else if (finalClaims.accountType === 'individual') {
-              if (pathname.startsWith('/org')) {
-                console.log("[AuthContext] Redirecting to / for individual user from org path.");
-                router.replace('/');
-              }
-            } else {
-                // If accountType is still null or undefined, it might be a new user or error
-                console.warn("[AuthContext] Account type could not be definitively determined. Defaulting to individual flow.");
-                if (pathname.startsWith('/org')) {
-                    router.replace('/');
-                }
+          // Routing logic
+          const currentPath = window.location.pathname;
+          if (finalProcessedClaims.accountType === 'organization' && finalProcessedClaims.organizationId) {
+            if (!currentPath.startsWith('/org')) {
+              console.log("[AuthContext] Redirecting to /org for organization user.");
+              router.replace('/org');
             }
-            setInitialCheckDone(true);
+          } else if (finalProcessedClaims.accountType === 'individual') {
+            if (currentPath.startsWith('/org')) {
+              console.log("[AuthContext] Redirecting to / for individual user from /org path.");
+              router.replace('/');
+            }
+          } else {
+            console.warn("[AuthContext] Account type is still null/undefined. This shouldn't happen if determineAndSetAccountType works correctly. Staying on current path or redirecting to / if on /org.");
+             if (currentPath.startsWith('/org')) {
+                router.replace('/');
+            }
           }
         } catch (error) {
-          console.error("[AuthContext] Error during auth state change processing:", error);
+          console.error("[AuthContext] Error processing auth state change for user:", currentUser.uid, error);
+          setUser(null);
           setUserClaims(null);
-          // Handle potential token errors leading to sign-out
+          // Handle specific auth errors that might require sign-out
           if ((error as any).code === 'auth/user-token-expired' || (error as any).code === 'auth/id-token-revoked' || (error as any).code === 'auth/user-not-found') {
-            console.warn("[AuthContext] User token invalid or user not found during auth state change, signing out.");
-            await auth.signOut();
-            setUser(null); // Ensure user state is cleared
-            router.push('/login');
+             console.warn("[AuthContext] Critical auth error, signing out and redirecting to login.");
+             await auth.signOut(); // This will re-trigger onAuthStateChanged
+             router.push('/login'); // Explicit redirect
           }
+        } finally {
+          setLoading(false); // Set loading to false only after all processing is done
         }
       } else {
-        console.log("[AuthContext] No user authenticated.");
+        console.log("[AuthContext] No user authenticated, clearing state.");
+        setUser(null);
         setUserClaims(null);
-        setInitialCheckDone(false); // Reset for next login
+        setLoading(false); // No user, so not loading
       }
-      setLoading(false); // Set loading false after all checks
     });
 
     return () => {
-      console.log("[AuthContext] Cleaning up auth state listener");
-      unsubscribe();
+      console.log("[AuthContext] Cleaning up auth state listener.");
+      unsubscribeAuth();
       if (firestoreListener) {
-        console.log("[AuthContext] Cleaning up Firestore document listener from auth effect");
+        console.log("[AuthContext] Cleaning up Firestore listener.");
         firestoreListener();
       }
     };
-  }, [refreshUserData, determineAndSetAccountType, router, initialCheckDone]); // Added initialCheckDone
+  }, [determineAndSetAccountType, router]); // refreshUserData removed as it's used internally
 
-  // Firestore listener for user document changes (role updates, etc.)
   useEffect(() => {
     if (firestoreListener) {
-      console.log("[AuthContext] Cleaning up previous Firestore listener before setting new one.");
-      firestoreListener();
+      firestoreListener(); // Clean up previous listener
       setFirestoreListener(null);
     }
 
@@ -257,45 +253,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       let docPath: string;
       if (userClaims.accountType === 'organization' && userClaims.organizationId) {
         docPath = `organizations/${userClaims.organizationId}/members/${user.uid}`;
-      } else if (userClaims.accountType === 'individual') {
-        docPath = `individuals/${user.uid}`;
-      } else {
-        // Fallback or if accountType is not yet determined, listen to 'users'
-        // This might need adjustment based on your exact logic for "undetermined" users
-        docPath = `users/${user.uid}`;
+      } else { // Default or individual
+        docPath = `users/${user.uid}`; // Listen to 'users' for role changes even for individuals if that's where it's stored
       }
       
-      console.log("[AuthContext] Setting up Firestore listener for user document at:", docPath);
+      console.log("[AuthContext] Setting up Firestore listener for path:", docPath);
       const userDocRef = doc(db, docPath);
-
-      const unsubscribe = onSnapshot(userDocRef, async (docSnapshot) => {
-        console.log("[AuthContext] Firestore document snapshot received for path:", docPath);
+      const unsubscribeFirestore = onSnapshot(userDocRef, async (docSnapshot) => {
+        console.log("[AuthContext] Firestore snapshot for", docPath, "exists:", docSnapshot.exists());
         if (docSnapshot.exists()) {
           const firestoreData = docSnapshot.data();
-          console.log("[AuthContext] Firestore data:", firestoreData);
-          // Potentially trigger a claims refresh if relevant data (like role) changed
           if (firestoreData.role && userClaims.role !== firestoreData.role) {
             console.log("[AuthContext] Role changed in Firestore, forcing claims refresh.");
-            await refreshUserData(true); // Force refresh if role in DB changed
+            await refreshUserData(true);
           }
         } else {
-          console.log("[AuthContext] User document does not exist at path:", docPath);
-          // If the listened-to document is deleted (e.g., user removed from org),
-          // it might be a sign to refresh claims or re-evaluate account type.
-          // This could be an edge case. For now, just log it.
-          // A full refreshUserData might be too aggressive here without more context.
+          // If the doc doesn't exist (e.g., user removed from org), claims might be stale.
+          console.log("[AuthContext] User document at", docPath, "does not exist. Forcing claims refresh.");
+          await refreshUserData(true);
         }
       }, (error) => {
-        console.error("[AuthContext] Error in Firestore listener:", error);
+        console.error("[AuthContext] Error in Firestore listener for path:", docPath, error);
       });
-
-      setFirestoreListener(() => unsubscribe);
-      return () => {
-        console.log("[AuthContext] Cleaning up Firestore listener for path:", docPath);
-        unsubscribe();
-      };
+      setFirestoreListener(() => unsubscribeFirestore);
     }
-  }, [user, userClaims, refreshUserData]); // Ensure dependencies are correct
+  }, [user, userClaims, refreshUserData]);
+
 
   if (loading) {
     return (
