@@ -1,3 +1,4 @@
+
 /**
  * ملف اللغة العربية
  * Arabic language file
@@ -74,11 +75,70 @@ const ar = {
     dark: "داكن",
     light: "فاتح",
     system: "النظام",
-    direction: "rtl", // اتجاه النص من اليمين إلى اليسار
+    direction: "rtl",
     menu: "فتح/إغلاق الشريط الجانبي",
     general: "عام",
     features: "الميزات",
     errorLoadingPageContextOrUser: "خطأ في تحميل سياق الصفحة أو المستخدم."
+  },
+
+  sidebar: {
+    mainMenu: "القائمة الرئيسية",
+    tasks: "المهام",
+    tasksTooltip: "عرض وإدارة المهام",
+    dailyPlan: "الخطة اليومية",
+    dailyPlanTooltip: "عرض خطة المهام اليومية المقترحة",
+    weeklyReports: "التقارير الأسبوعية",
+    weeklyReportsTooltip: "عرض التقارير الأسبوعية",
+    kpi: "مؤشرات الأداء",
+    kpiTooltip: "عرض مؤشرات الأداء الرئيسية",
+    tools: "الأدوات",
+    toolsTooltip: "أدوات مساعدة",
+    smartSuggestions: "الاقتراحات الذكية",
+    smartSuggestionsTooltip: "عرض الاقتراحات الذكية",
+    adminMenu: "إدارة النظام",
+    adminPanel: "لوحة الإدارة",
+    adminPanelTooltip: "الوصول إلى لوحة تحكم المسؤول",
+    users: "المستخدمين",
+    usersTooltip: "إدارة المستخدمين والصلاحيات",
+    dataManagement: "إدارة البيانات",
+    dataManagementTooltip: "إدارة بيانات النظام (تصدير/استيراد)",
+    importExport: "استيراد/تصدير البيانات",
+    importExportTooltip: "استيراد وتصدير بيانات المستخدم الفردي",
+    organizationRequests: "طلبات المؤسسات",
+    organizationRequestsTooltip: "مراجعة طلبات إنشاء المؤسسات",
+    generalSection: "عام",
+    settings: "الإعدادات",
+    settingsTooltip: "تعديل إعدادات التطبيق",
+    documentation: "الوثائق",
+    documentationTooltip: "عرض وثائق النظام",
+    diagnostics: "التشخيص",
+    diagnosticsTooltip: "أدوات التشخيص (للمالك فقط)",
+    userInfoTitle: "معلومات المستخدم",
+    currentUserDefault: "المستخدم الحالي",
+    userRoleLoading: "جار التحميل...",
+    signOut: "تسجيل الخروج",
+    signOutTooltip: "تسجيل الخروج من الحساب",
+    toggleSidebar: "تبديل الشريط الجانبي"
+  },
+
+  roles: {
+    owner: "مالك النظام",
+    admin: "مسؤول",
+    individual_admin: "مسؤول نظام الأفراد",
+    engineer: "مهندس",
+    supervisor: "مشرف",
+    technician: "فني",
+    assistant: "مساعد فني",
+    user: "مستخدم",
+    independent: "مستخدم مستقل"
+  },
+
+  common: {
+    applyFilters: "تطبيق الفلاتر",
+    filters: "الفلاتر",
+    resetFilters: "إعادة تعيين الفلاتر",
+    noFiltersAvailable: "لا توجد فلاتر متاحة لهذه الصفحة"
   },
 
   // المصادقة - Authentication
@@ -130,8 +190,6 @@ const ar = {
     signupFailed: "فشل إنشاء الحساب. قد يكون البريد الإلكتروني مستخدمًا بالفعل.",
     resetPasswordFailed: "فشل إرسال رابط إعادة تعيين كلمة المرور.",
     resetPasswordDescription: "أدخل بريدك الإلكتروني لتلقي رابط إعادة تعيين كلمة المرور.",
-    resetPasswordEmailSent: "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني. يرجى التحقق من صندوق الوارد الخاص بك (وقد يكون في مجلد الرسائل غير المرغوب فيها).",
-    rememberedPassword: "تذكرت كلمة المرور؟",
     backToLogin: "العودة إلى تسجيل الدخول",
     sendResetLink: "إرسال رابط إعادة التعيين",
     googleSignInFailed: "فشل تسجيل الدخول باستخدام جوجل.",
@@ -255,6 +313,15 @@ const ar = {
     taskMovedTo: "تم نقل المهمة إلى {category}.",
     taskMoveError: "خطأ في نقل المهمة",
     errorMovingTask: "حدث خطأ أثناء نقل المهمة.",
+    category: {
+      overdue: "فائتة",
+      today: "اليوم",
+      upcoming: "قادمة",
+      scheduled: "مجدولة",
+      pending: "معلقة",
+      hold: "متوقفة",
+      completed: "مكتملة"
+    }
   },
 
   // التقارير - Reports
@@ -317,6 +384,7 @@ const ar = {
   // الإشعارات - Notifications
   notifications: {
     notifications: "الإشعارات",
+    notificationsTooltip: "عرض الإشعارات",
     notification: "إشعار",
     notificationSettings: "إعدادات الإشعارات",
     notificationSettingsDescription: "إدارة إعدادات الإشعارات وتفضيلات التنبيهات",
@@ -553,8 +621,6 @@ const ar = {
     scanner: "الماسح الضوئي",
     recorder: "المسجل",
     camera: "الكاميرا",
-
-    // أدوات الذكاء الاصطناعي
     aiTools: "أدوات الذكاء الاصطناعي",
     aiSuggestions: "الاقتراحات الذكية",
     aiTaskSuggestions: "اقتراحات المهام الذكية",
@@ -576,8 +642,6 @@ const ar = {
     aiOptimization: "تحسين ذكي",
     aiAutomation: "أتمتة ذكية",
     underDevelopment: "قيد التطوير",
-
-    // برومبت الذكاء الاصطناعي
     aiPrompts: "برومبت الذكاء الاصطناعي",
     promptTitle: "عنوان البرومبت",
     promptDescription: "وصف البرومبت",

@@ -30,25 +30,25 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarSeparator,
-  useSidebar, // Import useSidebar hook here
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { AddTaskSheet } from '@/components/AddTaskSheet'; // Import the AddTaskSheet component
-import { useAuth } from '@/context/AuthContext'; // Import useAuth
-import { useTaskPageContext, type TaskCategory } from '@/context/TaskPageContext'; // Import context for tabs
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Import Tabs components
-import { useAccountType } from '@/hooks/useAccountType'; // Import useAccountType
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton for loading state
-import { Badge } from '@/components/ui/badge'; // Import Badge
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'; // Import Popover
-import { DateRangePicker } from '@/components/DateRangePicker'; // Import DateRangePicker
-import { CategoryFilter } from '@/components/CategoryFilter'; // Import CategoryFilter
-import { usePermissions } from '@/hooks/usePermissions'; // Import usePermissions
-import { Label } from '@/components/ui/label'; // Import Label
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Import Select
-import { NotificationsPopover } from '@/components/notifications/NotificationsPopover'; // Import NotificationsPopover
+import { AddTaskSheet } from '@/components/AddTaskSheet';
+import { useAuth } from '@/context/AuthContext';
+import { useTaskPageContext, type TaskCategory, categoryInfo, categoryOrder } from '@/context/TaskPageContext';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAccountType } from '@/hooks/useAccountType';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DateRangePicker } from '@/components/DateRangePicker';
+import { CategoryFilter } from '@/components/CategoryFilter';
+import { usePermissions } from '@/hooks/usePermissions';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { NotificationsPopover } from '@/components/notifications/NotificationsPopover';
 import { OkrTaskFilter } from '@/components/okr/OkrTaskFilter';
 
 
@@ -56,15 +56,13 @@ import { OkrTaskFilter } from '@/components/okr/OkrTaskFilter';
 function TaskTabsHeader() {
     const pathname = usePathname();
     let taskPageContext: ReturnType<typeof useTaskPageContext> | null = null;
+    const { t } = useLanguage();
     try {
-        // Try to get the context, will throw if not in provider
         taskPageContext = useTaskPageContext();
     } catch (e) {
-        // Context not available (e.g., in admin layout), ignore.
-        // console.log("TaskTabsHeader: TaskPageContext not available."); // Reduced logging
+        // Context not available
     }
 
-    // Only show tabs on the main task page ('/') AND if context exists
     if (pathname !== '/' || !taskPageContext) {
         return null;
     }
@@ -78,7 +76,6 @@ function TaskTabsHeader() {
                     {categoryOrder.map(categoryKey => {
                         const info = categoryInfo[categoryKey];
                         const count = categorizedTasks[categoryKey]?.length ?? 0;
-                        // Ensure info exists before accessing its properties
                         if (!info) return null;
                         const IconComponent = info.icon;
                         return (
@@ -86,17 +83,16 @@ function TaskTabsHeader() {
                                 key={categoryKey}
                                 value={categoryKey}
                                 className={cn(
-                                    "flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm h-auto min-h-[2rem]", // Adjusted padding and height
+                                    "flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm h-auto min-h-[2rem]",
                                     "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md",
-                                    "hover:bg-accent/80 hover:text-accent-foreground", // Gentler hover
-                                    count === 0 && "opacity-60", // Dim if empty, but keep clickable
-                                    !categorizedTasks[categoryKey] && "opacity-50 cursor-not-allowed" // Ensure disabled style if category has no tasks
+                                    "hover:bg-accent/80 hover:text-accent-foreground",
+                                    count === 0 && "opacity-60",
+                                    !categorizedTasks[categoryKey] && "opacity-50 cursor-not-allowed"
                                 )}
-                                // Disable if the category itself is undefined/null OR has no tasks
-                                disabled={!categorizedTasks[categoryKey] /* || categorizedTasks[categoryKey]?.length === 0 */}
+                                disabled={!categorizedTasks[categoryKey]}
                             >
-                               {IconComponent ? <IconComponent className="ml-1.5 h-3.5 w-3.5 flex-shrink-0" /> : null} {/* Use IconComponent safely */}
-                               <span><Translate text={`tasks.category.${categoryKey}`} defaultValue={info.title} /></span> {/* Use Translate component */}
+                               {IconComponent ? <IconComponent className="ml-1.5 h-3.5 w-3.5 flex-shrink-0" /> : null}
+                               <span><Translate text={`tasks.category.${categoryKey}`} defaultValue={info.title} /></span>
                                 <span className="ml-1.5 text-xs opacity-80">({count})</span>
                             </TabsTrigger>
                         );
@@ -125,7 +121,7 @@ function FilterPopover() {
     const isTasksPage = pathname === '/';
     const isKpiPage = pathname === '/kpi';
     const isReportsPage = pathname.startsWith('/reports');
-    const isDataManagementPage = pathname.startsWith('/data');
+    const isDataManagementPage = pathname.startsWith('/data') || pathname.startsWith('/admin/data-management');
     const isSettingsPage = pathname.startsWith('/settings');
 
     let isFilterActive = false;
@@ -256,7 +252,7 @@ function FilterPopover() {
                                     <SelectContent>
                                         <SelectItem value="tasks">{t('tasks.tasks')}</SelectItem>
                                         <SelectItem value="categories">{t('general.categories')}</SelectItem>
-                                        <SelectItem value="settings">{t('common.settings')}</SelectItem>
+                                        <SelectItem value="settings">{t('settings.settings')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -274,7 +270,7 @@ function FilterPopover() {
                                     <SelectContent>
                                         <SelectItem value="general">{t('general.general')}</SelectItem>
                                         <SelectItem value="appearance">{t('settings.appearance')}</SelectItem>
-                                        <SelectItem value="notifications">{t('notifications.notifications')}</SelectItem>
+                                        <SelectItem value="notifications">{t('settings.notifications')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -484,14 +480,17 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
-                            asChild
+                            className="h-8 w-8 relative group" // Added relative and group
                             title={t('sidebar.smartSuggestionsTooltip')}
                           >
                             <Link href="/suggestions">
                               <Wand2 className="h-4 w-4" />
                               <span className="sr-only"><Translate text="sidebar.smartSuggestions" /></span>
                             </Link>
+                            {/* Tooltip using Tailwind classes for positioning and opacity */}
+                            <span className="absolute top-full right-0 mt-1 w-max bg-popover text-popover-foreground text-xs p-1 rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50 text-center">
+                               <Translate text="tools.underDevelopment" />
+                            </span>
                           </Button>
                         )}
                     </div>

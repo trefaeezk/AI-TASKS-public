@@ -1,3 +1,4 @@
+
 /**
  * English language file
  */
@@ -73,11 +74,70 @@ const en = {
     dark: "Dark",
     light: "Light",
     system: "System",
-    direction: "ltr", // Left to right text direction
+    direction: "ltr",
     menu: "Toggle Sidebar",
     general: "General",
     features: "Features",
     errorLoadingPageContextOrUser: "Error loading page context or user."
+  },
+
+  sidebar: {
+    mainMenu: "Main Menu",
+    tasks: "Tasks",
+    tasksTooltip: "View and manage tasks",
+    dailyPlan: "Daily Plan",
+    dailyPlanTooltip: "View suggested daily task plan",
+    weeklyReports: "Weekly Reports",
+    weeklyReportsTooltip: "View weekly reports",
+    kpi: "KPIs",
+    kpiTooltip: "View Key Performance Indicators",
+    tools: "Tools",
+    toolsTooltip: "Helper tools",
+    smartSuggestions: "Smart Suggestions",
+    smartSuggestionsTooltip: "View smart suggestions",
+    adminMenu: "System Management",
+    adminPanel: "Admin Panel",
+    adminPanelTooltip: "Access admin control panel",
+    users: "Users",
+    usersTooltip: "Manage users and permissions",
+    dataManagement: "Data Management",
+    dataManagementTooltip: "Manage system data (export/import)",
+    importExport: "Import/Export Data",
+    importExportTooltip: "Import and export individual user data",
+    organizationRequests: "Organization Requests",
+    organizationRequestsTooltip: "Review organization creation requests",
+    generalSection: "General", // Already in general, but can be specific for sidebar
+    settings: "Settings", // Already in general
+    settingsTooltip: "Modify application settings",
+    documentation: "Documentation",
+    documentationTooltip: "View system documentation",
+    diagnostics: "Diagnostics",
+    diagnosticsTooltip: "Diagnostic tools (Owner only)",
+    userInfoTitle: "User Information",
+    currentUserDefault: "Current User",
+    userRoleLoading: "Loading...",
+    signOut: "Sign Out",
+    signOutTooltip: "Sign out of the account",
+    toggleSidebar: "Toggle sidebar"
+  },
+
+  roles: {
+    owner: "System Owner",
+    admin: "Admin",
+    individual_admin: "Individual System Admin",
+    engineer: "Engineer",
+    supervisor: "Supervisor",
+    technician: "Technician",
+    assistant: "Assistant",
+    user: "User",
+    independent: "Independent User"
+  },
+
+  common: {
+    applyFilters: "Apply Filters",
+    filters: "Filters",
+    resetFilters: "Reset Filters",
+    noFiltersAvailable: "No filters available for this page"
   },
 
   // Authentication
@@ -129,8 +189,6 @@ const en = {
     signupFailed: "Failed to create account. Email might already be in use.",
     resetPasswordFailed: "Failed to send password reset link.",
     resetPasswordDescription: "Enter your email to receive a password reset link.",
-    resetPasswordEmailSent: "A password reset link has been sent to your email. Please check your inbox (and possibly your spam folder).",
-    rememberedPassword: "Remembered your password?",
     backToLogin: "Back to Login",
     sendResetLink: "Send Reset Link",
     googleSignInFailed: "Failed to sign in with Google.",
@@ -254,6 +312,15 @@ const en = {
     taskMovedTo: "Task moved to {category}.",
     taskMoveError: "Task Move Error",
     errorMovingTask: "An error occurred while moving the task.",
+    category: {
+      overdue: "Overdue",
+      today: "Today",
+      upcoming: "Upcoming",
+      scheduled: "Scheduled",
+      pending: "Pending",
+      hold: "On Hold",
+      completed: "Completed"
+    }
   },
 
   // Reports
@@ -316,6 +383,7 @@ const en = {
   // Notifications
   notifications: {
     notifications: "Notifications",
+    notificationsTooltip: "View notifications",
     notification: "Notification",
     notificationSettings: "Notification Settings",
     notificationSettingsDescription: "Manage notification settings and alert preferences",
@@ -552,8 +620,6 @@ const en = {
     scanner: "Scanner",
     recorder: "Recorder",
     camera: "Camera",
-
-    // AI Tools
     aiTools: "AI Tools",
     aiSuggestions: "AI Suggestions",
     aiTaskSuggestions: "AI Task Suggestions",
@@ -575,8 +641,6 @@ const en = {
     aiOptimization: "AI Optimization",
     aiAutomation: "AI Automation",
     underDevelopment: "Under Development",
-
-    // AI Prompts
     aiPrompts: "AI Prompts",
     promptTitle: "Prompt Title",
     promptDescription: "Prompt Description",
