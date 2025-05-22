@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -85,13 +86,14 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
     // جلب الأقسام
     const fetchDepartments = async () => {
       try {
+        // Corrected path to fetch departments for the specific organization
         const departmentsQuery = query(
           collection(db, 'organizations', organizationId, 'departments')
         );
         const snapshot = await getDocs(departmentsQuery);
         const departmentsData = snapshot.docs.map(doc => ({
           id: doc.id,
-          name: doc.data().name
+          name: doc.data().name || 'قسم غير مسمى' // Provide a fallback name
         }));
         setDepartments(departmentsData);
       } catch (error) {
@@ -112,34 +114,40 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
         try {
           const membersPromises = snapshot.docs.map(async (doc) => {
             const memberData = doc.data();
+            let userName = 'مستخدم غير معروف';
+            let userEmail = 'غير متاح';
 
-            // جلب معلومات المستخدم من Firebase Auth
-            const idToken = await user.getIdToken();
-            const response = await fetch(`https://us-central1-tasks-intelligence.cloudfunctions.net/getUserHttp?uid=${doc.id}`, {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${idToken}`
+            try {
+              // Attempt to fetch user details from the top-level 'users' collection
+              const userDocRef = doc(db, 'users', doc.id);
+              const userDocSnap = await getDoc(userDocRef);
+              if (userDocSnap.exists()) {
+                const specificUserData = userDocSnap.data();
+                userName = specificUserData.name || specificUserData.displayName || userName;
+                userEmail = specificUserData.email || userEmail;
+              } else {
+                // Fallback if not in 'users', try Firebase Auth (less reliable for display name)
+                const idToken = await user.getIdToken();
+                const response = await fetch(`https://us-central1-tasks-intelligence.cloudfunctions.net/getUserHttp?uid=${doc.id}`, {
+                  method: 'GET',
+                  headers: {
+                    'Authorization': `Bearer ${idToken}`
+                  }
+                });
+                if (response.ok) {
+                  const authUserData = await response.json();
+                  userName = authUserData.displayName || userName;
+                  userEmail = authUserData.email || userEmail;
+                }
               }
-            });
-
-            if (!response.ok) {
-              console.error(`Error fetching user ${doc.id}:`, await response.text());
-              return {
-                uid: doc.id,
-                email: 'غير متاح',
-                name: 'مستخدم غير معروف',
-                role: memberData.role || 'user',
-                departmentId: memberData.departmentId || null,
-                joinedAt: memberData.joinedAt?.toDate() || new Date()
-              };
+            } catch (fetchError) {
+              console.error(`Error fetching details for user ${doc.id}:`, fetchError);
             }
-
-            const userData = await response.json();
 
             return {
               uid: doc.id,
-              email: userData.email || 'غير متاح',
-              name: userData.displayName || 'مستخدم غير معروف',
+              email: userEmail,
+              name: userName,
               role: memberData.role || 'user',
               departmentId: memberData.departmentId || null,
               joinedAt: memberData.joinedAt?.toDate() || new Date()
@@ -148,7 +156,6 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
 
           const membersData = await Promise.all(membersPromises);
           setMembers(membersData);
-          setLoading(false);
         } catch (error) {
           console.error('Error processing members:', error);
           toast({
@@ -156,7 +163,8 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
             description: 'حدث خطأ أثناء محاولة معالجة بيانات الأعضاء.',
             variant: 'destructive',
           });
-          setLoading(false);
+        } finally {
+          setLoading(false); // Moved setLoading to finally
         }
       },
       (error) => {
@@ -182,20 +190,18 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
     setFormLoading(true);
 
     try {
-      const idToken = await user.getIdToken();
-
       // استدعاء وظيفة إضافة عضو
-      const addMemberToOrganization = httpsCallable(functions, 'addMemberToOrganization');
-      await addMemberToOrganization({
+      const inviteUserToOrganization = httpsCallable(functions, 'inviteUserToOrganization');
+      await inviteUserToOrganization({
         email: formData.email,
         role: formData.role,
         departmentId: formData.departmentId === 'none' ? null : formData.departmentId,
-        organizationId
+        organizationId // Ensure organizationId is passed
       });
 
       toast({
-        title: 'تمت إضافة العضو بنجاح',
-        description: 'تمت إضافة العضو إلى المؤسسة بنجاح.',
+        title: 'تم إرسال الدعوة بنجاح',
+        description: `تم إرسال دعوة إلى ${formData.email} للانضمام إلى المؤسسة.`,
       });
 
       // إعادة تعيين نموذج الإضافة
@@ -206,10 +212,10 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
       });
       setIsAddDialogOpen(false);
     } catch (error: any) {
-      console.error('Error adding member:', error);
+      console.error('Error inviting member:', error);
       toast({
-        title: 'خطأ في إضافة العضو',
-        description: error.message || 'حدث خطأ أثناء محاولة إضافة العضو.',
+        title: 'خطأ في إرسال الدعوة',
+        description: error.message || 'حدث خطأ أثناء محاولة إرسال الدعوة.',
         variant: 'destructive',
       });
     } finally {
@@ -224,15 +230,14 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
     setFormLoading(true);
 
     try {
-      const idToken = await user.getIdToken();
-
       // استدعاء وظيفة تعديل عضو
-      const updateMemberInOrganization = httpsCallable(functions, 'updateMemberInOrganization');
-      await updateMemberInOrganization({
+      // Assuming you have a cloud function named 'updateOrganizationMemberRoleAndDepartment'
+      const updateOrganizationMember = httpsCallable(functions, 'updateOrganizationMember');
+      await updateOrganizationMember({
         uid: selectedMember.uid,
         role: formData.role,
         departmentId: formData.departmentId === 'none' ? null : formData.departmentId,
-        organizationId
+        organizationId // Ensure organizationId is passed
       });
 
       toast({
@@ -260,13 +265,11 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
     setFormLoading(true);
 
     try {
-      const idToken = await user.getIdToken();
-
       // استدعاء وظيفة حذف عضو
       const removeMemberFromOrganization = httpsCallable(functions, 'removeMemberFromOrganization');
       await removeMemberFromOrganization({
         uid: selectedMember.uid,
-        organizationId
+        organizationId // Ensure organizationId is passed
       });
 
       toast({
@@ -289,7 +292,7 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
 
   if (loading) {
     return (
-      <div className="space-y-4">
+      <div className="container mx-auto p-4">
         <div className="flex justify-between items-center mb-6">
           <Skeleton className="h-8 w-40" />
           <Skeleton className="h-10 w-32" />
@@ -304,12 +307,12 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
   }
 
   return (
-    <div>
+    <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold flex items-center">
-          <Users className="ml-2 h-5 w-5" />
+        <h1 className="text-2xl font-bold flex items-center">
+          <Users className="ml-2 h-6 w-6" />
           أعضاء المؤسسة
-        </h2>
+        </h1>
         {(isOwner || isAdmin) && (
           <Button onClick={() => setIsAddDialogOpen(true)} className="flex items-center">
             <UserPlus className="ml-2 h-4 w-4" />
@@ -328,7 +331,7 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
             <Card key={member.uid}>
               <CardContent className="p-4 flex justify-between items-center">
                 <div>
-                  <h3 className="font-medium">{member.email}</h3>
+                  <h3 className="font-medium">{member.name} ({member.email})</h3>
                   <p className="text-sm text-muted-foreground">
                     {member.role === 'owner' ? 'مالك' :
                      member.role === 'admin' ? 'مسؤول' :
@@ -364,7 +367,7 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
                         setSelectedMember(member);
                         setIsDeleteDialogOpen(true);
                       }}
-                      disabled={member.role === 'owner' && !isOwner}
+                      disabled={(member.role === 'owner' || member.uid === user?.uid) && !isOwner} // Owner can't remove self unless they are the only owner
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -382,14 +385,15 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
           <DialogHeader>
             <DialogTitle>إضافة عضو جديد</DialogTitle>
             <DialogDescription>
-              أدخل بريد العضو الإلكتروني ودوره في المؤسسة.
+              أدخل بريد العضو الإلكتروني ودوره في المؤسسة. سيتم إرسال دعوة للعضو للانضمام.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="email">البريد الإلكتروني</Label>
               <Input
                 id="email"
+                type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="example@example.com"
@@ -422,7 +426,7 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
                 onValueChange={(value) => setFormData({ ...formData, departmentId: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="اختر القسم" />
+                  <SelectValue placeholder="اختر القسم (اختياري)" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">بدون قسم</SelectItem>
@@ -439,14 +443,14 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               إلغاء
             </Button>
-            <Button onClick={handleAddMember} disabled={formLoading}>
+            <Button onClick={handleAddMember} disabled={formLoading || !formData.email}>
               {formLoading ? (
                 <>
                   <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                  جاري الإضافة...
+                  جاري إرسال الدعوة...
                 </>
               ) : (
-                'إضافة'
+                'إرسال دعوة'
               )}
             </Button>
           </DialogFooter>
@@ -462,21 +466,21 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
               تعديل دور العضو وقسمه في المؤسسة.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="email">البريد الإلكتروني</Label>
+              <Label htmlFor="edit-email">البريد الإلكتروني</Label>
               <Input
-                id="email"
+                id="edit-email"
                 value={formData.email}
                 disabled
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role">الدور</Label>
+              <Label htmlFor="edit-role">الدور</Label>
               <Select
                 value={formData.role}
                 onValueChange={(value) => setFormData({ ...formData, role: value })}
-                disabled={selectedMember?.role === 'owner' && !isOwner}
+                disabled={(selectedMember?.role === 'owner' && !isOwner) || selectedMember?.uid === user?.uid}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="اختر الدور" />
@@ -493,13 +497,13 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="department">القسم</Label>
+              <Label htmlFor="edit-department">القسم</Label>
               <Select
                 value={formData.departmentId}
                 onValueChange={(value) => setFormData({ ...formData, departmentId: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="اختر القسم" />
+                  <SelectValue placeholder="اختر القسم (اختياري)" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">بدون قسم</SelectItem>
@@ -541,7 +545,7 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteMember} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={handleDeleteMember} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={formLoading}>
               {formLoading ? (
                 <>
                   <Loader2 className="ml-2 h-4 w-4 animate-spin" />
