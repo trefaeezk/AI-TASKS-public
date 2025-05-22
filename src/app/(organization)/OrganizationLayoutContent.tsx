@@ -19,7 +19,7 @@ import {
   SidebarMenu,
   SidebarSeparator,
   SidebarInset,
-  useSidebar,
+  useSidebar, // Import useSidebar hook
 } from '@/components/ui/sidebar';
 import { SidebarMenuLink } from '@/components/ui/sidebar-menu-link';
 import { SignOutButton } from '@/components/auth/SignOutButton';
@@ -39,8 +39,8 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
   const pathname = usePathname();
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  // الحصول على متغيرات الشريط الجانبي
-  const { isMobile, setOpenMobile } = useSidebar();
+  // Get sidebar state and setters from the useSidebar hook
+  const { isMobile, openMobile, setOpenMobile } = useSidebar();
 
   // تحديث التاريخ الحالي كل دقيقة
   useEffect(() => {
@@ -52,10 +52,10 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
 
   // إغلاق الشريط الجانبي عند تغيير المسار (للأجهزة المحمولة)
   useEffect(() => {
-    if (isMobile) {
+    if (isMobile && openMobile) { // Close only if mobile and sidebar is open
       setOpenMobile(false);
     }
-  }, [pathname, isMobile, setOpenMobile]);
+  }, [pathname, isMobile, openMobile, setOpenMobile]);
 
   // الحصول على اسم المؤسسة من userClaims
   const organizationName = userClaims?.organizationName || t('organization.organization');
@@ -64,71 +64,23 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      {/* Main Content - Add padding-right to prevent content from going behind sidebar */}
-      <div className="flex-1 flex flex-col relative md:pr-64">
-        {/* Top Navigation Bar */}
-        <header className="sticky top-0 z-10 bg-background border-b h-14 flex items-center justify-between px-4">
-          <div className="flex items-center">
-            <h1 className="text-lg font-semibold"><Translate text="organization.organization" /></h1>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher variant="default" size="sm" />
-            {pathname === '/org/tasks' && user && (
-              <AddTaskSheet user={user} />
-            )}
-
-            {/* Notifications Popover */}
-            {user && <NotificationsPopover />}
-
-            {/* Suggestions Button - Modified to show "Under Development" message */}
-            {user && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 relative group"
-                title="الاقتراحات الذكية - سيتم تطويره"
-                onClick={(e) => {
-                  e.preventDefault();
-                  // يمكن إضافة إشعار هنا إذا لزم الأمر
-                }}
-              >
-                <Wand2 className="h-4 w-4" />
-                <span className="sr-only">الاقتراحات الذكية</span>
-                <span className="absolute top-full right-0 mt-1 w-32 bg-popover text-popover-foreground text-xs p-1 rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50 text-center">
-                  سيتم تطويره
-                </span>
-              </Button>
-            )}
-
-            {/* Sidebar Trigger for Mobile */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden h-8 w-8"
-              onClick={() => setOpenMobile(true)}
-              aria-label="فتح القائمة"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-          </div>
-        </header>
-
-        {/* Page Content */}
-        <main className="flex-1 overflow-auto p-4 md:p-6">
-          {children}
-        </main>
-      </div>
-
-      {/* Sidebar - Fixed on the right side (hidden on mobile) */}
-      <div className={`fixed right-0 top-0 h-full w-64 border-l bg-sidebar text-sidebar-foreground z-20 transition-transform duration-300 ${isMobile ? 'translate-x-full' : ''} md:translate-x-0`}>
+      {/* Sidebar component - manages its own mobile (Sheet) and desktop views */}
+      <Sidebar
+        side="right"
+        collapsible="icon"
+        open={isMobile ? openMobile : undefined} // Control open state for mobile
+        onOpenChange={isMobile ? setOpenMobile : undefined} // Control open state for mobile
+      >
         <SidebarHeader className="py-4">
           <div className="flex items-center justify-between px-4">
             <div className="flex items-center">
               <Building className="h-6 w-6 text-primary ml-2" />
-              <h2 className="text-lg font-semibold">{organizationName}</h2>
+              <h2 className="text-lg font-semibold group-data-[collapsible=icon]:hidden">
+                {organizationName}
+              </h2>
             </div>
-            <SidebarTrigger asChild>
+            {/* This trigger is for desktop icon collapse, not mobile sheet opening */}
+            <SidebarTrigger asChild className="hidden md:flex">
               <Button variant="ghost" size="icon">
                 <Menu className="h-5 w-5" />
                 <span className="sr-only"><Translate text="general.menu" defaultValue="فتح/إغلاق الشريط الجانبي" /></span>
@@ -149,12 +101,12 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
               <span>المهام</span>
             </SidebarMenuLink>
 
-            <SidebarMenuLink href="/org/reports" active={pathname === '/org/reports'}>
+            <SidebarMenuLink href="/org/reports" active={pathname.startsWith('/org/reports')}>
               <FileText className="ml-2 h-5 w-5" />
               <span>التقارير</span>
             </SidebarMenuLink>
 
-            <SidebarMenuLink href="/org/meetings" active={pathname === '/org/meetings'}>
+            <SidebarMenuLink href="/org/meetings" active={pathname.startsWith('/org/meetings')}>
               <Calendar className="ml-2 h-5 w-5" />
               <span>الاجتماعات</span>
             </SidebarMenuLink>
@@ -176,13 +128,13 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
               <span>الأعضاء</span>
             </SidebarMenuLink>
 
-            <SidebarMenuLink href="/org/departments" active={pathname === '/org/departments'}>
+            <SidebarMenuLink href="/org/departments" active={pathname.startsWith('/org/departments')}>
               <FolderTree className="ml-2 h-5 w-5" />
               <span>الأقسام</span>
             </SidebarMenuLink>
 
             {(isOwner || isAdmin) && (
-              <SidebarMenuLink href="/org/settings" active={pathname === '/org/settings'}>
+              <SidebarMenuLink href="/org/settings" active={pathname.startsWith('/org/settings')}>
                 <Settings className="ml-2 h-5 w-5" />
                 <span>إعدادات المؤسسة</span>
               </SidebarMenuLink>
@@ -198,20 +150,70 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
         </SidebarContent>
 
         <SidebarFooter className="p-4">
-          <div className="flex flex-col space-y-2">
+          <div className="flex flex-col space-y-2 group-data-[collapsible=icon]:hidden">
             <div className="text-sm text-muted-foreground">
               {format(currentDate, 'EEEE, d MMMM yyyy')}
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <UserCircle className="h-5 w-5 ml-2 text-muted-foreground" />
-                <span className="text-sm">{user?.displayName || user?.email}</span>
+                <span className="text-sm truncate max-w-[120px]">{user?.displayName || user?.email}</span>
               </div>
               <SignOutButton />
             </div>
           </div>
         </SidebarFooter>
-      </div>
+      </Sidebar>
+
+
+      {/* Main Content Area */}
+      <SidebarInset className="flex-1 flex flex-col relative"> {/* SidebarInset handles padding */}
+        {/* Top Navigation Bar */}
+        <header className="sticky top-0 z-10 bg-background border-b h-14 flex items-center justify-between px-4">
+          <div className="flex items-center">
+             {/* Mobile Sidebar Trigger - This button opens the Sheet */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden h-8 w-8 mr-2" // Show only on mobile, add margin
+              onClick={() => setOpenMobile(true)} // Correctly use setOpenMobile from useSidebar
+              aria-label="فتح القائمة"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <h1 className="text-lg font-semibold hidden md:block"><Translate text="organization.organization" /></h1>
+            <h1 className="text-lg font-semibold md:hidden">{organizationName}</h1>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher variant="default" size="sm" />
+            {pathname === '/org/tasks' && user && (
+              <AddTaskSheet user={user} />
+            )}
+            {user && <NotificationsPopover />}
+            {user && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 relative group"
+                title="الاقتراحات الذكية - سيتم تطويره"
+                onClick={(e) => e.preventDefault()}
+              >
+                <Wand2 className="h-4 w-4" />
+                <span className="sr-only">الاقتراحات الذكية</span>
+                <span className="absolute top-full right-0 mt-1 w-32 bg-popover text-popover-foreground text-xs p-1 rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50 text-center">
+                  سيتم تطويره
+                </span>
+              </Button>
+            )}
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="flex-1 overflow-auto p-4 md:p-6">
+          {children}
+        </main>
+      </SidebarInset>
     </div>
   );
 }
