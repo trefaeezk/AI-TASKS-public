@@ -12,7 +12,7 @@ import {
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { format } from 'date-fns';
-import { ar } from 'date-fns/locale'; // Added import for Arabic locale
+import { ar } from 'date-fns/locale'; // Ensured import for Arabic locale
 import { PermissionSidebarItem } from '@/components/PermissionSidebarItem';
 import { AccountTypeGuard } from '@/components/auth/AccountTypeGuard';
 import { useLanguage } from '@/context/LanguageContext';
