@@ -1,3 +1,4 @@
+
 'use client'; // Required for context and hooks
 
 import type { ReactNode } from 'react';
@@ -11,6 +12,7 @@ import {
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { format } from 'date-fns';
+import { ar } from 'date-fns/locale'; // Added import for Arabic locale
 import { PermissionSidebarItem } from '@/components/PermissionSidebarItem';
 import { AccountTypeGuard } from '@/components/auth/AccountTypeGuard';
 import { useLanguage } from '@/context/LanguageContext';
@@ -94,7 +96,7 @@ function TaskTabsHeader() {
                                 disabled={!categorizedTasks[categoryKey] /* || categorizedTasks[categoryKey]?.length === 0 */}
                             >
                                {IconComponent ? <IconComponent className="ml-1.5 h-3.5 w-3.5 flex-shrink-0" /> : null} {/* Use IconComponent safely */}
-                               <span>{info.title}</span> {/* Use info.title safely */}
+                               <span><Translate text={`tasks.category.${categoryKey}`} defaultValue={info.title} /></span> {/* Use Translate component */}
                                 <span className="ml-1.5 text-xs opacity-80">({count})</span>
                             </TabsTrigger>
                         );
@@ -109,27 +111,23 @@ function TaskTabsHeader() {
 function FilterPopover() {
     const { user } = useAuth();
     const pathname = usePathname();
-    const { t } = useLanguage(); // استخدام سياق اللغة للترجمة
+    const { t } = useLanguage();
     let taskPageContext: ReturnType<typeof useTaskPageContext> | null = null;
 
     try {
-        // Try to get the context, will throw if not in provider
         taskPageContext = useTaskPageContext();
     } catch (e) {
-        // Context not available (e.g., in admin layout), ignore.
+        // Context not available
     }
 
-    // Return null if user is not logged in
     if (!user) return null;
 
-    // Determine filter type based on current page
     const isTasksPage = pathname === '/';
     const isKpiPage = pathname === '/kpi';
     const isReportsPage = pathname.startsWith('/reports');
     const isDataManagementPage = pathname.startsWith('/data');
     const isSettingsPage = pathname.startsWith('/settings');
 
-    // Determine filter activation state for the home page
     let isFilterActive = false;
     if (isTasksPage && taskPageContext) {
         const { categoryFilter, dateFilter, okrFilter } = taskPageContext;
@@ -144,12 +142,11 @@ function FilterPopover() {
                     size="icon"
                     className={cn(
                         "h-8 w-8 relative",
-                        isFilterActive && "text-primary hover:text-primary" // Highlight if filters are active
+                        isFilterActive && "text-primary hover:text-primary"
                     )}
                     aria-label={t('common.applyFilters')}
                 >
                     <Filter className="h-4 w-4" />
-                    {/* Warning indicator */}
                     {isFilterActive && (
                         <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />
                     )}
@@ -159,7 +156,6 @@ function FilterPopover() {
                 <div className="space-y-4">
                     <h4 className="font-medium leading-none">{t('common.filters')}</h4>
 
-                    {/* Task page filters */}
                     {isTasksPage && taskPageContext && (
                         <>
                             <CategoryFilter
@@ -171,7 +167,6 @@ function FilterPopover() {
                                 dateRange={taskPageContext.dateFilter}
                                 setDateRange={taskPageContext.setDateFilter}
                             />
-                            {/* OKR filter */}
                             <OkrTaskFilter
                                 value={taskPageContext.okrFilter}
                                 onChange={taskPageContext.setOkrFilter}
@@ -181,7 +176,6 @@ function FilterPopover() {
                                 variant="outline"
                                 onClick={() => {
                                     taskPageContext.setCategoryFilter(null);
-                                    // Reset filter to default value (one month back and one month forward)
                                     const now = new Date();
                                     const thirtyDaysAgo = new Date();
                                     const thirtyDaysLater = new Date();
@@ -190,14 +184,13 @@ function FilterPopover() {
                                     taskPageContext.setDateFilter({ startDate: thirtyDaysAgo, endDate: thirtyDaysLater });
                                     taskPageContext.setOkrFilter(false);
                                 }}
-                                disabled={!isFilterActive} // Disable if no filters are active
+                                disabled={!isFilterActive}
                             >
                                 {t('common.resetFilters')}
                             </Button>
                         </>
                     )}
 
-                    {/* KPI page filters */}
                     {isKpiPage && (
                         <div className="space-y-2">
                             <div className="flex flex-col space-y-1">
@@ -230,7 +223,6 @@ function FilterPopover() {
                         </div>
                     )}
 
-                    {/* Reports page filters */}
                     {isReportsPage && (
                         <div className="space-y-2">
                             <div className="flex flex-col space-y-1">
@@ -253,7 +245,6 @@ function FilterPopover() {
                         </div>
                     )}
 
-                    {/* Data management page filters */}
                     {isDataManagementPage && (
                         <div className="space-y-2">
                             <div className="flex flex-col space-y-1">
@@ -272,7 +263,6 @@ function FilterPopover() {
                         </div>
                     )}
 
-                    {/* فلاتر صفحة الإعدادات */}
                     {isSettingsPage && (
                         <div className="space-y-2">
                             <div className="flex flex-col space-y-1">
@@ -284,14 +274,13 @@ function FilterPopover() {
                                     <SelectContent>
                                         <SelectItem value="general">{t('general.general')}</SelectItem>
                                         <SelectItem value="appearance">{t('settings.appearance')}</SelectItem>
-                                        <SelectItem value="notifications">{t('settings.notifications')}</SelectItem>
+                                        <SelectItem value="notifications">{t('notifications.notifications')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                         </div>
                     )}
 
-                    {/* رسالة إذا لم تكن هناك فلاتر متاحة للصفحة الحالية */}
                     {!isTasksPage && !isKpiPage && !isReportsPage && !isDataManagementPage && !isSettingsPage && (
                         <p className="text-sm text-muted-foreground">{t('common.noFiltersAvailable')}</p>
                     )}
@@ -304,20 +293,23 @@ function FilterPopover() {
 
 export function AppLayoutContent({ children }: { children: ReactNode }) {
     const pathname = usePathname();
-    const { user } = useAuth(); // Get user for AddTaskSheet
+    const { user } = useAuth();
     const { isMobile, setOpenMobile } = useSidebar();
-    const { role, loading: loadingPermissions } = usePermissions(); // استخدام hook الصلاحيات
-    const { accountType, isLoading: loadingAccountType } = useAccountType(); // استخدام hook نوع الحساب
-    const { t, direction } = useLanguage(); // استخدام سياق اللغة
+    const { role, loading: loadingPermissions } = usePermissions();
+    const { accountType, isLoading: loadingAccountType } = useAccountType();
+    const { t, direction } = useLanguage();
+    let taskPageContextForAppLayout: ReturnType<typeof useTaskPageContext> | null = null;
 
-    // التحقق مما إذا كان المستخدم مسؤولاً
+    try {
+        taskPageContextForAppLayout = useTaskPageContext();
+    } catch (e) {
+        // Context not available.
+    }
+
     const isAdmin = role === 'admin';
 
-
-    // Helper function to check if a link is active
     const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href));
 
-    // Function to close sidebar on mobile link click
     const handleLinkClick = () => {
       if (isMobile) {
         setOpenMobile(false);
@@ -326,149 +318,127 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-        <Sidebar side="right" collapsible="icon"> {/* Sidebar on the right for RTL */}
+        <Sidebar side="right" collapsible="icon">
             <SidebarHeader className="p-2 flex items-center justify-between">
                 <div className="flex justify-between items-center w-full">
                   <h2 className="text-lg font-semibold text-primary group-data-[collapsible=icon]:hidden">
-                    <Translate text="general.appName" defaultValue="إدارة المهام" />
+                    <Translate text="general.appName" />
                   </h2>
                   <LanguageSwitcher variant="default" size="sm" className="group-data-[collapsible=icon]:hidden" />
                 </div>
-                {/* Add a visually hidden title for accessibility in mobile view */}
-                <span className="sr-only"><Translate text="general.menu" defaultValue="القائمة الرئيسية" /></span>
+                <span className="sr-only"><Translate text="general.menu" /></span>
             </SidebarHeader>
 
             <SidebarContent className="flex-1 overflow-y-auto p-2">
             <SidebarMenu>
-                {/* عناصر القائمة الرئيسية */}
                 <PermissionSidebarItem
                   href="/"
                   icon={ListTodo}
-                  label="المهام"
-                  tooltip="إدارة المهام ولوحة التحكم الرئيسية"
+                  label={t('sidebar.tasks')}
+                  tooltip={t('sidebar.tasksTooltip')}
                 />
-
-
-
                 <PermissionSidebarItem
                   href="/reports"
                   icon={ListChecks}
-                  label="الخطة اليومية"
-                  tooltip="خطة اليوم المقترحة"
+                  label={t('sidebar.dailyPlan')}
+                  tooltip={t('sidebar.dailyPlanTooltip')}
                   requiredPermission={{ area: 'reports', action: 'view' }}
                 />
-
                 <PermissionSidebarItem
                   href="/reports/weekly"
                   icon={FileText}
-                  label="التقارير الأسبوعية"
-                  tooltip="التقارير الأسبوعية للمهام"
+                  label={t('sidebar.weeklyReports')}
+                  tooltip={t('sidebar.weeklyReportsTooltip')}
                   requiredPermission={{ area: 'reports', action: 'view' }}
                 />
-
                 <PermissionSidebarItem
                   href="/kpi"
                   icon={BarChart3}
-                  label="مؤشرات الأداء"
-                  tooltip="مؤشرات الأداء (KPI)"
+                  label={t('sidebar.kpi')}
+                  tooltip={t('sidebar.kpiTooltip')}
                   requiredPermission={{ area: 'reports', action: 'view' }}
                 />
-
                 <AccountTypeGuard requiredType="individual">
                   <PermissionSidebarItem
                     href="/tools"
                     icon={Wrench}
-                    label="الأدوات"
-                    tooltip="أدوات النظام"
+                    label={t('sidebar.tools')}
+                    tooltip={t('sidebar.toolsTooltip')}
                     requiredPermission={{ area: 'tools', action: 'view' }}
                   />
                 </AccountTypeGuard>
-
                 <AccountTypeGuard requiredType="individual">
                   <PermissionSidebarItem
                     href="/suggestions"
                     icon={Wand2}
-                    label="الاقتراحات الذكية"
-                    tooltip="اقتراحات ذكية لتحسين إدارة المهام"
+                    label={t('sidebar.smartSuggestions')}
+                    tooltip={t('sidebar.smartSuggestionsTooltip')}
                     requiredPermission={{ area: 'tools', action: 'view' }}
                   />
                 </AccountTypeGuard>
 
-
-                {/* عناصر قائمة الإدارة */}
                 <div className="h-px bg-border my-2" />
 
                 <PermissionSidebarItem
                   href="/admin"
                   icon={Shield}
-                  label="لوحة الإدارة"
-                  tooltip="لوحة تحكم المسؤول"
+                  label={t('sidebar.adminPanel')}
+                  tooltip={t('sidebar.adminPanelTooltip')}
                   requiredRole="admin"
                 />
-
                 <PermissionSidebarItem
                   href="/admin/users"
                   icon={Users}
-                  label="المستخدمين"
-                  tooltip="إدارة المستخدمين"
+                  label={t('sidebar.users')}
+                  tooltip={t('sidebar.usersTooltip')}
                   requiredPermission={{ area: 'users', action: 'view' }}
                 />
-
-                {/* إدارة البيانات للمسؤول */}
                 {(role === 'admin' || role === 'owner') && (
                   <PermissionSidebarItem
                     href="/admin/data-management"
                     icon={Database}
-                    label="إدارة البيانات"
-                    tooltip="تصدير واستيراد بيانات النظام"
+                    label={t('sidebar.dataManagement')}
+                    tooltip={t('sidebar.dataManagementTooltip')}
                     requiredPermission={{ area: 'data', action: 'view' }}
                   />
                 )}
-
-                {/* استيراد/تصدير للمستخدم المستقل */}
                 {role === 'independent' && (
                   <PermissionSidebarItem
                     href="/data"
                     icon={Database}
-                    label="استيراد/تصدير"
-                    tooltip="استيراد وتصدير مهامك الخاصة"
+                    label={t('sidebar.importExport')}
+                    tooltip={t('sidebar.importExportTooltip')}
                     requiredPermission={{ area: 'data', action: 'view' }}
                   />
                 )}
-
-                {/* رابط إدارة طلبات المؤسسات - يظهر فقط للمالك */}
                 <AccountTypeGuard requiredType="individual">
                   <PermissionSidebarItem
                     href="/admin/organization-requests"
                     icon={Building}
-                    label="طلبات المؤسسات"
-                    tooltip="إدارة طلبات إنشاء المؤسسات"
+                    label={t('sidebar.organizationRequests')}
+                    tooltip={t('sidebar.organizationRequestsTooltip')}
                     requiredRole="owner"
                   />
                 </AccountTypeGuard>
-
                 <PermissionSidebarItem
                   href="/settings"
                   icon={Settings}
-                  label="الإعدادات"
-                  tooltip="إعدادات النظام"
+                  label={t('sidebar.settings')}
+                  tooltip={t('sidebar.settingsTooltip')}
                   requiredPermission={{ area: 'settings', action: 'view' }}
                 />
-
                 <PermissionSidebarItem
                   href="/documentation"
                   icon={BookOpen}
-                  label="الوثائق"
-                  tooltip="وثائق النظام"
+                  label={t('sidebar.documentation')}
+                  tooltip={t('sidebar.documentationTooltip')}
                   requiredPermission={{ area: 'settings', action: 'view' }}
                 />
-
-                {/* رابط صفحة التشخيص - يظهر فقط للمالك */}
                 <PermissionSidebarItem
                   href="/debug"
                   icon={Bug}
-                  label="التشخيص"
-                  tooltip="صفحة التشخيص وإصلاح المشاكل"
+                  label={t('sidebar.diagnostics')}
+                  tooltip={t('sidebar.diagnosticsTooltip')}
                   requiredRole="owner"
                 />
             </SidebarMenu>
@@ -477,101 +447,69 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
             <SidebarSeparator />
 
             <SidebarFooter className="p-2 space-y-2">
-             {/* User Info Section */}
              <div className="flex flex-col items-start space-y-1 group-data-[collapsible=icon]:hidden px-2">
                 {user ? (
                   <>
                     <div className="flex items-center text-xs text-muted-foreground">
                         <UserCircle className="h-4 w-4 ml-1.5"/>
-                        <span className="truncate max-w-[150px]" title={user.email || 'User'}>
-                            {user.email || 'المستخدم الحالي'}
+                        <span className="truncate max-w-[150px]" title={user.email || t('sidebar.currentUserDefault')}>
+                            {user.email || t('sidebar.currentUserDefault')}
                         </span>
                     </div>
                     <Badge
-                      variant={role === 'admin' ? "default" : role === 'user' ? "secondary" : "outline"}
+                      variant={role === 'admin' || role === 'owner' ? "default" : role === 'user' ? "secondary" : "outline"}
                       className="text-[10px] px-1.5 py-0 h-auto self-start"
                     >
-                      {loadingPermissions ? 'جار التحميل...' : (() => {
-                        switch(role) {
-                          case 'admin': return 'مسؤول';
-                          case 'engineer': return 'مهندس';
-                          case 'supervisor': return 'مشرف';
-                          case 'technician': return 'فني';
-                          case 'assistant': return 'مساعد فني';
-                          case 'user': return 'مستخدم';
-                          case 'independent': return 'مستخدم مستقل';
-                          default: return role;
-                        }
-                      })()}
+                      {loadingPermissions ? t('sidebar.userRoleLoading') : t(`roles.${role}`, role) }
                     </Badge>
                   </>
                 ) : (
                   <Skeleton className="h-8 w-full bg-muted" />
                 )}
               </div>
-
-             {/* Sign Out Button */}
             <SidebarMenuItem>
-                    <SignOutButton />
+                    <SignOutButton tooltip={t('sidebar.signOutTooltip')} />
             </SidebarMenuItem>
             </SidebarFooter>
         </Sidebar>
 
-        {/* Main Content Area */}
         <SidebarInset className="flex-1 flex flex-col relative">
-            {/* Header for the main content area */}
              <header className="sticky top-0 z-10 flex h-auto min-h-[3.5rem] flex-col border-b bg-background/80 backdrop-blur-sm sm:h-auto">
-                 {/* Top part of header: Trigger, Filter, Add Task */}
                 <div className="flex items-center justify-between gap-2 px-4 py-1 md:py-1.5 md:px-6">
-                    {/* Right side: Sidebar Trigger for Mobile */}
                     <div className="flex items-center gap-2">
-                        {/* Add Task Button */}
                         {user && <AddTaskSheet user={user} />}
-
-                        {/* Filter Button/Popover - Show on all pages */}
                         <FilterPopover />
-
-                        {/* Notifications Popover */}
                         {user && <NotificationsPopover />}
-
-                        {/* Suggestions Link */}
                         {user && (
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
                             asChild
-                            title="الاقتراحات الذكية"
+                            title={t('sidebar.smartSuggestionsTooltip')}
                           >
                             <Link href="/suggestions">
                               <Wand2 className="h-4 w-4" />
-                              <span className="sr-only">الاقتراحات الذكية</span>
+                              <span className="sr-only"><Translate text="sidebar.smartSuggestions" /></span>
                             </Link>
                           </Button>
                         )}
                     </div>
-
-                    {/* Left side: App Title (visible on mobile) and Menu Button */}
                     <div className="flex items-center gap-2">
-                        {/* Sidebar Trigger for Mobile - Moved to right side */}
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="md:hidden h-8 w-8" // Only show on mobile
-                            onClick={() => setOpenMobile(true)} // Use setOpenMobile from useSidebar
-                            aria-label="فتح القائمة"
+                            className="md:hidden h-8 w-8"
+                            onClick={() => setOpenMobile(true)}
+                            aria-label={t('sidebar.toggleSidebar')}
                         >
                             <Menu className="h-5 w-5" />
                         </Button>
-
-                        {/* App Title - Only show on mobile */}
-                        <h2 className="text-sm font-semibold text-primary md:hidden">إدارة المهام</h2>
+                         <h2 className="text-sm font-semibold text-primary md:hidden"><Translate text="general.appName" /></h2>
                     </div>
                 </div>
-                 {/* Bottom part of header: Task Tabs (only on '/' and if context is available) */}
-                 {pathname === '/' && <TaskTabsHeader />}
+                 {pathname === '/' && taskPageContextForAppLayout && <TaskTabsHeader />}
             </header>
-                {/* Page content rendered here */}
             <main className="flex-1 overflow-y-auto p-4 md:p-6">
                 {children}
             </main>
