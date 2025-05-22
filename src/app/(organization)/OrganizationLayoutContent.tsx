@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { format } from 'date-fns';
+import { ar } from 'date-fns/locale'; // Added import for Arabic locale
 
 import {
   Sidebar,
