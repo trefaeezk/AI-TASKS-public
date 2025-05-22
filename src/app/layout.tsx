@@ -59,7 +59,7 @@ export default function RootLayout({
           <meta name="apple-mobile-web-app-status-bar-style" content="default" />
           {/* Add other head elements like favicon links here if needed */}
        </head>
-      <body className={`${cairo.variable} font-sans antialiased bg-background text-foreground`}>
+      <body className={`${cairo.variable} font-sans antialiased bg-background text-foreground overflow-x-hidden`}>
          {/* Wrap children with providers */}
          <ThemeProvider>
            <LanguageProvider>

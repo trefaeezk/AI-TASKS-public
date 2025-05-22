@@ -50,13 +50,6 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
     return () => clearInterval(interval);
   }, []);
 
-  // No longer automatically closing sidebar on path change for mobile
-  // useEffect(() => {
-  //   if (isMobile && openMobile) {
-  //     setOpenMobile(false); // Close on path change for mobile
-  //   }
-  // }, [pathname, isMobile, openMobile, setOpenMobile]);
-
   const organizationName = userClaims?.organizationName || t('organization.organization');
   const isOwner = userClaims?.owner === true;
   const isAdmin = userClaims?.admin === true;
@@ -162,13 +155,13 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
       </Sidebar>
 
       <SidebarInset className="flex-1 flex flex-col relative">
-        <header className="sticky top-0 z-10 bg-background border-b h-14 flex items-center justify-between px-4">
-          <div className="flex items-center">
+        <header className="sticky top-0 z-10 bg-background border-b min-h-[3.5rem] flex items-center justify-between px-4 py-2 flex-wrap">
+          <div className="flex items-center flex-wrap">
             {/* Mobile menu button in header */}
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden mr-2" // Removed h-8 w-8
+              className="md:hidden mr-2"
               onClick={() => setOpenMobile(true)}
               aria-label={t('sidebar.toggleSidebar')}
             >
@@ -178,7 +171,7 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
             <h2 className="text-lg font-semibold md:hidden">{organizationName}</h2>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <LanguageSwitcher variant="default" size="sm" />
             {pathname === '/org/tasks' && user && (
               <AddTaskSheet user={user} />
