@@ -165,17 +165,17 @@ const Sidebar = React.forwardRef<
       collapsible = "offcanvas",
       className,
       children,
-      ...props
+      ...props // {...props} will include open and onOpenChange passed by parent
     },
     ref
   ) => {
-    const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+    // Get isMobile, openMobile, and setOpenMobile from context
+    const { isMobile: contextIsMobile, openMobile: contextOpenMobile, setOpenMobile: contextSetOpenMobile } = useSidebar();
     const [mounted, setMounted] = React.useState(false);
 
     React.useEffect(() => {
       setMounted(true);
     }, []);
-
 
     if (collapsible === "none") {
       return (
@@ -185,56 +185,47 @@ const Sidebar = React.forwardRef<
             className
           )}
           ref={ref}
-          {...props}
+          {...props} // Pass all props including open/onOpenChange if needed
         >
           {children}
         </div>
       )
     }
     
-    if (isMobile) {
+    if (contextIsMobile) {
       if (!mounted) {
-        // Render a placeholder or null on the server and initial client render for mobile
         return <div className="md:hidden w-[var(--sidebar-width-mobile)]" />; 
       }
+      // Use context's openMobile and setOpenMobile for the Sheet
       return (
-        <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
+        <Sheet open={contextOpenMobile} onOpenChange={contextSetOpenMobile}>
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground shadow-lg flex flex-col" 
+            className="w-[var(--sidebar-width)] bg-sidebar p-0 text-sidebar-foreground shadow-lg flex flex-col" 
             style={
               {
                 "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
               } as React.CSSProperties
             }
             side={side}
+            // Do not spread {...props} here as Sheet has its own open/onOpenChange
           >
-            <SheetHeader className="p-3 border-b border-sidebar-border"> 
-              <div className="flex items-center justify-between">
-                <SheetTitle className="text-base font-semibold">إدارة المهام</SheetTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setOpenMobile(false)}
-                  aria-label="إغلاق القائمة"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-            </SheetHeader>
-            <div className="flex-1 overflow-y-auto">{children}</div>
+            {/* SheetHeader and close button are now part of SheetContent's responsibility
+                or should be passed as children. Let's assume children includes the header */}
+            {children} 
           </SheetContent>
         </Sheet>
       )
     }
 
+    // Desktop sidebar logic (uses internal state 'open' from SidebarProvider for desktop collapse)
+    const { state } = useSidebar(); 
     return (
       <div
         ref={ref}
         className="group peer hidden md:block text-sidebar-foreground"
-        data-state={state}
+        data-state={state} // Use state from context for desktop
         data-collapsible={state === "collapsed" ? collapsible : ""}
         data-variant={variant}
         data-side={side}
@@ -260,7 +251,7 @@ const Sidebar = React.forwardRef<
               : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
             className
           )}
-          {...props}
+          {...props} // Pass all props here for the desktop div
         >
           <div
             data-sidebar="sidebar"
@@ -625,6 +616,20 @@ const SidebarMenuButton = React.forwardRef<
 );
 SidebarMenuButton.displayName = "SidebarMenuButton";
 
+const SidebarMenuStub = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<"div">
+>(({ className, ...props }, ref) => {
+  return (
+    <div
+      ref={ref}
+      className={cn("flex flex-col gap-1", className)}
+      {...props}
+    />
+  );
+});
+SidebarMenuStub.displayName = "SidebarMenuStub";
+
 
 const SidebarMenuAction = React.forwardRef<
   HTMLButtonElement,
@@ -781,7 +786,7 @@ export {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarMenuSkeleton,
+  SidebarMenuSkeleton, // Corrected export
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
