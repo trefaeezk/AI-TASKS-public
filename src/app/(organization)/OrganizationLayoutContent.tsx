@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
+import { ar } from 'date-fns/locale'; // Ensure 'ar' is imported
 
 import {
   Sidebar,
@@ -50,11 +50,12 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    if (isMobile && openMobile) {
-      // No automatic close on path change, user explicitly closes via X or by clicking a link
-    }
-  }, [pathname, isMobile, openMobile, setOpenMobile]);
+  // No longer automatically closing sidebar on path change for mobile
+  // useEffect(() => {
+  //   if (isMobile && openMobile) {
+  //     setOpenMobile(false); // Close on path change for mobile
+  //   }
+  // }, [pathname, isMobile, openMobile, setOpenMobile]);
 
   const organizationName = userClaims?.organizationName || t('organization.organization');
   const isOwner = userClaims?.owner === true;
@@ -167,8 +168,8 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden h-8 w-8 mr-2" // Only show on mobile
-              onClick={() => setOpenMobile(true)} // Action to open the mobile sidebar (Sheet)
+              className="md:hidden mr-2" // Removed h-8 w-8
+              onClick={() => setOpenMobile(true)}
               aria-label={t('sidebar.toggleSidebar')}
             >
               <Menu className="h-5 w-5" />
@@ -189,7 +190,7 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
                 size="icon"
                 className="h-8 w-8 relative group"
                 title={t('sidebar.smartSuggestionsTooltip')}
-                onClick={(e) => e.preventDefault()}
+                onClick={(e) => e.preventDefault()} // This seems like a temp thing, maybe needs a Link?
               >
                 <Wand2 className="h-4 w-4" />
                 <span className="sr-only"><Translate text="sidebar.smartSuggestions" /></span>
