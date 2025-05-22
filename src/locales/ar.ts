@@ -84,14 +84,20 @@ const ar = {
 
   sidebar: {
     mainMenu: "القائمة الرئيسية",
+    dashboard: "لوحة التحكم", // For organization dashboard
     tasks: "المهام",
     tasksTooltip: "عرض وإدارة المهام",
     dailyPlan: "الخطة اليومية",
     dailyPlanTooltip: "عرض خطة المهام اليومية المقترحة",
+    reports: "التقارير", // Generic reports for individual and org
     weeklyReports: "التقارير الأسبوعية",
     weeklyReportsTooltip: "عرض التقارير الأسبوعية",
+    meetings: "الاجتماعات",
+    meetingsTooltip: "عرض وإدارة اجتماعات المؤسسة",
     kpi: "مؤشرات الأداء",
     kpiTooltip: "عرض مؤشرات الأداء الرئيسية",
+    okr: "التخطيط السنوي (OKRs)",
+    okrTooltip: "إدارة الأهداف والنتائج الرئيسية للمؤسسة",
     tools: "الأدوات",
     toolsTooltip: "أدوات مساعدة",
     smartSuggestions: "الاقتراحات الذكية",
@@ -99,16 +105,24 @@ const ar = {
     adminMenu: "إدارة النظام",
     adminPanel: "لوحة الإدارة",
     adminPanelTooltip: "الوصول إلى لوحة تحكم المسؤول",
-    users: "المستخدمين",
+    users: "المستخدمين", // For admin section
     usersTooltip: "إدارة المستخدمين والصلاحيات",
-    dataManagement: "إدارة البيانات",
+    members: "الأعضاء", // For organization members
+    membersTooltip: "إدارة أعضاء المؤسسة",
+    departments: "الأقسام",
+    departmentsTooltip: "إدارة أقسام المؤسسة",
+    organizationSettings: "إعدادات المؤسسة",
+    organizationSettingsTooltip: "إدارة إعدادات المؤسسة",
+    dataManagement: "إدارة البيانات", // Generic data management
     dataManagementTooltip: "إدارة بيانات النظام (تصدير/استيراد)",
-    importExport: "استيراد/تصدير البيانات",
+    importExport: "استيراد/تصدير البيانات", // For individual user data
     importExportTooltip: "استيراد وتصدير بيانات المستخدم الفردي",
+    organizationDataManagement: "إدارة بيانات المؤسسة",
+    organizationDataManagementTooltip: "تصدير واستيراد بيانات المؤسسة",
     organizationRequests: "طلبات المؤسسات",
     organizationRequestsTooltip: "مراجعة طلبات إنشاء المؤسسات",
     generalSection: "عام",
-    settings: "الإعدادات",
+    settings: "الإعدادات", // General settings for individual user
     settingsTooltip: "تعديل إعدادات التطبيق",
     documentation: "الوثائق",
     documentationTooltip: "عرض وثائق النظام",

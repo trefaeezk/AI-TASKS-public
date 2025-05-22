@@ -83,7 +83,7 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
             <SidebarTrigger asChild className="hidden md:flex">
               <Button variant="ghost" size="icon">
                 <Menu className="h-5 w-5" />
-                <span className="sr-only"><Translate text="general.menu" defaultValue="فتح/إغلاق الشريط الجانبي" /></span>
+                <span className="sr-only"><Translate text="sidebar.toggleSidebar" defaultValue="فتح/إغلاق الشريط الجانبي" /></span>
               </Button>
             </SidebarTrigger>
           </div>
@@ -144,7 +144,7 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
 
             <SidebarMenuLink href="/org/data" active={pathname === '/org/data'}>
               <Database className="ml-2 h-5 w-5" />
-              <span><Translate text="sidebar.dataManagement" defaultValue="إدارة البيانات" /></span>
+              <span><Translate text="sidebar.organizationDataManagement" defaultValue="إدارة بيانات المؤسسة" /></span>
             </SidebarMenuLink>
           </SidebarMenu>
         </SidebarContent>
