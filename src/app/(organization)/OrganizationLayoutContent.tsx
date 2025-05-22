@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ReactNode } from 'react';
@@ -64,12 +65,10 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      {/* Sidebar component - manages its own mobile (Sheet) and desktop views */}
+      {/* Sidebar component - relies on context for mobile state */}
       <Sidebar
         side="right"
         collapsible="icon"
-        open={isMobile ? openMobile : undefined} // Control open state for mobile
-        onOpenChange={isMobile ? setOpenMobile : undefined} // Control open state for mobile
       >
         <SidebarHeader className="py-4">
           <div className="flex items-center justify-between px-4">
@@ -93,50 +92,50 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
           <SidebarMenu>
             <SidebarMenuLink href="/org" active={pathname === '/org'}>
               <Home className="ml-2 h-5 w-5" />
-              <span>الرئيسية</span>
+              <span><Translate text="sidebar.dashboard" defaultValue="الرئيسية" /></span>
             </SidebarMenuLink>
 
             <SidebarMenuLink href="/org/tasks" active={pathname === '/org/tasks'}>
               <ListTodo className="ml-2 h-5 w-5" />
-              <span>المهام</span>
+              <span><Translate text="sidebar.tasks" defaultValue="المهام" /></span>
             </SidebarMenuLink>
 
             <SidebarMenuLink href="/org/reports" active={pathname.startsWith('/org/reports')}>
               <FileText className="ml-2 h-5 w-5" />
-              <span>التقارير</span>
+              <span><Translate text="sidebar.reports" defaultValue="التقارير" /></span>
             </SidebarMenuLink>
 
             <SidebarMenuLink href="/org/meetings" active={pathname.startsWith('/org/meetings')}>
               <Calendar className="ml-2 h-5 w-5" />
-              <span>الاجتماعات</span>
+              <span><Translate text="sidebar.meetings" defaultValue="الاجتماعات" /></span>
             </SidebarMenuLink>
 
             <SidebarMenuLink href="/org/kpi" active={pathname === '/org/kpi'}>
               <BarChart3 className="ml-2 h-5 w-5" />
-              <span>مؤشرات الأداء</span>
+              <span><Translate text="sidebar.kpi" defaultValue="مؤشرات الأداء" /></span>
             </SidebarMenuLink>
 
             <SidebarMenuLink href="/org/okr" active={pathname?.startsWith('/org/okr') || false}>
               <Target className="ml-2 h-5 w-5" />
-              <span>التخطيط السنوي (OKRs)</span>
+              <span><Translate text="sidebar.okr" defaultValue="التخطيط السنوي (OKRs)" /></span>
             </SidebarMenuLink>
 
             <SidebarSeparator />
 
             <SidebarMenuLink href="/org/members" active={pathname === '/org/members'}>
               <Users className="ml-2 h-5 w-5" />
-              <span>الأعضاء</span>
+              <span><Translate text="sidebar.members" defaultValue="الأعضاء" /></span>
             </SidebarMenuLink>
 
             <SidebarMenuLink href="/org/departments" active={pathname.startsWith('/org/departments')}>
               <FolderTree className="ml-2 h-5 w-5" />
-              <span>الأقسام</span>
+              <span><Translate text="sidebar.departments" defaultValue="الأقسام" /></span>
             </SidebarMenuLink>
 
             {(isOwner || isAdmin) && (
               <SidebarMenuLink href="/org/settings" active={pathname.startsWith('/org/settings')}>
                 <Settings className="ml-2 h-5 w-5" />
-                <span>إعدادات المؤسسة</span>
+                <span><Translate text="sidebar.organizationSettings" defaultValue="إعدادات المؤسسة" /></span>
               </SidebarMenuLink>
             )}
 
@@ -144,7 +143,7 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
 
             <SidebarMenuLink href="/org/data" active={pathname === '/org/data'}>
               <Database className="ml-2 h-5 w-5" />
-              <span>إدارة البيانات</span>
+              <span><Translate text="sidebar.dataManagement" defaultValue="إدارة البيانات" /></span>
             </SidebarMenuLink>
           </SidebarMenu>
         </SidebarContent>
@@ -152,7 +151,7 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
         <SidebarFooter className="p-4">
           <div className="flex flex-col space-y-2 group-data-[collapsible=icon]:hidden">
             <div className="text-sm text-muted-foreground">
-              {format(currentDate, 'EEEE, d MMMM yyyy')}
+              {format(currentDate, 'EEEE, d MMMM yyyy', { locale: ar })}
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
@@ -177,12 +176,12 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
               size="icon"
               className="md:hidden h-8 w-8 mr-2" // Show only on mobile, add margin
               onClick={() => setOpenMobile(true)} // Correctly use setOpenMobile from useSidebar
-              aria-label="فتح القائمة"
+              aria-label={t('sidebar.toggleSidebar')}
             >
               <Menu className="h-5 w-5" />
             </Button>
             <h1 className="text-lg font-semibold hidden md:block"><Translate text="organization.organization" /></h1>
-            <h1 className="text-lg font-semibold md:hidden">{organizationName}</h1>
+            <h2 className="text-lg font-semibold md:hidden">{organizationName}</h2>
           </div>
 
           <div className="flex items-center gap-2">
@@ -196,13 +195,13 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 relative group"
-                title="الاقتراحات الذكية - سيتم تطويره"
-                onClick={(e) => e.preventDefault()}
+                title={t('sidebar.smartSuggestionsTooltip')}
+                onClick={(e) => e.preventDefault()} // Keep as non-functional for now
               >
                 <Wand2 className="h-4 w-4" />
-                <span className="sr-only">الاقتراحات الذكية</span>
+                <span className="sr-only"><Translate text="sidebar.smartSuggestions" /></span>
                 <span className="absolute top-full right-0 mt-1 w-32 bg-popover text-popover-foreground text-xs p-1 rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50 text-center">
-                  سيتم تطويره
+                  <Translate text="tools.underDevelopment" />
                 </span>
               </Button>
             )}
