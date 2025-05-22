@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet" // Ensure SheetHeader and SheetTitle are imported
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
@@ -19,6 +19,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { Translate } from "@/components/Translate" // Corrected import path
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -82,15 +83,17 @@ const SidebarProvider = React.forwardRef<
         } else {
           _setOpen(openState)
         }
-        document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+        if (typeof document !== 'undefined') {
+          document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+        }
       },
       [setOpenProp, open]
     )
 
     const toggleSidebar = React.useCallback(() => {
       return isMobile
-        ? setOpenMobile((open) => !open)
-        : setOpen((open) => !open)
+        ? setOpenMobile((current) => !current)
+        : setOpen((current) => !current)
     }, [isMobile, setOpen, setOpenMobile])
 
     React.useEffect(() => {
@@ -103,9 +106,10 @@ const SidebarProvider = React.forwardRef<
           toggleSidebar()
         }
       }
-
-      window.addEventListener("keydown", handleKeyDown)
-      return () => window.removeEventListener("keydown", handleKeyDown)
+      if (typeof window !== 'undefined') {
+        window.addEventListener("keydown", handleKeyDown)
+        return () => window.removeEventListener("keydown", handleKeyDown)
+      }
     }, [toggleSidebar])
 
     const state = open ? "expanded" : "collapsed"
@@ -165,18 +169,17 @@ const Sidebar = React.forwardRef<
       collapsible = "offcanvas",
       className,
       children,
-      ...props // {...props} will include open and onOpenChange passed by parent
+      ...props
     },
     ref
   ) => {
-    // Get isMobile, openMobile, and setOpenMobile from context
     const { isMobile: contextIsMobile, openMobile: contextOpenMobile, setOpenMobile: contextSetOpenMobile } = useSidebar();
     const [mounted, setMounted] = React.useState(false);
 
     React.useEffect(() => {
       setMounted(true);
     }, []);
-
+    
     if (collapsible === "none") {
       return (
         <div
@@ -185,7 +188,7 @@ const Sidebar = React.forwardRef<
             className
           )}
           ref={ref}
-          {...props} // Pass all props including open/onOpenChange if needed
+          {...props}
         >
           {children}
         </div>
@@ -196,36 +199,38 @@ const Sidebar = React.forwardRef<
       if (!mounted) {
         return <div className="md:hidden w-[var(--sidebar-width-mobile)]" />; 
       }
-      // Use context's openMobile and setOpenMobile for the Sheet
       return (
         <Sheet open={contextOpenMobile} onOpenChange={contextSetOpenMobile}>
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            className="w-[var(--sidebar-width)] bg-sidebar p-0 text-sidebar-foreground shadow-lg flex flex-col" 
+            className={cn(
+              "w-[var(--sidebar-width)] bg-sidebar p-0 text-sidebar-foreground shadow-lg flex flex-col",
+              className 
+            )}
             style={
               {
-                "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
+                "--sidebar-width": SIDEBAR_WIDTH_MOBILE, 
               } as React.CSSProperties
             }
             side={side}
-            // Do not spread {...props} here as Sheet has its own open/onOpenChange
           >
-            {/* SheetHeader and close button are now part of SheetContent's responsibility
-                or should be passed as children. Let's assume children includes the header */}
+            {/* Accessibility Fix: Add a visually hidden title for the Sheet/Dialog */}
+            <SheetHeader className="sr-only">
+              <SheetTitle><Translate text="general.menu" defaultValue="القائمة الرئيسية" /></SheetTitle>
+            </SheetHeader>
             {children} 
           </SheetContent>
         </Sheet>
       )
     }
 
-    // Desktop sidebar logic (uses internal state 'open' from SidebarProvider for desktop collapse)
     const { state } = useSidebar(); 
     return (
       <div
         ref={ref}
         className="group peer hidden md:block text-sidebar-foreground"
-        data-state={state} // Use state from context for desktop
+        data-state={state}
         data-collapsible={state === "collapsed" ? collapsible : ""}
         data-variant={variant}
         data-side={side}
@@ -251,7 +256,7 @@ const Sidebar = React.forwardRef<
               : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
             className
           )}
-          {...props} // Pass all props here for the desktop div
+          {...props}
         >
           <div
             data-sidebar="sidebar"
@@ -583,7 +588,7 @@ const SidebarMenuButton = React.forwardRef<
         data-sidebar="menu-button"
         data-size={size}
         data-active={isActive}
-        className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
+        className={cn(sidebarMenuButtonVariants({ variant, size, className }))}
         {...props}
       >
         {children}
@@ -786,7 +791,7 @@ export {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarMenuSkeleton, // Corrected export
+  SidebarMenuSkeleton, 
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
