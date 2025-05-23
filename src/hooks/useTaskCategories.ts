@@ -59,6 +59,16 @@ export const useTaskCategories = (userId?: string) => {
             setLoading(false); // Set loading false *after* state update
         }, (error) => {
             console.error("useTaskCategories: Error fetching categories:", error);
+
+            // التعامل مع أخطاء الصلاحيات بعد تسجيل الخروج
+            if (error.code === 'permission-denied' || error.message?.includes('Missing or insufficient permissions')) {
+              console.warn("useTaskCategories: Permission denied, user may have been signed out.");
+              // لا نعرض toast في هذه الحالة لأنه قد يكون بسبب تسجيل الخروج
+              setLoading(false);
+              setCategories([]);
+              return;
+            }
+
             toast({ title: 'خطأ في تحميل الفئات', variant: 'destructive' });
             setLoading(false);
             setCategories([]); // Clear categories on error

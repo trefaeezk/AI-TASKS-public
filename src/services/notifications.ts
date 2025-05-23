@@ -222,6 +222,16 @@ export function subscribeToUserNotifications(
     },
     (error) => {
       console.error('Error subscribing to user notifications:', error);
+
+      // التعامل مع أخطاء الصلاحيات بعد تسجيل الخروج
+      if (error.code === 'permission-denied' || error.message?.includes('Missing or insufficient permissions')) {
+        console.warn('Notifications subscription: Permission denied, user may have been signed out.');
+        // لا نستدعي callback مع خطأ في هذه الحالة
+        return;
+      }
+
+      // استدعاء callback مع مصفوفة فارغة في حالة الأخطاء الأخرى
+      callback([]);
     }
   );
 

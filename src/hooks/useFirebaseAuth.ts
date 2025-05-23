@@ -141,13 +141,17 @@ export function useFirebaseAuth() {
     setLoading(true);
     setError(null);
     try {
+      // إضافة تأخير قصير للسماح لـ AuthContext بإلغاء listeners
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       await signOut(auth);
-       toast({
-            title: 'تم تسجيل الخروج.', // Signed out.
-        });
+      toast({
+        title: 'تم تسجيل الخروج.', // Signed out.
+      });
       setLoading(false);
       return true;
     } catch (err) {
+      console.error('Error during logout:', err);
       handleAuthError(err);
       return false;
     }

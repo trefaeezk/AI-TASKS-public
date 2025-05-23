@@ -139,6 +139,16 @@ export function TaskDataLoader({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
     }, (err) => {
         console.error("TaskDataLoader: Error fetching tasks:", err);
+
+        // التعامل مع أخطاء الصلاحيات بعد تسجيل الخروج
+        if (err.code === 'permission-denied' || err.message?.includes('Missing or insufficient permissions')) {
+          console.warn("TaskDataLoader: Permission denied, user may have been signed out.");
+          // لا نعرض خطأ للمستخدم في هذه الحالة لأنه قد يكون بسبب تسجيل الخروج
+          setIsLoading(false);
+          setTasks([]);
+          return;
+        }
+
         setError('حدث خطأ أثناء تحميل المهام.');
         setIsLoading(false);
         setTasks([]);

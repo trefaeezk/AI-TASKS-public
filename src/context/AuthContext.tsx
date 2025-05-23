@@ -12,6 +12,7 @@ import { db } from '@/lib/firebase';
 import { doc, onSnapshot, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { SystemType } from '@/types/system';
+import { firestoreListenerManager, handleFirestoreError } from '@/utils/firestoreListenerManager';
 
 interface UserClaims {
   role?: string;
@@ -201,7 +202,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       isProcessingAuthStateRef.current = true;
       console.log("[AuthContext] Auth state changed, user:", currentUser?.uid, "Current loading state:", loading);
-      
+
+      // إلغاء جميع Firestore listeners فوراً عند تغيير حالة المصادقة
+      firestoreListenerManager.removeAllListeners();
+      if (firestoreListener) {
+        console.log("[AuthContext] Cleaning up existing Firestore listener due to auth state change.");
+        firestoreListener();
+        setFirestoreListener(null);
+      }
+
       // Always set loading true at the beginning of auth state change processing
       // This ensures that if a user logs out and then logs in quickly,
       // the loading state is correctly managed.
@@ -266,9 +275,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       console.log("[AuthContext] Cleaning up auth state listener.");
       unsubscribeAuth();
+
+      // إلغاء جميع Firestore listeners
+      firestoreListenerManager.removeAllListeners();
+
       if (firestoreListener) {
         console.log("[AuthContext] Cleaning up Firestore listener.");
         firestoreListener();
+        setFirestoreListener(null);
       }
       isProcessingAuthStateRef.current = false; // Reset on cleanup
     };
@@ -309,21 +323,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             await refreshUserData(true);
           }
         }, (error: any) => {
-          console.error("[AuthContext] Error in Firestore listener for path:", docPath, error);
-          if (error.code === 'permission-denied' && docPath?.startsWith('organizations/')) {
-            console.warn(
-              `[AuthContext] Firestore permission denied for ${docPath}.
-              This user (UID: ${user?.uid}) may not have permission to read their own member document at this path.
-              Please check your Firestore security rules.
-              Example rule:
-              match /organizations/{orgId}/members/{memberId} {
-                allow read: if request.auth.uid == memberId;
+          const isPermissionError = handleFirestoreError(error, 'AuthContext');
+
+          if (isPermissionError) {
+            // إلغاء listener إذا كان الخطأ بسبب عدم وجود مصادقة
+            if (!auth.currentUser) {
+              console.log("[AuthContext] No authenticated user, cleaning up Firestore listener.");
+              if (firestoreListener) {
+                firestoreListener();
+                setFirestoreListener(null);
               }
-              Real-time role updates from this path might not work until rules are fixed.`
-            );
-            // Optionally, trigger a refreshUserData here less aggressively or not at all
-            // to avoid spamming if rules are indeed the issue.
-            // await refreshUserData(true); // Be cautious with this in a permission-denied loop
+              return;
+            }
+
+            if (docPath?.startsWith('organizations/')) {
+              console.warn(
+                `[AuthContext] Firestore permission denied for ${docPath}.
+                This user (UID: ${user?.uid}) may not have permission to read their own member document at this path.
+                Please check your Firestore security rules.
+                Example rule:
+                match /organizations/{orgId}/members/{memberId} {
+                  allow read: if request.auth.uid == memberId;
+                }
+                Real-time role updates from this path might not work until rules are fixed.`
+              );
+            }
           }
         });
         setFirestoreListener(() => unsubscribeFirestore);

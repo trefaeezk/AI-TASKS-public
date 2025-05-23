@@ -265,6 +265,7 @@ export default function SuggestionsPage() {
   useEffect(() => {
     if (!user) return;
     console.log(`[SuggestionsPage] Setting up real-time notifications listener for user ${user.uid}`);
+
     const unsubscribe = subscribeToUserNotifications(
       user.uid,
       (notifications) => {
@@ -277,9 +278,18 @@ export default function SuggestionsPage() {
       },
       { limit: 50 }
     );
+
+    // إضافة listener إلى مدير listeners
+    import('@/utils/firestoreListenerManager').then(({ firestoreListenerManager }) => {
+      firestoreListenerManager.addListener(`suggestions-${user.uid}`, unsubscribe);
+    });
+
     return () => {
       console.log(`[SuggestionsPage] Unsubscribing from real-time notifications`);
       unsubscribe();
+      import('@/utils/firestoreListenerManager').then(({ firestoreListenerManager }) => {
+        firestoreListenerManager.removeListener(`suggestions-${user.uid}`);
+      });
     };
   }, [user]);
 
