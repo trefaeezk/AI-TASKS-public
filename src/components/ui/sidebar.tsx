@@ -172,7 +172,7 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
-    const { isMobile, openMobile: contextOpenMobile, setOpenMobile: contextSetOpenMobile } = useSidebar();
+    const { isMobile, state, openMobile: contextOpenMobile, setOpenMobile: contextSetOpenMobile } = useSidebar();
     const [mounted, setMounted] = React.useState(false);
 
     React.useEffect(() => {
@@ -225,7 +225,6 @@ const Sidebar = React.forwardRef<
     }
 
     // Desktop view
-    const { state } = useSidebar();
     return (
       <div
         ref={ref}

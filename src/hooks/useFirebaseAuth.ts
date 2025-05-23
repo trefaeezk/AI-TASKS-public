@@ -52,11 +52,26 @@ export function useFirebaseAuth() {
          message = 'البريد الإلكتروني غير صالح.'; // Invalid email.
          break;
       case 'auth/popup-closed-by-user':
-          message = 'تم إغلاق نافذة تسجيل الدخول بواسطة المستخدم.'; // Popup closed by user.
+          message = 'تم إغلاق نافذة تسجيل الدخول بواسطة المستخدم.';
           break;
       case 'auth/cancelled-popup-request':
-          message = 'تم إلغاء طلب تسجيل الدخول.'; // Cancelled popup request.
-           break;
+          message = 'تم إلغاء طلب تسجيل الدخول.';
+          break;
+      case 'auth/unauthorized-domain':
+          message = 'النطاق غير مصرح به. يرجى المحاولة من الموقع الرسمي.';
+          break;
+      case 'auth/popup-blocked':
+          message = 'يرجى السماح للنوافذ المنبثقة في المتصفح.';
+          break;
+      case 'auth/network-request-failed':
+          message = 'تحقق من اتصالك بالإنترنت وحاول مرة أخرى.';
+          break;
+      case 'auth/too-many-requests':
+          message = 'تم تجاوز عدد المحاولات المسموح. يرجى المحاولة لاحقاً.';
+          break;
+      case 'auth/operation-not-allowed':
+          message = 'تسجيل الدخول عبر Google غير مفعل. يرجى التواصل مع الدعم.';
+          break;
       default:
         message = authError.message || message;
     }
