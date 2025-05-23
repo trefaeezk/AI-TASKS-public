@@ -71,6 +71,7 @@ const ar = {
     about: "حول",
     contact: "اتصل بنا",
     language: "اللغة",
+    changeLanguage: "تغيير اللغة",
     theme: "السمة",
     dark: "داكن",
     light: "فاتح",

@@ -43,13 +43,21 @@ export function LanguageSwitcher({
     return (
       <Button
         variant={variant}
-        size={size}
+        size={size === 'sm' ? 'icon' : size}
         onClick={toggleLanguage}
-        className={className}
-        title={t('general.language')}
+        className={`${className} ${size === 'sm' ? 'h-8 w-8' : ''}`}
+        title={`${t('general.changeLanguage', 'تغيير اللغة')} (${languageOptions.find(lang => lang.code === language)?.name || language})`}
       >
-        <Languages className="h-4 w-4 mr-2" />
-        {languageOptions.find(lang => lang.code === language)?.name || language}
+        {size === 'sm' ? (
+          // عرض أيقونة اللغة فقط للأحجام الصغيرة (مثل أيقونات الشريط العلوي)
+          <Languages className="h-4 w-4" />
+        ) : (
+          // عرض الأيقونة والنص للأحجام الكبيرة
+          <>
+            <Languages className="h-4 w-4 mr-2" />
+            {languageOptions.find(lang => lang.code === language)?.name || language}
+          </>
+        )}
       </Button>
     );
   }
@@ -64,7 +72,7 @@ export function LanguageSwitcher({
           setLanguage(newLang);
         }}
       >
-        <SelectTrigger className={size === 'sm' ? 'h-8 w-[120px]' : 'w-[150px]'}>
+        <SelectTrigger className={size === 'sm' ? 'h-8 w-[90px] text-xs' : 'w-[150px]'}>
           <SelectValue placeholder={t('general.language')} />
         </SelectTrigger>
         <SelectContent>
@@ -76,7 +84,7 @@ export function LanguageSwitcher({
                 ) : (
                   <span className={direction === 'rtl' ? 'ml-2' : 'mr-2'}>🇺🇸</span>
                 )}
-                <span>{lang.name}</span>
+                <span className={size === 'sm' ? 'text-xs' : ''}>{lang.name}</span>
               </div>
             </SelectItem>
           ))}

@@ -91,9 +91,8 @@ export function PermissionSidebarItem({
         asChild
         isActive={isActive}
         tooltip={tooltip || label}
-        onClick={handleLinkClick}
       >
-        <Link href={href}>
+        <Link href={href} onClick={handleLinkClick}>
           <Icon />
           <span>{label}</span>
         </Link>

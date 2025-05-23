@@ -315,12 +315,11 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen bg-background text-foreground">
         <Sidebar side="right" collapsible="icon">
-            <SidebarHeader className="p-2 flex items-center justify-between">
-                <div className="flex justify-between items-center w-full">
-                  <h2 className="text-lg font-semibold text-primary group-data-[collapsible=icon]:hidden">
+            <SidebarHeader className="p-2">
+                <div className="flex items-center w-full">
+                  <h2 className="text-base font-semibold text-primary group-data-[collapsible=icon]:hidden truncate flex-1">
                     <Translate text="general.appName" />
                   </h2>
-                  <LanguageSwitcher variant="default" size="sm" className="group-data-[collapsible=icon]:hidden" />
                 </div>
                 <span className="sr-only"><Translate text="general.menu" /></span>
             </SidebarHeader>
@@ -452,12 +451,15 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                             {user.email || t('sidebar.currentUserDefault')}
                         </span>
                     </div>
-                    <Badge
-                      variant={role === 'admin' || role === 'owner' ? "default" : role === 'user' ? "secondary" : "outline"}
-                      className="text-[10px] px-1.5 py-0 h-auto self-start"
-                    >
-                      {loadingPermissions ? t('sidebar.userRoleLoading') : t(`roles.${role}`, role) }
-                    </Badge>
+                    <div className="flex items-center justify-between w-full">
+                      <Badge
+                        variant={role === 'admin' || role === 'owner' ? "default" : role === 'user' ? "secondary" : "outline"}
+                        className="text-[10px] px-1.5 py-0 h-auto"
+                      >
+                        {loadingPermissions ? t('sidebar.userRoleLoading') : t(`roles.${role}`, role) }
+                      </Badge>
+                      <LanguageSwitcher variant="default" size="sm" />
+                    </div>
                   </>
                 ) : (
                   <Skeleton className="h-8 w-full bg-muted" />
