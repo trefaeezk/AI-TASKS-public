@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Building, Users, FolderTree, ListTodo, BarChart3, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 export default function OrganizationDashboard() {
@@ -42,17 +42,32 @@ export default function OrganizationDashboard() {
       }
 
       try {
+        // جلب بيانات المؤسسة أولاً للتحقق من الصلاحيات
+        const orgDoc = await getDoc(doc(db, 'organizations', organizationId));
+        if (!orgDoc.exists()) {
+          throw new Error('Organization not found');
+        }
+
+        const orgData = orgDoc.data();
+        console.log('Organization data:', orgData);
+        console.log('Current user ID:', user.uid);
+        console.log('Organization owner ID:', orgData.ownerId);
+
         // جلب عدد الأعضاء
+        console.log('Fetching members...');
         const membersQuery = query(
           collection(db, 'organizations', organizationId, 'members')
         );
         const membersSnapshot = await getDocs(membersQuery);
+        console.log('Members fetched successfully:', membersSnapshot.size);
 
         // جلب عدد الأقسام
+        console.log('Fetching departments...');
         const departmentsQuery = query(
           collection(db, 'organizations', organizationId, 'departments')
         );
         const departmentsSnapshot = await getDocs(departmentsQuery);
+        console.log('Departments fetched successfully:', departmentsSnapshot.size);
 
         // جلب إحصائيات المهام
         const tasksQuery = query(
@@ -95,11 +110,21 @@ export default function OrganizationDashboard() {
         setRecentTasks(recentTasksData);
       } catch (error) {
         console.error('Error fetching organization data:', error);
-        toast({
-          title: 'خطأ في جلب بيانات المؤسسة',
-          description: 'حدث خطأ أثناء محاولة جلب بيانات المؤسسة.',
-          variant: 'destructive',
-        });
+
+        // معالجة أخطاء الصلاحيات
+        if (error.code === 'permission-denied') {
+          toast({
+            title: 'خطأ في الصلاحيات',
+            description: 'ليس لديك صلاحية للوصول إلى بيانات هذه المؤسسة.',
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'خطأ في جلب بيانات المؤسسة',
+            description: 'حدث خطأ أثناء محاولة جلب بيانات المؤسسة.',
+            variant: 'destructive',
+          });
+        }
       } finally {
         setLoading(false);
       }

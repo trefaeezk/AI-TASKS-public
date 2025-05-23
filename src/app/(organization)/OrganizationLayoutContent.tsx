@@ -33,7 +33,7 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Translate } from '@/components/Translate';
 
 import { NotificationsPopover } from '@/components/notifications/NotificationsPopover';
-import Link from 'next/link';
+// import Link from 'next/link'; // غير مستخدم حالياً
 
 export function OrganizationLayoutContent({ children }: { children: ReactNode }) {
   const { user, userClaims } = useAuth();
@@ -90,12 +90,12 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
               <span><Translate text="sidebar.tasks" /></span>
             </SidebarMenuLink>
 
-            <SidebarMenuLink href="/org/reports" active={pathname.startsWith('/org/reports')}>
+            <SidebarMenuLink href="/org/reports" active={pathname?.startsWith('/org/reports') || false}>
               <FileText className="ml-2 h-5 w-5" />
               <span><Translate text="sidebar.reports" /></span>
             </SidebarMenuLink>
 
-            <SidebarMenuLink href="/org/meetings" active={pathname.startsWith('/org/meetings')}>
+            <SidebarMenuLink href="/org/meetings" active={pathname?.startsWith('/org/meetings') || false}>
               <Calendar className="ml-2 h-5 w-5" />
               <span><Translate text="sidebar.meetings" /></span>
             </SidebarMenuLink>
@@ -117,13 +117,13 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
               <span><Translate text="sidebar.members" /></span>
             </SidebarMenuLink>
 
-            <SidebarMenuLink href="/org/departments" active={pathname.startsWith('/org/departments')}>
+            <SidebarMenuLink href="/org/departments" active={pathname?.startsWith('/org/departments') || false}>
               <FolderTree className="ml-2 h-5 w-5" />
               <span><Translate text="sidebar.departments" /></span>
             </SidebarMenuLink>
 
             {(isOwner || isAdmin) && (
-              <SidebarMenuLink href="/org/settings" active={pathname.startsWith('/org/settings')}>
+              <SidebarMenuLink href="/org/settings" active={pathname?.startsWith('/org/settings') || false}>
                 <Settings className="ml-2 h-5 w-5" />
                 <span><Translate text="sidebar.organizationSettings" /></span>
               </SidebarMenuLink>
@@ -182,11 +182,12 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 relative group"
-                title={t('sidebar.smartSuggestionsTooltip')}
-                onClick={(e) => e.preventDefault()} // This seems like a temp thing, maybe needs a Link?
+                title={t('suggestions.smartSuggestions')}
+                onClick={(e) => e.preventDefault()}
+                disabled
               >
-                <Wand2 className="h-4 w-4" />
-                <span className="sr-only"><Translate text="sidebar.smartSuggestions" /></span>
+                <Wand2 className="h-4 w-4 opacity-50" />
+                <span className="sr-only"><Translate text="suggestions.smartSuggestions" /></span>
                 <span className="absolute top-full right-0 mt-1 w-32 bg-popover text-popover-foreground text-xs p-1 rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50 text-center">
                   <Translate text="tools.underDevelopment" />
                 </span>

@@ -4,9 +4,11 @@
 export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Loader2, FileText, Edit, Trash2, AlertTriangle, CalendarDays, CalendarCheck2, ListTodo, PauseCircle, CheckCircle2, Settings, Filter, Plus, Wand2 } from 'lucide-react';
+import { Loader2, FileText, Edit, Trash2, AlertTriangle, CalendarDays, CalendarCheck2, ListTodo, PauseCircle, CheckCircle2, Settings, Filter, Plus, Wand2, BarChart3, Users, Clock, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/context/AuthContext';
@@ -18,6 +20,9 @@ import { collection, query, where, onSnapshot, orderBy, Timestamp, doc, updateDo
 import { firestoreListenerManager, handleFirestoreError } from '@/utils/firestoreListenerManager';
 import { useToast } from '@/hooks/use-toast';
 import { EditTaskSheet } from '@/components/EditTaskSheet';
+import { CategoryFilter } from '@/components/CategoryFilter';
+import { DateFilter } from '@/components/DateFilter';
+import { OkrFilter } from '@/components/OkrFilter';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -245,6 +250,25 @@ export default function OrganizationTasksPage() {
     );
   }
 
+  // حساب الإحصائيات
+  const stats = useMemo(() => {
+    const total = tasks.length;
+    const completed = tasks.filter(task => task.status === 'completed').length;
+    const pending = tasks.filter(task => task.status === 'pending').length;
+    const overdue = tasks.filter(task => {
+      if (!task.dueDate) return false;
+      return task.dueDate < new Date() && task.status !== 'completed';
+    }).length;
+    const today = tasks.filter(task => {
+      if (!task.dueDate) return false;
+      const today = new Date();
+      const taskDate = new Date(task.dueDate);
+      return taskDate.toDateString() === today.toDateString();
+    }).length;
+
+    return { total, completed, pending, overdue, today };
+  }, [tasks]);
+
   // عرض المهام حسب الفئة المحددة
   const tasksToDisplay = categorizedTasks[selectedCategory] || [];
 
@@ -281,111 +305,251 @@ export default function OrganizationTasksPage() {
         </div>
       </div>
 
-      {/* عرض علامات التبويب للأجهزة المحمولة */}
-      <div className="md:hidden mb-4">
-        <Tabs
-          value={selectedCategory}
-          onValueChange={(value) => setSelectedCategory(value as TaskCategory)}
-          className="w-full"
-        >
-          <TabsContent value="today" className="mt-0">
-            <h2 className="text-lg font-semibold mb-2 flex items-center">
-              <CalendarCheck2 className="ml-2 h-5 w-5 text-blue-500" />
-              مهام اليوم
-            </h2>
-          </TabsContent>
-          <TabsContent value="upcoming" className="mt-0">
-            <h2 className="text-lg font-semibold mb-2 flex items-center">
-              <CalendarDays className="ml-2 h-5 w-5 text-green-500" />
-              المهام القادمة
-            </h2>
-          </TabsContent>
-          <TabsContent value="overdue" className="mt-0">
-            <h2 className="text-lg font-semibold mb-2 flex items-center">
-              <AlertTriangle className="ml-2 h-5 w-5 text-red-500" />
-              المهام المتأخرة
-            </h2>
-          </TabsContent>
-          <TabsContent value="scheduled" className="mt-0">
-            <h2 className="text-lg font-semibold mb-2 flex items-center">
-              <CalendarDays className="ml-2 h-5 w-5 text-purple-500" />
-              المهام المجدولة
-            </h2>
-          </TabsContent>
-          <TabsContent value="pending" className="mt-0">
-            <h2 className="text-lg font-semibold mb-2 flex items-center">
-              <FileText className="ml-2 h-5 w-5 text-orange-500" />
-              المهام المعلقة
-            </h2>
-          </TabsContent>
-          <TabsContent value="hold" className="mt-0">
-            <h2 className="text-lg font-semibold mb-2 flex items-center">
-              <PauseCircle className="ml-2 h-5 w-5 text-yellow-500" />
-              المهام المتوقفة
-            </h2>
-          </TabsContent>
-          <TabsContent value="completed" className="mt-0">
-            <h2 className="text-lg font-semibold mb-2 flex items-center">
-              <CheckCircle2 className="ml-2 h-5 w-5 text-green-500" />
-              المهام المكتملة
-            </h2>
-          </TabsContent>
-        </Tabs>
+      {/* بطاقات الإحصائيات */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center">
+              <ListTodo className="h-4 w-4 text-muted-foreground ml-2" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">إجمالي المهام</p>
+                <p className="text-2xl font-bold">{stats.total}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center">
+              <CalendarCheck2 className="h-4 w-4 text-blue-500 ml-2" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">مهام اليوم</p>
+                <p className="text-2xl font-bold text-blue-500">{stats.today}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center">
+              <Clock className="h-4 w-4 text-orange-500 ml-2" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">قيد التنفيذ</p>
+                <p className="text-2xl font-bold text-orange-500">{stats.pending}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center">
+              <AlertTriangle className="h-4 w-4 text-red-500 ml-2" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">متأخرة</p>
+                <p className="text-2xl font-bold text-red-500">{stats.overdue}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center">
+              <CheckCircle2 className="h-4 w-4 text-green-500 ml-2" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">مكتملة</p>
+                <p className="text-2xl font-bold text-green-500">{stats.completed}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* عرض المهام */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={tasksToDisplay.map(task => task.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="space-y-4">
-            {tasksToDisplay.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                لا توجد مهام في هذه الفئة
+      {/* الفلاتر */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center">
+            <Filter className="ml-2 h-5 w-5" />
+            الفلاتر
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">تصفية حسب التاريخ</label>
+              <div className="text-xs text-muted-foreground">
+                {dateFilter.startDate && dateFilter.endDate ?
+                  `${dateFilter.startDate.toLocaleDateString()} - ${dateFilter.endDate.toLocaleDateString()}` :
+                  'جميع التواريخ'
+                }
               </div>
-            ) : (
-              tasksToDisplay.map(task => (
-                <TaskCardTemp
-                  key={task.id}
-                  id={task.id}
-                  task={task}
-                  onEdit={() => {
-                    setTaskToEdit(task);
-                    setIsEditSheetOpen(true);
-                  }}
-                  onDelete={() => {
-                    setTaskToDelete(task);
-                    setIsDeleteDialogOpen(true);
-                  }}
-                  onStatusChange={(taskId, newStatus) => {
-                    const updatedTask = { ...task, status: newStatus };
-                    updateTaskOptimistic(task.id, updatedTask);
-
-                    const taskRef = doc(db, 'tasks', task.id);
-                    updateDoc(taskRef, {
-                      status: newStatus,
-                      updatedAt: Timestamp.now()
-                    }).catch(error => {
-                      console.error(`Error updating task status for ${task.id}:`, error);
-                      revertTaskOptimistic(task.id, task);
-                      toast({
-                        title: 'خطأ في تحديث حالة المهمة',
-                        description: 'حدث خطأ أثناء محاولة تحديث حالة المهمة.',
-                        variant: 'destructive',
-                      });
-                    });
-                  }}
-                />
-              ))
-            )}
+            </div>
+            <CategoryFilter
+              userId={user?.uid || ''}
+              selectedCategory={categoryFilter}
+              onSelectCategory={setCategoryFilter}
+            />
+            <OkrFilter
+              value={okrFilter ? 'linked' : 'all'}
+              onChange={(value) => setOkrFilter(value !== 'all')}
+              label="تصفية حسب OKR"
+              organizationId={organizationId}
+            />
           </div>
-        </SortableContext>
-      </DndContext>
+        </CardContent>
+      </Card>
+
+      {/* علامات التبويب للفئات */}
+      <Card className="mb-6">
+        <CardContent className="p-0">
+          <Tabs
+            value={selectedCategory}
+            onValueChange={(value) => setSelectedCategory(value as TaskCategory)}
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-4 md:grid-cols-7 h-auto p-1">
+              <TabsTrigger value="today" className="flex flex-col items-center p-2 text-xs">
+                <CalendarCheck2 className="h-4 w-4 mb-1 text-blue-500" />
+                <span>اليوم</span>
+                <Badge variant="secondary" className="text-xs">{categorizedTasks.today?.length || 0}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="upcoming" className="flex flex-col items-center p-2 text-xs">
+                <CalendarDays className="h-4 w-4 mb-1 text-green-500" />
+                <span>القادمة</span>
+                <Badge variant="secondary" className="text-xs">{categorizedTasks.upcoming?.length || 0}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="overdue" className="flex flex-col items-center p-2 text-xs">
+                <AlertTriangle className="h-4 w-4 mb-1 text-red-500" />
+                <span>متأخرة</span>
+                <Badge variant="destructive" className="text-xs">{categorizedTasks.overdue?.length || 0}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="scheduled" className="flex flex-col items-center p-2 text-xs">
+                <CalendarDays className="h-4 w-4 mb-1 text-purple-500" />
+                <span>مجدولة</span>
+                <Badge variant="secondary" className="text-xs">{categorizedTasks.scheduled?.length || 0}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="pending" className="flex flex-col items-center p-2 text-xs">
+                <FileText className="h-4 w-4 mb-1 text-orange-500" />
+                <span>معلقة</span>
+                <Badge variant="secondary" className="text-xs">{categorizedTasks.pending?.length || 0}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="hold" className="flex flex-col items-center p-2 text-xs">
+                <PauseCircle className="h-4 w-4 mb-1 text-yellow-500" />
+                <span>متوقفة</span>
+                <Badge variant="secondary" className="text-xs">{categorizedTasks.hold?.length || 0}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="completed" className="flex flex-col items-center p-2 text-xs">
+                <CheckCircle2 className="h-4 w-4 mb-1 text-green-500" />
+                <span>مكتملة</span>
+                <Badge variant="secondary" className="text-xs">{categorizedTasks.completed?.length || 0}</Badge>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* عرض المهام */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center">
+              {categoryInfo[selectedCategory]?.icon &&
+                React.createElement(categoryInfo[selectedCategory].icon, {
+                  className: `ml-2 h-5 w-5 ${categoryInfo[selectedCategory].color}`
+                })
+              }
+              {categoryInfo[selectedCategory]?.title || 'المهام'}
+              <Badge variant="outline" className="mr-2">
+                {tasksToDisplay.length}
+              </Badge>
+            </div>
+            {tasksToDisplay.length > 0 && (
+              <div className="text-sm text-muted-foreground">
+                اسحب لإعادة الترتيب
+              </div>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={tasksToDisplay.map(task => task.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-4">
+                {tasksToDisplay.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="flex flex-col items-center">
+                      {categoryInfo[selectedCategory]?.icon &&
+                        React.createElement(categoryInfo[selectedCategory].icon, {
+                          className: `h-12 w-12 mb-4 ${categoryInfo[selectedCategory].color} opacity-50`
+                        })
+                      }
+                      <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                        لا توجد مهام في هذه الفئة
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        ابدأ بإنشاء مهمة جديدة أو استخدم الفلاتر لعرض مهام أخرى
+                      </p>
+                      <Button
+                        onClick={() => {
+                          setTaskToEdit(null);
+                          setIsEditSheetOpen(true);
+                        }}
+                        variant="outline"
+                      >
+                        <Plus className="ml-2 h-4 w-4" />
+                        إنشاء مهمة جديدة
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  tasksToDisplay.map(task => (
+                    <TaskCardTemp
+                      key={task.id}
+                      id={task.id}
+                      task={task}
+                      onEdit={() => {
+                        setTaskToEdit(task);
+                        setIsEditSheetOpen(true);
+                      }}
+                      onDelete={() => {
+                        setTaskToDelete(task);
+                        setIsDeleteDialogOpen(true);
+                      }}
+                      onStatusChange={(taskId, newStatus) => {
+                        const updatedTask = { ...task, status: newStatus };
+                        updateTaskOptimistic(task.id, updatedTask);
+
+                        const taskRef = doc(db, 'tasks', task.id);
+                        updateDoc(taskRef, {
+                          status: newStatus,
+                          updatedAt: Timestamp.now()
+                        }).catch(error => {
+                          console.error(`Error updating task status for ${task.id}:`, error);
+                          revertTaskOptimistic(task.id, task);
+                          toast({
+                            title: 'خطأ في تحديث حالة المهمة',
+                            description: 'حدث خطأ أثناء محاولة تحديث حالة المهمة.',
+                            variant: 'destructive',
+                          });
+                        });
+                      }}
+                    />
+                  ))
+                )}
+              </div>
+            </SortableContext>
+          </DndContext>
+        </CardContent>
+      </Card>
 
       {/* مربع حوار تأكيد الحذف */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

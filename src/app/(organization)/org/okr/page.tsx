@@ -447,7 +447,7 @@ export default function OkrPage() {
                         <SelectValue placeholder="اختر القسم" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">المؤسسة (بدون قسم)</SelectItem>
+                        <SelectItem value="none">المؤسسة (بدون قسم)</SelectItem>
                         {departments.map((dept) => (
                           <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
                         ))}

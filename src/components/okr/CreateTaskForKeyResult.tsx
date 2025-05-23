@@ -337,7 +337,7 @@ export function CreateTaskForKeyResult({
                   <SelectValue placeholder="اختر قسم" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">بدون قسم</SelectItem>
+                  <SelectItem value="none">بدون قسم</SelectItem>
                   {departments.map((department) => (
                     <SelectItem key={department.id} value={department.id}>
                       {department.name}
@@ -356,7 +356,7 @@ export function CreateTaskForKeyResult({
                   <SelectValue placeholder="اختر فئة" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">بدون فئة</SelectItem>
+                  <SelectItem value="none">بدون فئة</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}

@@ -122,7 +122,7 @@ export function CreateMeetingForm({ onSuccess, organizationId, departmentId }: C
 
   // تحديث قائمة الأعضاء المحددين عند تغيير القسم
   useEffect(() => {
-    if (selectedDepartment) {
+    if (selectedDepartment && selectedDepartment !== 'none') {
       // تحديد أعضاء القسم تلقائيًا
       const departmentMembers = members
         .filter(member => member.departmentId === selectedDepartment)
@@ -155,7 +155,7 @@ export function CreateMeetingForm({ onSuccess, organizationId, departmentId }: C
   // تقديم النموذج
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user || !organizationId) {
       toast({
         title: 'خطأ',
@@ -164,7 +164,7 @@ export function CreateMeetingForm({ onSuccess, organizationId, departmentId }: C
       });
       return;
     }
-    
+
     if (!title) {
       toast({
         title: 'خطأ',
@@ -173,13 +173,13 @@ export function CreateMeetingForm({ onSuccess, organizationId, departmentId }: C
       });
       return;
     }
-    
+
     try {
       setLoading(true);
-      
+
       const startDateTime = createStartDateTime();
       const endDateTime = createEndDateTime(startDateTime);
-      
+
       // إعداد المشاركين
       const participants = selectedMembers.map(memberId => {
         const member = members.find(m => m.uid === memberId);
@@ -190,7 +190,7 @@ export function CreateMeetingForm({ onSuccess, organizationId, departmentId }: C
           role: member?.role,
         };
       });
-      
+
       // إضافة المستخدم الحالي إذا لم يكن موجودًا
       if (!participants.some(p => p.userId === user.uid)) {
         participants.push({
@@ -200,7 +200,7 @@ export function CreateMeetingForm({ onSuccess, organizationId, departmentId }: C
           role: userClaims?.role || '',
         });
       }
-      
+
       // إنشاء بيانات الاجتماع
       const meetingData: Omit<Meeting, 'id'> = {
         title,
@@ -213,7 +213,7 @@ export function CreateMeetingForm({ onSuccess, organizationId, departmentId }: C
         isOnline,
         meetingLink: isOnline ? meetingLink : '',
         organizationId,
-        departmentId: selectedDepartment,
+        departmentId: selectedDepartment === 'none' ? undefined : selectedDepartment,
         createdBy: user.uid,
         participants,
         agenda: [],
@@ -228,15 +228,15 @@ export function CreateMeetingForm({ onSuccess, organizationId, departmentId }: C
           count: recurringCount,
         } : undefined,
       };
-      
+
       // إنشاء الاجتماع
       await createMeeting(meetingData);
-      
+
       toast({
         title: 'تم إنشاء الاجتماع',
         description: 'تم إنشاء الاجتماع بنجاح',
       });
-      
+
       onSuccess();
     } catch (error) {
       console.error('Error creating meeting:', error);
@@ -292,15 +292,15 @@ export function CreateMeetingForm({ onSuccess, organizationId, departmentId }: C
 
         <div className="space-y-2">
           <Label>القسم</Label>
-          <Select 
-            value={selectedDepartment} 
+          <Select
+            value={selectedDepartment}
             onValueChange={setSelectedDepartment}
           >
             <SelectTrigger>
               <SelectValue placeholder="اختر القسم (اختياري)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">بدون قسم (عام للمؤسسة)</SelectItem>
+              <SelectItem value="none">بدون قسم (عام للمؤسسة)</SelectItem>
               {departments.map((dept) => (
                 <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
               ))}
@@ -394,13 +394,13 @@ export function CreateMeetingForm({ onSuccess, organizationId, departmentId }: C
             onCheckedChange={setIsRecurring}
           />
         </div>
-        
+
         {isRecurring && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
             <div>
               <Label>التكرار</Label>
-              <Select 
-                value={recurringFrequency} 
+              <Select
+                value={recurringFrequency}
                 onValueChange={(value) => setRecurringFrequency(value as 'daily' | 'weekly' | 'monthly')}
               >
                 <SelectTrigger>
@@ -413,7 +413,7 @@ export function CreateMeetingForm({ onSuccess, organizationId, departmentId }: C
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
               <Label>الفاصل</Label>
               <Input
@@ -423,7 +423,7 @@ export function CreateMeetingForm({ onSuccess, organizationId, departmentId }: C
                 onChange={(e) => setRecurringInterval(parseInt(e.target.value))}
               />
             </div>
-            
+
             <div>
               <Label>عدد المرات</Label>
               <Input

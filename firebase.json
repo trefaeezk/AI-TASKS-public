@@ -30,6 +30,10 @@
       "maxInstances": 10
     }
   },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
   "functions": {
     "source": "functions",
     "ignore": [

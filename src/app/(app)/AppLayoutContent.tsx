@@ -479,21 +479,21 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                         <FilterPopover />
                         {user && <NotificationsPopover />}
                         {user && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 relative group" // Added relative and group
-                            title={t('sidebar.smartSuggestionsTooltip')}
-                          >
-                            <Link href="/suggestions">
+                          <Link href="/suggestions">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 relative group"
+                              title={t('suggestions.smartSuggestions')}
+                            >
                               <Wand2 className="h-4 w-4" />
-                              <span className="sr-only"><Translate text="sidebar.smartSuggestions" /></span>
-                            </Link>
-                            {/* Tooltip using Tailwind classes for positioning and opacity */}
-                            <span className="absolute top-full right-0 mt-1 w-max bg-popover text-popover-foreground text-xs p-1 rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50 text-center">
-                               <Translate text="tools.underDevelopment" />
-                            </span>
-                          </Button>
+                              <span className="sr-only"><Translate text="suggestions.smartSuggestions" /></span>
+                              {/* Tooltip للاقتراحات الذكية */}
+                              <span className="absolute top-full right-0 mt-1 w-max bg-popover text-popover-foreground text-xs p-1 rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50 text-center">
+                                <Translate text="suggestions.smartSuggestions" />
+                              </span>
+                            </Button>
+                          </Link>
                         )}
                     </div>
                     <div className="flex items-center gap-2">

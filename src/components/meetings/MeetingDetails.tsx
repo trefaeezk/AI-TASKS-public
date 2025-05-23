@@ -32,16 +32,16 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
   const [notes, setNotes] = useState(meeting.notes || '');
   const [summary, setSummary] = useState(meeting.summary || '');
   const [status, setStatus] = useState<MeetingStatus>(meeting.status);
-  
+
   // بيانات بند جدول الأعمال الجديد
   const [newAgendaTitle, setNewAgendaTitle] = useState('');
   const [newAgendaDescription, setNewAgendaDescription] = useState('');
   const [newAgendaDuration, setNewAgendaDuration] = useState(15);
-  
+
   // بيانات القرار الجديد
   const [newDecisionDescription, setNewDecisionDescription] = useState('');
   const [newDecisionResponsible, setNewDecisionResponsible] = useState('');
-  
+
   // بيانات المهمة الجديدة
   const [newTaskDescription, setNewTaskDescription] = useState('');
   const [newTaskAssignee, setNewTaskAssignee] = useState('');
@@ -51,7 +51,7 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
   const isEngineer = userClaims?.engineer === true;
   const isSupervisor = userClaims?.supervisor === true;
   const canEdit = isOwner || isAdmin || isEngineer || isSupervisor || meeting.createdBy === user?.uid;
-  
+
   // تنسيق حالة الاجتماع
   const formatMeetingStatus = (status: MeetingStatus) => {
     switch (status) {
@@ -62,7 +62,7 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
       default: return status;
     }
   };
-  
+
   // الحصول على لون الحالة
   const getStatusColor = (status: MeetingStatus) => {
     switch (status) {
@@ -73,7 +73,7 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
-  
+
   // تنسيق حالة الحضور
   const formatAttendanceStatus = (status?: AttendanceStatus) => {
     switch (status) {
@@ -84,7 +84,7 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
       default: return 'غير محدد';
     }
   };
-  
+
   // الحصول على لون حالة الحضور
   const getAttendanceStatusColor = (status?: AttendanceStatus) => {
     switch (status) {
@@ -95,11 +95,11 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
-  
+
   // تحديث حالة الاجتماع
   const handleUpdateStatus = async (newStatus: MeetingStatus) => {
     if (!user) return;
-    
+
     try {
       setLoading(true);
       await updateMeeting(meeting.id, { status: newStatus });
@@ -119,11 +119,11 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
       setLoading(false);
     }
   };
-  
+
   // حفظ الملاحظات والملخص
   const handleSaveNotes = async () => {
     if (!user) return;
-    
+
     try {
       setLoading(true);
       await updateMeeting(meeting.id, { notes, summary });
@@ -142,14 +142,14 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
       setLoading(false);
     }
   };
-  
+
   // إضافة بند جدول أعمال جديد
   const handleAddAgendaItem = async () => {
     if (!user || !newAgendaTitle) return;
-    
+
     try {
       setLoading(true);
-      
+
       const newItem: AgendaItem = {
         id: uuidv4(),
         title: newAgendaTitle,
@@ -157,13 +157,13 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
         duration: newAgendaDuration,
         status: 'pending',
       };
-      
+
       await addAgendaItem(meeting.id, newItem);
-      
+
       setNewAgendaTitle('');
       setNewAgendaDescription('');
       setNewAgendaDuration(15);
-      
+
       toast({
         title: 'تمت الإضافة',
         description: 'تم إضافة بند جدول الأعمال بنجاح',
@@ -179,28 +179,28 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
       setLoading(false);
     }
   };
-  
+
   // إضافة قرار جديد
   const handleAddDecision = async () => {
     if (!user || !newDecisionDescription) return;
-    
+
     try {
       setLoading(true);
-      
+
       const responsible = meeting.participants.find(p => p.userId === newDecisionResponsible);
-      
+
       const newDecision: Omit<MeetingDecision, 'id'> = {
         description: newDecisionDescription,
         responsibleUserId: newDecisionResponsible || undefined,
         responsibleUserName: responsible?.name,
         status: 'pending',
       };
-      
+
       await addMeetingDecision(meeting.id, newDecision);
-      
+
       setNewDecisionDescription('');
       setNewDecisionResponsible('');
-      
+
       toast({
         title: 'تمت الإضافة',
         description: 'تم إضافة القرار بنجاح',
@@ -216,28 +216,28 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
       setLoading(false);
     }
   };
-  
+
   // إضافة مهمة جديدة
   const handleAddTask = async () => {
     if (!user || !newTaskDescription) return;
-    
+
     try {
       setLoading(true);
-      
+
       const assignee = meeting.participants.find(p => p.userId === newTaskAssignee);
-      
+
       const newTask: Omit<MeetingTask, 'id'> = {
         description: newTaskDescription,
         assignedToUserId: newTaskAssignee || undefined,
         assignedToUserName: assignee?.name,
         status: 'pending',
       };
-      
+
       await addMeetingTask(meeting.id, newTask);
-      
+
       setNewTaskDescription('');
       setNewTaskAssignee('');
-      
+
       toast({
         title: 'تمت الإضافة',
         description: 'تم إضافة المهمة بنجاح',
@@ -554,7 +554,7 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
                         <SelectValue placeholder="اختر المسؤول" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">بدون مسؤول</SelectItem>
+                        <SelectItem value="none">بدون مسؤول</SelectItem>
                         {meeting.participants.map((participant) => (
                           <SelectItem key={participant.userId} value={participant.userId}>
                             {participant.name}
