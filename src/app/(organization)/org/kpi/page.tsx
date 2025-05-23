@@ -7,6 +7,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart3, AlertTriangle, Target, CheckCircle2, Clock, PauseCircle } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, Timestamp, orderBy } from 'firebase/firestore';
+import { firestoreListenerManager, handleFirestoreError } from '@/utils/firestoreListenerManager';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -106,14 +107,23 @@ export default function OrganizationKpiPage() {
         setIsLoading(false);
       },
       (err) => {
-        console.error('Error fetching tasks for KPI:', err);
-        setError('حدث خطأ أثناء جلب بيانات المهام. يرجى المحاولة مرة أخرى.');
+        const isPermissionError = handleFirestoreError(err, 'OrganizationKpiPage');
+
+        if (!isPermissionError) {
+          setError('حدث خطأ أثناء جلب بيانات المهام. يرجى المحاولة مرة أخرى.');
+        }
         setIsLoading(false);
       }
     );
 
+    // إضافة listener إلى مدير listeners
+    firestoreListenerManager.addListener(`org-kpi-${organizationId}`, unsubscribe);
+
     // Cleanup subscription on unmount
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      firestoreListenerManager.removeListener(`org-kpi-${organizationId}`);
+    };
   }, [user, organizationId]);
 
   // --- KPI Calculations ---

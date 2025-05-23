@@ -141,8 +141,13 @@ export function useFirebaseAuth() {
     setLoading(true);
     setError(null);
     try {
+      // إلغاء جميع Firestore listeners قبل تسجيل الخروج
+      const { firestoreListenerManager } = await import('@/utils/firestoreListenerManager');
+      console.log('[useFirebaseAuth] Cleaning up all Firestore listeners before logout');
+      firestoreListenerManager.removeAllListeners();
+
       // إضافة تأخير قصير للسماح لـ AuthContext بإلغاء listeners
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       await signOut(auth);
       toast({

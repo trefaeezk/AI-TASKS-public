@@ -11,6 +11,7 @@ import { getApp, getApps, initializeApp } from 'firebase/app';
 import { firebaseConfig } from '../../../../firebaseConfig';
 import { collection, onSnapshot, query, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { firestoreListenerManager, handleFirestoreError } from '@/utils/firestoreListenerManager';
 import { auth } from '@/config/firebase';
 import { ExtendedUser } from '@/types/user';
 
@@ -161,18 +162,24 @@ export default function AdminDashboardPage() {
           }
         },
         (err) => {
-          console.error("[AdminPage Client] Error in Firestore users listener:", err);
-          const errorMessage = `فشل في جلب بيانات المستخدمين: ${err.message || 'سبب غير معروف'}.`;
-          setError(errorMessage);
-          toast({
-            title: 'فشل تحميل المستخدمين',
-            description: errorMessage,
-            variant: 'destructive',
-          });
+          const isPermissionError = handleFirestoreError(err, 'AdminPage');
+
+          if (!isPermissionError) {
+            const errorMessage = `فشل في جلب بيانات المستخدمين: ${err.message || 'سبب غير معروف'}.`;
+            setError(errorMessage);
+            toast({
+              title: 'فشل تحميل المستخدمين',
+              description: errorMessage,
+              variant: 'destructive',
+            });
+          }
           setUsers([]);
           setLoading(false);
         }
       );
+
+      // إضافة listener إلى مدير listeners
+      firestoreListenerManager.addListener('admin-users', unsubscribe);
 
       return unsubscribe;
     } catch (err: any) {
@@ -200,6 +207,7 @@ export default function AdminDashboardPage() {
     return () => {
       console.log("[AdminPage Client] useEffect cleanup: unsubscribing from Firestore listener.");
       unsubscribe();
+      firestoreListenerManager.removeListener('admin-users');
     };
   }, [setupUsersListener]); // الاعتماد فقط على دالة setupUsersListener المستقرة
 

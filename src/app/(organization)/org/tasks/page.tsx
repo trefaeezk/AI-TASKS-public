@@ -15,6 +15,7 @@ import type { TaskType, TaskStatus, TaskFirestoreData, DurationUnit, TaskCategor
 import { useTaskPageContext, type TaskCategory, categoryInfo, categoryOrder } from '@/context/TaskPageContext';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, orderBy, Timestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { firestoreListenerManager, handleFirestoreError } from '@/utils/firestoreListenerManager';
 import { useToast } from '@/hooks/use-toast';
 import { EditTaskSheet } from '@/components/EditTaskSheet';
 import {
@@ -144,18 +145,27 @@ export default function OrganizationTasksPage() {
         setLoading(false);
       },
       (error) => {
-        console.error('Error fetching tasks:', error);
-        toast({
-          title: 'خطأ في جلب المهام',
-          description: 'حدث خطأ أثناء محاولة جلب المهام.',
-          variant: 'destructive',
-        });
+        const isPermissionError = handleFirestoreError(error, 'OrganizationTasksPage');
+
+        if (!isPermissionError) {
+          toast({
+            title: 'خطأ في جلب المهام',
+            description: 'حدث خطأ أثناء محاولة جلب المهام.',
+            variant: 'destructive',
+          });
+        }
         setLoading(false);
       }
     );
 
+    // إضافة listener إلى مدير listeners
+    firestoreListenerManager.addListener(`org-tasks-${organizationId}`, unsubscribe);
+
     // تنظيف المستمع عند تفكيك المكون
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      firestoreListenerManager.removeListener(`org-tasks-${organizationId}`);
+    };
   }, [user, organizationId, setTasksDirectly, toast]);
 
   // معالجة حدث انتهاء السحب

@@ -9,6 +9,7 @@ import { db } from '@/config/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/use-auth';
 import { Loader2 } from 'lucide-react';
+import { handleFirestoreError } from '@/utils/firestoreListenerManager';
 
 interface SystemSetupCheckProps {
   children: React.ReactNode;
@@ -26,29 +27,44 @@ export default function SystemSetupCheck({ children }: SystemSetupCheckProps) {
 
     const checkSystemSetup = async () => {
       try {
+        // إذا لم يكن هناك مستخدم مسجل الدخول، نفترض أن النظام تم إعداده
+        // لتجنب محاولة الوصول إلى Firestore بدون مصادقة
+        if (!user) {
+          console.log('[SystemSetupCheck] No authenticated user, assuming system is setup');
+          setIsSetup(true);
+          setLoading(false);
+          return;
+        }
+
         // التحقق من وجود إعدادات النظام في Firestore
         const settingsDoc = await getDoc(doc(db, 'system', 'settings'));
 
         if (settingsDoc.exists()) {
           // النظام تم إعداده بالفعل
+          console.log('[SystemSetupCheck] System is already setup');
           setIsSetup(true);
         } else {
           // النظام لم يتم إعداده بعد
+          console.log('[SystemSetupCheck] System needs setup, redirecting to /setup');
+          setIsSetup(false);
+          router.push('/setup');
+        }
+      } catch (error) {
+        const isPermissionError = handleFirestoreError(error, 'SystemSetupCheck');
+
+        if (isPermissionError) {
+          // إذا كان خطأ صلاحيات، نفترض أن النظام تم إعداده لتجنب حلقة لانهائية
+          console.warn('[SystemSetupCheck] Permission error, assuming system is setup');
+          setIsSetup(true);
+        } else {
+          // في حالة حدوث خطأ آخر، نفترض أن النظام لم يتم إعداده
+          console.warn('[SystemSetupCheck] Other error, assuming system needs setup');
           setIsSetup(false);
 
           // إذا كان المستخدم مسجل الدخول، توجيهه إلى صفحة الإعداد
           if (user) {
             router.push('/setup');
           }
-        }
-      } catch (error) {
-        console.error('Error checking system setup:', error);
-        // في حالة حدوث خطأ، نفترض أن النظام لم يتم إعداده
-        setIsSetup(false);
-
-        // إذا كان المستخدم مسجل الدخول، توجيهه إلى صفحة الإعداد
-        if (user) {
-          router.push('/setup');
         }
       } finally {
         setLoading(false);

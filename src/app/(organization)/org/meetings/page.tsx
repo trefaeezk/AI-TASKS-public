@@ -11,6 +11,7 @@ import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay }
 import { ar } from 'date-fns/locale';
 import { db } from '@/config/firebase';
 import { collection, query, where, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
+import { firestoreListenerManager, handleFirestoreError } from '@/utils/firestoreListenerManager';
 import { Meeting, MeetingType, MeetingStatus } from '@/types/meeting';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -112,17 +113,26 @@ export default function OrganizationMeetingsPage() {
         setLoading(false);
       },
       (error) => {
-        console.error('Error fetching meetings:', error);
-        toast({
-          title: 'خطأ',
-          description: 'حدث خطأ أثناء تحميل الاجتماعات',
-          variant: 'destructive',
-        });
+        const isPermissionError = handleFirestoreError(error, 'OrganizationMeetingsPage');
+
+        if (!isPermissionError) {
+          toast({
+            title: 'خطأ',
+            description: 'حدث خطأ أثناء تحميل الاجتماعات',
+            variant: 'destructive',
+          });
+        }
         setLoading(false);
       }
     );
 
-    return () => unsubscribe();
+    // إضافة listener إلى مدير listeners
+    firestoreListenerManager.addListener(`org-meetings-${organizationId}`, unsubscribe);
+
+    return () => {
+      unsubscribe();
+      firestoreListenerManager.removeListener(`org-meetings-${organizationId}`);
+    };
   }, [user, organizationId, toast]);
 
   // تصفية الاجتماعات حسب التبويب النشط

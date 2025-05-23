@@ -8,7 +8,8 @@ import { Loader2, Wand2, BarChart3, AlertTriangle, ListChecks, Info, Target, Che
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { db } from '@/config/firebase';
-import { collection, query, where, onSnapshot, Timestamp, orderBy } from 'firebase/firestore'; // Use onSnapshot for real-time updates
+import { collection, query, where, onSnapshot, Timestamp, orderBy } from 'firebase/firestore';
+import { firestoreListenerManager, handleFirestoreError } from '@/utils/firestoreListenerManager'; // Use onSnapshot for real-time updates
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -176,12 +177,21 @@ export default function KpiPage() {
         setTasks(fetchedTasks);
         setIsLoading(false);
     }, (err) => {
-        console.error("Error fetching tasks for KPI:", err);
-        setError('حدث خطأ أثناء تحميل بيانات المهام.');
+        const isPermissionError = handleFirestoreError(err, 'IndividualKpiPage');
+
+        if (!isPermissionError) {
+          setError('حدث خطأ أثناء تحميل بيانات المهام.');
+        }
         setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    // إضافة listener إلى مدير listeners
+    firestoreListenerManager.addListener(`individual-kpi-${user.uid}`, unsubscribe);
+
+    return () => {
+      unsubscribe();
+      firestoreListenerManager.removeListener(`individual-kpi-${user.uid}`);
+    };
   }, [user]);
 
 

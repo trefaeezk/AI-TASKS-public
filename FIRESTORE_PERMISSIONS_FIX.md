@@ -40,7 +40,7 @@ const logOut = async (): Promise<boolean> => {
   try {
     // إضافة تأخير قصير للسماح لـ AuthContext بإلغاء listeners
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+
     await signOut(auth);
     // ...
   } catch (err) {
@@ -73,7 +73,7 @@ class FirestoreListenerManager {
 ```typescript
 }, (err) => {
   console.error("TaskDataLoader: Error fetching tasks:", err);
-  
+
   // التعامل مع أخطاء الصلاحيات بعد تسجيل الخروج
   if (err.code === 'permission-denied' || err.message?.includes('Missing or insufficient permissions')) {
     console.warn("TaskDataLoader: Permission denied, user may have been signed out.");
@@ -82,7 +82,7 @@ class FirestoreListenerManager {
     setTasks([]);
     return;
   }
-  
+
   setError('حدث خطأ أثناء تحميل المهام.');
   setIsLoading(false);
   setTasks([]);
@@ -93,7 +93,7 @@ class FirestoreListenerManager {
 ```typescript
 }, (error) => {
   console.error("useTaskCategories: Error fetching categories:", error);
-  
+
   // التعامل مع أخطاء الصلاحيات بعد تسجيل الخروج
   if (error.code === 'permission-denied' || error.message?.includes('Missing or insufficient permissions')) {
     console.warn("useTaskCategories: Permission denied, user may have been signed out.");
@@ -101,7 +101,7 @@ class FirestoreListenerManager {
     setCategories([]);
     return;
   }
-  
+
   toast({ title: 'خطأ في تحميل الفئات', variant: 'destructive' });
   setLoading(false);
   setCategories([]);
@@ -112,13 +112,13 @@ class FirestoreListenerManager {
 ```typescript
 (error) => {
   console.error('Error subscribing to user notifications:', error);
-  
+
   // التعامل مع أخطاء الصلاحيات بعد تسجيل الخروج
   if (error.code === 'permission-denied' || error.message?.includes('Missing or insufficient permissions')) {
     console.warn('Notifications subscription: Permission denied, user may have been signed out.');
     return;
   }
-  
+
   // استدعاء callback مع مصفوفة فارغة في حالة الأخطاء الأخرى
   callback([]);
 }
@@ -132,7 +132,7 @@ export function handleFirestoreError(error: any, context: string): boolean {
   console.error(`[${context}] Firestore error:`, error);
 
   // التحقق من أخطاء الصلاحيات
-  if (error.code === 'permission-denied' || 
+  if (error.code === 'permission-denied' ||
       error.message?.includes('Missing or insufficient permissions') ||
       error.code === 'unauthenticated') {
     console.warn(`[${context}] Permission/authentication error, likely due to logout.`);
@@ -140,6 +140,52 @@ export function handleFirestoreError(error: any, context: string): boolean {
   }
 
   return false; // خطأ عادي
+}
+```
+
+### 6. إصلاح SystemSetupCheck
+تحسين مكون التحقق من إعداد النظام لتجنب أخطاء الصلاحيات:
+
+```typescript
+const checkSystemSetup = async () => {
+  try {
+    // إذا لم يكن هناك مستخدم مسجل الدخول، نفترض أن النظام تم إعداده
+    // لتجنب محاولة الوصول إلى Firestore بدون مصادقة
+    if (!user) {
+      console.log('[SystemSetupCheck] No authenticated user, assuming system is setup');
+      setIsSetup(true);
+      setLoading(false);
+      return;
+    }
+
+    // التحقق من وجود إعدادات النظام في Firestore
+    const settingsDoc = await getDoc(doc(db, 'system', 'settings'));
+    // ...
+  } catch (error) {
+    const isPermissionError = handleFirestoreError(error, 'SystemSetupCheck');
+
+    if (isPermissionError) {
+      // إذا كان خطأ صلاحيات، نفترض أن النظام تم إعداده لتجنب حلقة لانهائية
+      console.warn('[SystemSetupCheck] Permission error, assuming system is setup');
+      setIsSetup(true);
+    }
+    // ...
+  }
+};
+```
+
+### 7. تحديث قواعد Firestore
+تحديث قواعد Firestore للسماح بقراءة إعدادات النظام بدون مصادقة:
+
+```javascript
+// قواعد لإعدادات النظام
+match /system/{document=**} {
+  // يمكن لأي شخص قراءة إعدادات النظام الأساسية (للتحقق من الإعداد)
+  // هذا آمن لأن إعدادات النظام عامة ولا تحتوي على معلومات حساسة
+  allow read: if true;
+
+  // يمكن للمديرين فقط تعديل إعدادات النظام
+  allow write: if request.auth != null && request.auth.token.admin == true;
 }
 ```
 
@@ -151,11 +197,19 @@ export function handleFirestoreError(error: any, context: string): boolean {
 
 ## الملفات المعدلة
 1. `src/context/AuthContext.tsx` - تحسين إدارة listeners ومعالجة الأخطاء
-2. `src/hooks/useFirebaseAuth.ts` - تحسين دالة تسجيل الخروج
+2. `src/hooks/useFirebaseAuth.ts` - تحسين دالة تسجيل الخروج مع إلغاء شامل للـ listeners
 3. `src/app/(app)/TaskDataLoader.tsx` - تحسين معالجة الأخطاء
 4. `src/hooks/useTaskCategories.ts` - تحسين معالجة الأخطاء
 5. `src/services/notifications.ts` - تحسين معالجة الأخطاء
 6. `src/utils/firestoreListenerManager.ts` - مدير listeners جديد
+7. `src/app/(app)/suggestions/page.tsx` - إضافة إدارة listeners
+8. `src/app/(organization)/org/tasks/page.tsx` - إضافة إدارة listeners ومعالجة أخطاء
+9. `src/app/(organization)/org/kpi/page.tsx` - إضافة إدارة listeners ومعالجة أخطاء
+10. `src/app/(app)/kpi/page.tsx` - إضافة إدارة listeners ومعالجة أخطاء
+11. `src/app/(organization)/org/meetings/page.tsx` - إضافة إدارة listeners ومعالجة أخطاء
+12. `src/app/(admin)/admin/page.tsx` - إضافة إدارة listeners ومعالجة أخطاء
+13. `src/components/setup/SystemSetupCheck.tsx` - إصلاح خطأ الصلاحيات عند التحقق من إعداد النظام
+14. `firestore.rules` - تحديث قواعد Firestore للسماح بقراءة إعدادات النظام
 
 ## أفضل الممارسات للمستقبل
 1. **استخدام مدير listeners**: استخدام `firestoreListenerManager` لجميع listeners الجديدة
