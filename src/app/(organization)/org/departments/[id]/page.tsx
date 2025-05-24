@@ -35,7 +35,7 @@ export default function DepartmentDetailsPage() {
   const router = useRouter();
   const params = useParams();
   const departmentId = params.id as string;
-  
+
   const [loading, setLoading] = useState(true);
   const [department, setDepartment] = useState<Department | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -50,8 +50,9 @@ export default function DepartmentDetailsPage() {
   });
 
   const organizationId = userClaims?.organizationId;
-  const isOwner = userClaims?.owner === true;
-  const isAdmin = userClaims?.admin === true;
+  // استخدام أسماء الحقول الصحيحة من قاعدة البيانات
+  const isOwner = userClaims?.organization_owner === true || userClaims?.isOwner === true;
+  const isAdmin = userClaims?.admin === true || userClaims?.isAdmin === true;
   const isEngineer = userClaims?.engineer === true;
   const isSupervisor = userClaims?.supervisor === true;
 
@@ -66,7 +67,7 @@ export default function DepartmentDetailsPage() {
       try {
         // جلب معلومات القسم
         const departmentDoc = await getDoc(doc(db, 'departments', departmentId));
-        
+
         if (!departmentDoc.exists()) {
           toast({
             title: 'خطأ',
@@ -76,9 +77,9 @@ export default function DepartmentDetailsPage() {
           router.push('/org/departments');
           return;
         }
-        
+
         const departmentData = departmentDoc.data() as Department;
-        
+
         // التحقق من أن القسم ينتمي للمؤسسة الحالية
         if (departmentData.organizationId !== organizationId) {
           toast({
@@ -89,70 +90,70 @@ export default function DepartmentDetailsPage() {
           router.push('/org/departments');
           return;
         }
-        
+
         setDepartment({
           id: departmentDoc.id,
           ...departmentData,
         });
-        
+
         // جلب أعضاء القسم
         const membersQuery = query(
           collection(db, 'organizations', organizationId, 'members'),
           where('departmentId', '==', departmentId)
         );
-        
+
         const membersSnapshot = await getDocs(membersQuery);
         const membersList: Member[] = [];
-        
+
         membersSnapshot.forEach((doc) => {
           membersList.push({
             uid: doc.id,
             ...doc.data() as Member,
           });
         });
-        
+
         setMembers(membersList);
-        
+
         // جلب إحصائيات المهام
         const tasksQuery = query(
           collection(db, 'tasks'),
           where('organizationId', '==', organizationId),
           where('departmentId', '==', departmentId)
         );
-        
+
         const tasksSnapshot = await getDocs(tasksQuery);
         let totalTasks = 0;
         let completedTasks = 0;
         let pendingTasks = 0;
         let overdueTasks = 0;
-        
+
         const now = new Date();
-        
+
         tasksSnapshot.forEach((doc) => {
           const taskData = doc.data();
           totalTasks++;
-          
+
           if (taskData.status === 'completed') {
             completedTasks++;
           } else if (taskData.status === 'pending') {
             pendingTasks++;
-            
+
             // التحقق من المهام المتأخرة
             if (taskData.dueDate && taskData.dueDate.toDate() < now) {
               overdueTasks++;
             }
           }
         });
-        
+
         // جلب عدد الاجتماعات
         const meetingsQuery = query(
           collection(db, 'meetings'),
           where('organizationId', '==', organizationId),
           where('departmentId', '==', departmentId)
         );
-        
+
         const meetingsSnapshot = await getDocs(meetingsQuery);
-        
+
         setStats({
           tasks: {
             total: totalTasks,

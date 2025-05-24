@@ -43,9 +43,10 @@ export default function OrganizationRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  // التحقق من أن المستخدم مالك أو مسؤول
-  // نسمح للمالك والمسؤول بالوصول مؤقتًا لحل المشكلة
-  const isOwner = userClaims?.owner === true || userClaims?.admin === true;
+  // التحقق من أن المستخدم مالك النظام أو مدير النظام
+  const isSystemOwner = userClaims?.system_owner === true;
+  const isSystemAdmin = userClaims?.system_admin === true;
+  const isOwner = isSystemOwner || isSystemAdmin || userClaims?.owner === true || userClaims?.admin === true;
 
   // طباعة معلومات المستخدم للتصحيح
   console.log('User Claims:', userClaims);

@@ -39,13 +39,23 @@ export default function DepartmentsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const organizationId = userClaims?.organizationId;
-  const isOwner = userClaims?.owner === true;
-  const isAdmin = userClaims?.admin === true;
-  const canCreateDepartment = isOwner || isAdmin;
+  // استخدام أسماء الحقول الصحيحة من قاعدة البيانات
+  const isSystemOwner = userClaims?.system_owner === true;
+  const isSystemAdmin = userClaims?.system_admin === true;
+  const isOwner = userClaims?.organization_owner === true || userClaims?.isOwner === true;
+  const isAdmin = userClaims?.admin === true || userClaims?.isAdmin === true;
+  // مالك النظام يملك صلاحيات كاملة على جميع المؤسسات
+  const canCreateDepartment = isSystemOwner || isSystemAdmin || isOwner || isAdmin;
 
   // تحميل الأقسام
   useEffect(() => {
-    if (!user || !organizationId) {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    // مالك النظام يمكنه الوصول بدون organizationId
+    if (!organizationId && !isSystemOwner && !isSystemAdmin) {
       setLoading(false);
       return;
     }
@@ -184,34 +194,56 @@ export default function DepartmentsPage() {
     );
   }
 
+  // عرض رسالة إذا لم يكن هناك organizationId
+  if (!user || !organizationId) {
+    return (
+      <div className="container mx-auto p-4">
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+          <Building2 className="h-16 w-16 text-muted-foreground mb-4" />
+          <h2 className="text-xl font-semibold mb-2">
+            <Translate text="organization.noOrganizationAccess" />
+          </h2>
+          <p className="text-muted-foreground mb-4">
+            <Translate text="organization.noOrganizationAccessDescription" />
+          </p>
+          <Button asChild>
+            <Link href="/org">
+              <Translate text="organization.goToOrganization" />
+            </Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold flex items-center">
           <FolderTree className="ml-2 h-6 w-6" />
-          <Translate text="organization.departments" defaultValue="أقسام المؤسسة" />
+          <Translate text="organization.departments" />
         </h1>
         {canCreateDepartment && (
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button className="flex items-center">
                 <Plus className="ml-2 h-4 w-4" />
-                <Translate text="organization.createNewDepartment" defaultValue="إنشاء قسم جديد" />
+                <Translate text="organization.createNewDepartment" />
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>
-                  <Translate text="organization.createNewDepartment" defaultValue="إنشاء قسم جديد" />
+                  <Translate text="organization.createNewDepartment" />
                 </DialogTitle>
                 <DialogDescription>
-                  <Translate text="organization.departmentFormDescription" defaultValue="أدخل معلومات القسم الجديد. اضغط على حفظ عند الانتهاء." />
+                  <Translate text="organization.departmentFormDescription" />
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">
-                    <Translate text="organization.departmentName" defaultValue="اسم القسم" />
+                    <Translate text="organization.departmentName" />
                   </Label>
                   <Input
                     id="name"
@@ -222,7 +254,7 @@ export default function DepartmentsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">
-                    <Translate text="organization.departmentDescription" defaultValue="وصف القسم" /> (<Translate text="general.optional" defaultValue="اختياري" />)
+                    <Translate text="organization.departmentDescription" /> (<Translate text="general.optional" />)
                   </Label>
                   <Textarea
                     id="description"
@@ -240,9 +272,9 @@ export default function DepartmentsPage() {
                   disabled={isSubmitting || !newDepartmentName.trim()}
                 >
                   {isSubmitting ? (
-                    <Translate text="general.creating" defaultValue="جاري الإنشاء..." />
+                    <Translate text="general.creating" />
                   ) : (
-                    <Translate text="organization.createDepartment" defaultValue="إنشاء القسم" />
+                    <Translate text="organization.createDepartment" />
                   )}
                 </Button>
               </DialogFooter>
@@ -255,17 +287,8 @@ export default function DepartmentsPage() {
         <Card>
           <CardContent className="pt-6 text-center">
             <p className="text-muted-foreground">
-              <Translate text="organization.noDepartments" defaultValue="لا توجد أقسام في المؤسسة." />
+              <Translate text="organization.noDepartments" />
             </p>
-            {canCreateDepartment && (
-              <Button
-                onClick={() => setIsCreateDialogOpen(true)}
-                className="mt-4"
-              >
-                <Plus className="ml-2 h-4 w-4" />
-                <Translate text="organization.createNewDepartment" defaultValue="إنشاء قسم جديد" />
-              </Button>
-            )}
           </CardContent>
         </Card>
       ) : (
@@ -276,7 +299,7 @@ export default function DepartmentsPage() {
                 <CardTitle className="text-lg">{department.name}</CardTitle>
                 <CardDescription>
                   {department.description || (
-                    <Translate text="organization.noDepartmentDescription" defaultValue="لا يوجد وصف للقسم" />
+                    <Translate text="organization.noDepartmentDescription" />
                   )}
                 </CardDescription>
               </CardHeader>
@@ -288,7 +311,7 @@ export default function DepartmentsPage() {
                     </div>
                     <div className="text-lg font-semibold">{department.membersCount}</div>
                     <div className="text-xs text-muted-foreground">
-                      <Translate text="organization.member" defaultValue="عضو" />
+                      <Translate text="organization.member" />
                     </div>
                   </div>
                   <div>
@@ -297,7 +320,7 @@ export default function DepartmentsPage() {
                     </div>
                     <div className="text-lg font-semibold">{department.meetingsCount}</div>
                     <div className="text-xs text-muted-foreground">
-                      <Translate text="meetings.meeting" defaultValue="اجتماع" />
+                      <Translate text="meetings.meeting" />
                     </div>
                   </div>
                   <div>
@@ -306,7 +329,7 @@ export default function DepartmentsPage() {
                     </div>
                     <div className="text-lg font-semibold">{department.tasksCount}</div>
                     <div className="text-xs text-muted-foreground">
-                      <Translate text="tasks.task" defaultValue="مهمة" />
+                      <Translate text="tasks.task" />
                     </div>
                   </div>
                 </div>
@@ -314,7 +337,7 @@ export default function DepartmentsPage() {
               <CardFooter>
                 <Button asChild variant="outline" className="w-full">
                   <Link href={`/org/departments/${department.id}`}>
-                    <Translate text="organization.departmentDetails" defaultValue="عرض التفاصيل" />
+                    <Translate text="organization.departmentDetails" />
                   </Link>
                 </Button>
               </CardFooter>

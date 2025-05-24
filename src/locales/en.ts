@@ -620,6 +620,9 @@ const en = {
     editMemberDescription: "Edit member's role and department in the organization",
     confirmDeleteMember: "Are you sure you want to delete this member?",
     deleteMemberWarning: "The member will be removed from the organization. This action cannot be undone",
+    noOrganizationAccess: "No Organization Access",
+    noOrganizationAccessDescription: "You must be a member of an organization to access this page",
+    goToOrganization: "Go to Organization",
   },
 
   // Meetings

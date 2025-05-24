@@ -29,7 +29,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/context/AuthContext';
 import { CreateUserDialog } from '@/components/admin/CreateUserDialog';
 import { UserDetailsDialog } from '@/components/admin/UserDetailsDialog';
 import { Translate } from '@/components/Translate';
@@ -60,7 +60,7 @@ if (app && !functionsInstance) { // Check if already initialized
 
 
 export default function AdminDashboardPage() {
-  const { user, refreshUserData } = useAuth(); // Get current authenticated user
+  const { user, userClaims, refreshUserData } = useAuth(); // Get current authenticated user
   const { toast } = useToast();
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -820,8 +820,8 @@ export default function AdminDashboardPage() {
          </div>
       </div>
 
-      {/* بطاقة طلبات إنشاء المؤسسات - تظهر فقط للمالك */}
-      {(user as ExtendedUser)?.customClaims?.owner && (
+      {/* بطاقة طلبات إنشاء المؤسسات - تظهر لمالك النظام ومدير النظام */}
+      {(userClaims?.system_owner || userClaims?.system_admin || userClaims?.owner) && (
         <Card className="shadow-md border border-border">
           <CardHeader>
             <CardTitle className="flex items-center">

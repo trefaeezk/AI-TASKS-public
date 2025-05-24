@@ -289,7 +289,7 @@ function FilterPopover() {
 
 export function AppLayoutContent({ children }: { children: ReactNode }) {
     const pathname = usePathname();
-    const { user } = useAuth();
+    const { user, userClaims } = useAuth();
     const { isMobile, setOpenMobile } = useSidebar();
     const { role, loading: loadingPermissions } = usePermissions();
     const { accountType, isLoading: loadingAccountType } = useAccountType();
@@ -406,15 +406,34 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                     requiredPermission={{ area: 'data', action: 'view' }}
                   />
                 )}
-                <AccountTypeGuard requiredType="individual">
+                {(() => {
+                  console.log('🚨 [ORGANIZATION REQUESTS DEBUG] Starting check...');
+                  const shouldShow = userClaims?.system_owner === true || userClaims?.role === 'system_owner';
+                  console.log('🚨 [ORGANIZATION REQUESTS DEBUG] Results:', {
+                    userClaims,
+                    userClaimsStringified: JSON.stringify(userClaims),
+                    system_owner: userClaims?.system_owner,
+                    role: userClaims?.role,
+                    shouldShow,
+                    condition1: userClaims?.system_owner === true,
+                    condition2: userClaims?.role === 'system_owner'
+                  });
+
+                  if (shouldShow) {
+                    console.log('✅ [ORGANIZATION REQUESTS] Should show - rendering component');
+                  } else {
+                    console.log('❌ [ORGANIZATION REQUESTS] Should NOT show - component hidden');
+                  }
+
+                  return shouldShow;
+                })() && (
                   <PermissionSidebarItem
                     href="/admin/organization-requests"
                     icon={Building}
                     label={t('sidebar.organizationRequests')}
                     tooltip={t('sidebar.organizationRequestsTooltip')}
-                    requiredRole="system_owner"
                   />
-                </AccountTypeGuard>
+                )}
                 <PermissionSidebarItem
                   href="/settings"
                   icon={Settings}

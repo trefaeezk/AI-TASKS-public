@@ -35,8 +35,9 @@ export default function OrganizationMeetingsPage() {
   const [weekDays, setWeekDays] = useState<Date[]>([]);
 
   const organizationId = userClaims?.organizationId;
-  const isOwner = userClaims?.owner === true;
-  const isAdmin = userClaims?.admin === true;
+  // استخدام أسماء الحقول الصحيحة من قاعدة البيانات
+  const isOwner = userClaims?.organization_owner === true || userClaims?.isOwner === true;
+  const isAdmin = userClaims?.admin === true || userClaims?.isAdmin === true;
   const isEngineer = userClaims?.engineer === true;
   const isSupervisor = userClaims?.supervisor === true;
   const canCreateMeetings = isOwner || isAdmin || isEngineer || isSupervisor;

@@ -75,8 +75,9 @@ export default function MembersPage() {
   const [activeTab, setActiveTab] = useState('all');
 
   const organizationId = userClaims?.organizationId;
-  const isOwner = userClaims?.owner === true;
-  const isAdmin = userClaims?.admin === true;
+  // استخدام أسماء الحقول الصحيحة من قاعدة البيانات
+  const isOwner = userClaims?.organization_owner === true || userClaims?.isOwner === true;
+  const isAdmin = userClaims?.admin === true || userClaims?.isAdmin === true;
 
   // 📊 تصفية الأعضاء حسب التبويب
   const filteredMembers = members.filter(member => {

@@ -622,6 +622,9 @@ const ar = {
     editMemberDescription: "تعديل دور العضو وقسمه في المؤسسة",
     confirmDeleteMember: "هل أنت متأكد من حذف هذا العضو؟",
     deleteMemberWarning: "سيتم إزالة العضو من المؤسسة. هذا الإجراء لا يمكن التراجع عنه",
+    noOrganizationAccess: "لا يمكن الوصول إلى المؤسسة",
+    noOrganizationAccessDescription: "يجب أن تكون عضواً في مؤسسة للوصول إلى هذه الصفحة",
+    goToOrganization: "اذهب إلى المؤسسة",
   },
 
   // الإعدادات - Settings
