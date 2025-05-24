@@ -20,6 +20,7 @@ import { collection, query, where, onSnapshot, orderBy, Timestamp, doc, updateDo
 import { firestoreListenerManager, handleFirestoreError } from '@/utils/firestoreListenerManager';
 import { useToast } from '@/hooks/use-toast';
 import { EditTaskSheet } from '@/components/EditTaskSheet';
+import { AddTaskSheet } from '@/components/AddTaskSheet';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { DateFilter } from '@/components/DateFilter';
 import { OkrFilter } from '@/components/OkrFilter';
@@ -44,22 +45,13 @@ export default function OrganizationTasksPage() {
   const [taskToDelete, setTaskToDelete] = useState<TaskType | null>(null);
   const [taskToEdit, setTaskToEdit] = useState<TaskType | null>(null);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
+  const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const organizationId = userClaims?.organizationId;
 
   // استخدام سياق صفحة المهام
   const taskPageContext = useTaskPageContext();
-
-  // التحقق من وجود سياق صفحة المهام
-  if (!taskPageContext) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <AlertTriangle className="h-8 w-8 text-destructive ml-2" />
-        <span>خطأ في تحميل سياق صفحة المهام</span>
-      </div>
-    );
-  }
 
   // الحصول على البيانات وحالة التصفية من السياق بأمان
   const {
@@ -79,7 +71,7 @@ export default function OrganizationTasksPage() {
     setCategoryFilter,
     okrFilter,
     setOkrFilter,
-  } = taskPageContext;
+  } = taskPageContext || {};
 
   // تكوين أجهزة استشعار السحب والإفلات
   const sensors = useSensors(
@@ -238,18 +230,6 @@ export default function OrganizationTasksPage() {
     }
   }, [taskToDelete, removeTaskOptimistic, toast]);
 
-  // عرض حالة التحميل
-  if (loading) {
-    return (
-      <div className="container mx-auto p-4">
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="mr-2">جاري تحميل المهام...</span>
-        </div>
-      </div>
-    );
-  }
-
   // حساب الإحصائيات
   const stats = useMemo(() => {
     const total = tasks.length;
@@ -269,6 +249,28 @@ export default function OrganizationTasksPage() {
     return { total, completed, pending, overdue, today };
   }, [tasks]);
 
+  // التحقق من وجود سياق صفحة المهام
+  if (!taskPageContext) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <AlertTriangle className="h-8 w-8 text-destructive ml-2" />
+        <span>خطأ في تحميل سياق صفحة المهام</span>
+      </div>
+    );
+  }
+
+  // عرض حالة التحميل
+  if (loading) {
+    return (
+      <div className="container mx-auto p-4">
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="mr-2">جاري تحميل المهام...</span>
+        </div>
+      </div>
+    );
+  }
+
   // عرض المهام حسب الفئة المحددة
   const tasksToDisplay = categorizedTasks[selectedCategory] || [];
 
@@ -283,8 +285,7 @@ export default function OrganizationTasksPage() {
           <Button
             onClick={() => {
               // إنشاء مهمة جديدة
-              setTaskToEdit(null);
-              setIsEditSheetOpen(true);
+              setIsAddSheetOpen(true);
             }}
             className="flex items-center"
           >
@@ -569,6 +570,16 @@ export default function OrganizationTasksPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* نافذة إنشاء مهمة جديدة */}
+      {user && (
+        <AddTaskSheet
+          user={user}
+          isOpen={isAddSheetOpen}
+          onOpenChange={setIsAddSheetOpen}
+          showTrigger={false}
+        />
+      )}
+
       {/* نافذة تعديل المهمة */}
       {taskToEdit && user && (
         <EditTaskSheet
@@ -577,7 +588,7 @@ export default function OrganizationTasksPage() {
           isOpen={isEditSheetOpen}
           onOpenChange={setIsEditSheetOpen}
           onTaskUpdated={() => {
-            // Recargar las tareas después de actualizar
+            // إعادة تحميل المهام بعد التحديث
             console.log("Task updated, refreshing tasks");
           }}
         />

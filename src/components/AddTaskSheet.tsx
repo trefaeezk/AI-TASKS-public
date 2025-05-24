@@ -42,9 +42,12 @@ import { useAuth } from '@/context/AuthContext'; // Import useAuth
 
 interface AddTaskSheetProps {
     user: User;
+    isOpen?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    showTrigger?: boolean;
 }
 
-export function AddTaskSheet({ user }: AddTaskSheetProps) {
+export function AddTaskSheet({ user, isOpen, onOpenChange, showTrigger = true }: AddTaskSheetProps) {
   const { toast } = useToast();
   const { categories: userCategories, loading: categoriesLoading, addCategory, deleteCategory, editCategory, getCategoryColor } = useTaskCategories(user.uid);
   const { userClaims } = useAuth(); // Get userClaims
@@ -84,7 +87,11 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
   const [isSuggestingDate, setIsSuggestingDate] = useState(false);
   const [isSuggestingMilestones, setIsSuggestingMilestones] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+
+  // استخدام isOpen الخارجي إذا تم تمريره، وإلا استخدام الداخلي
+  const sheetIsOpen = isOpen !== undefined ? isOpen : internalIsOpen;
+  const setSheetIsOpen = onOpenChange || setInternalIsOpen;
 
   const formatDateSafe = (dateInput: Date | string | undefined): string | null => {
       if (!dateInput) return null;
@@ -284,7 +291,7 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
             title: 'تمت إضافة المهمة',
             description: `تمت إضافة "${newTaskData.description}" بنجاح.`,
         });
-         setIsSheetOpen(false);
+         setSheetIsOpen(false);
 
     } catch (error) {
         console.error("Error adding task to Firestore:", error);
@@ -323,7 +330,7 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
   };
 
   useEffect(() => {
-      if (isSheetOpen) {
+      if (sheetIsOpen) {
           setNewTaskDescription('');
           setNewTaskDetails('');
           setNewTaskStartDate(undefined);
@@ -344,16 +351,18 @@ export function AddTaskSheet({ user }: AddTaskSheetProps) {
           setIsSuggestingDate(false);
           setIsSuggestingMilestones(false);
       }
-  }, [isSheetOpen, organizationIdFromClaims, user.uid]);
+  }, [sheetIsOpen, organizationIdFromClaims, user.uid]);
 
   return (
-    <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-      <SheetTrigger asChild>
-        <Button variant="outline" size="icon" className="h-8 w-8">
-          <PlusCircle className="h-4 w-4" />
-          <span className="sr-only">إضافة مهمة جديدة</span>
-        </Button>
-      </SheetTrigger>
+    <Sheet open={sheetIsOpen} onOpenChange={setSheetIsOpen}>
+      {showTrigger && (
+        <SheetTrigger asChild>
+          <Button variant="outline" size="icon" className="h-8 w-8">
+            <PlusCircle className="h-4 w-4" />
+            <span className="sr-only">إضافة مهمة جديدة</span>
+          </Button>
+        </SheetTrigger>
+      )}
       <SheetContent side="left" className="w-full sm:max-w-lg overflow-y-auto p-4 sm:p-6">
         <SheetHeader className="mb-6">
           <SheetTitle className="text-xl">إضافة مهمة جديدة</SheetTitle>
