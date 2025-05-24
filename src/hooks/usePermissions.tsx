@@ -47,39 +47,30 @@ export function usePermissions() {
     try {
       let effectiveRole: UserRole;
 
-      // تحديد الدور بناءً على النظام الجديد (بالأولوية)
-      if (userClaims.system_owner === true || userClaims.role === 'system_owner') {
+      // تحديد الدور بناءً على النظام الجديد
+      if (userClaims.system_owner) {
         effectiveRole = 'system_owner';
-      } else if (userClaims.system_admin === true || userClaims.role === 'system_admin') {
+      } else if (userClaims.system_admin) {
         effectiveRole = 'system_admin';
-      } else if (userClaims.organization_owner === true || userClaims.role === 'organization_owner') {
+      } else if (userClaims.organization_owner) {
         effectiveRole = 'organization_owner';
-      } else if (userClaims.admin === true || userClaims.role === 'admin') {
+      } else if (userClaims.admin) {
         effectiveRole = 'admin';
-      } else if (userClaims.role === 'supervisor') {
-        effectiveRole = 'supervisor';
-      } else if (userClaims.role === 'engineer') {
-        effectiveRole = 'engineer';
-      } else if (userClaims.role === 'technician') {
-        effectiveRole = 'technician';
-      } else if (userClaims.role === 'assistant') {
-        effectiveRole = 'assistant';
-      } else if (userClaims.role === 'independent') {
-        effectiveRole = 'independent';
-      }
-      // التوافق مع النظام القديم
-      else if (userClaims.owner === true) {
-        effectiveRole = 'system_owner'; // تحويل owner قديم إلى system_owner
-      } else if (userClaims.individual_admin === true) {
-        effectiveRole = 'system_admin'; // تحويل individual_admin إلى system_admin
-      } else if (userClaims.role === 'owner') {
-        effectiveRole = 'system_owner';
-      } else if (userClaims.role === 'individual_admin') {
-        effectiveRole = 'system_admin';
-      } else if (userClaims.role === 'user') {
-        effectiveRole = userClaims.accountType === 'individual' ? 'independent' : 'assistant';
+      } else if (userClaims.role) {
+        effectiveRole = userClaims.role as UserRole;
       } else {
         // الدور الافتراضي بناءً على نوع الحساب
+        effectiveRole = userClaims.accountType === 'individual' ? 'independent' : 'assistant';
+      }
+
+      // التوافق مع النظام القديم - تحويل الأدوار القديمة
+      if (userClaims.owner) {
+        effectiveRole = 'system_owner';
+      } else if (effectiveRole === 'owner') {
+        effectiveRole = 'system_owner';
+      } else if (effectiveRole === 'individual_admin') {
+        effectiveRole = 'system_admin';
+      } else if (effectiveRole === 'user') {
         effectiveRole = userClaims.accountType === 'individual' ? 'independent' : 'assistant';
       }
 

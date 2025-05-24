@@ -379,7 +379,7 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                   icon={Shield}
                   label={t('sidebar.adminPanel')}
                   tooltip={t('sidebar.adminPanelTooltip')}
-                  requiredPermission={{ area: 'users', action: 'view' }}
+                  requiredRole="admin"
                 />
                 <PermissionSidebarItem
                   href="/admin/users"
@@ -395,15 +395,6 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                     label={t('sidebar.dataManagement')}
                     tooltip={t('sidebar.dataManagementTooltip')}
                     requiredPermission={{ area: 'data', action: 'view' }}
-                  />
-                )}
-                {(role === 'system_owner' || role === 'system_admin') && (
-                  <PermissionSidebarItem
-                    href="/admin/migration"
-                    icon={Wand2}
-                    label="ترحيل النظام الجديد"
-                    tooltip="تطبيق نظام الأدوار الجديد على المؤسسات"
-                    requiredPermission={{ area: 'settings', action: 'edit' }}
                   />
                 )}
                 {role === 'independent' && (

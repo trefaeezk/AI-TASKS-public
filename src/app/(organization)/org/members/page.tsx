@@ -48,6 +48,9 @@ interface Member {
   role: string;
   departmentId: string | null;
   joinedAt: Date;
+  isActive: boolean;
+  lastActivity: Date | null;
+  avatar: string | null;
 }
 
 export default function MembersPage() {
@@ -108,40 +111,59 @@ export default function MembersPage() {
       membersRef,
       async (snapshot) => {
         try {
-          const membersPromises = snapshot.docs.map(async (doc) => {
-            const memberData = doc.data();
+          const membersPromises = snapshot.docs.map(async (memberDoc) => {
+            const memberData = memberDoc.data();
+            const memberId = memberDoc.id;
 
-            // جلب معلومات المستخدم من Firebase Auth
-            const idToken = await user.getIdToken();
-            const response = await fetch(`https://us-central1-tasks-intelligence.cloudfunctions.net/getUserHttp?uid=${doc.id}`, {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${idToken}`
-              }
-            });
+            try {
+              // 📊 استراتيجية مختلطة: Firestore + Auth
 
-            if (!response.ok) {
-              console.error(`Error fetching user ${doc.id}:`, await response.text());
+              // 1️⃣ جلب بيانات المستخدم من Firestore
+              const userDocRef = doc(db, 'users', memberId);
+              const userDocSnap = await getDoc(userDocRef);
+
+              // 2️⃣ تجميع البيانات من مصادر مختلفة
+              const userData = userDocSnap.exists() ? userDocSnap.data() : null;
+
               return {
-                uid: doc.id,
-                email: 'غير متاح',
-                name: 'مستخدم غير معروف',
-                role: memberData.role || 'user',
+                uid: memberId,
+                // 📧 الإيميل: من Firestore أولاً، ثم من Auth
+                email: userData?.email || memberData.email || 'غير متاح',
+
+                // 👤 الاسم: من Firestore (أكثر تفصيلاً)
+                name: userData?.name || userData?.displayName || memberData.displayName || 'مستخدم غير معروف',
+
+                // 🎭 الدور: من عضوية المؤسسة (أولوية)
+                role: memberData.role || userData?.role || 'assistant',
+
+                // 🏢 القسم: من عضوية المؤسسة
                 departmentId: memberData.departmentId || null,
-                joinedAt: memberData.joinedAt?.toDate() || new Date()
+
+                // 📅 تاريخ الانضمام: من عضوية المؤسسة
+                joinedAt: memberData.joinedAt?.toDate() || new Date(),
+
+                // 📊 بيانات إضافية
+                isActive: memberData.isActive !== false, // افتراضياً نشط
+                lastActivity: userData?.lastActivity?.toDate() || null,
+                avatar: userData?.avatar || null
+              };
+
+            } catch (error) {
+              console.error(`⚠️ Error fetching user data for ${memberId}:`, error);
+
+              // 🛑 في حالة الخطأ: استخدام بيانات العضوية فقط
+              return {
+                uid: memberId,
+                email: memberData.email || 'غير متاح',
+                name: memberData.displayName || 'مستخدم غير معروف',
+                role: memberData.role || 'assistant',
+                departmentId: memberData.departmentId || null,
+                joinedAt: memberData.joinedAt?.toDate() || new Date(),
+                isActive: true,
+                lastActivity: null,
+                avatar: null
               };
             }
-
-            const userData = await response.json();
-
-            return {
-              uid: doc.id,
-              email: userData.email || 'غير متاح',
-              name: userData.displayName || 'مستخدم غير معروف',
-              role: memberData.role || 'user',
-              departmentId: memberData.departmentId || null,
-              joinedAt: memberData.joinedAt?.toDate() || new Date()
-            };
           });
 
           const membersData = await Promise.all(membersPromises);
