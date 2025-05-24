@@ -12,6 +12,7 @@ const ar = {
     loading: "جاري التحميل...",
     saving: "جاري الحفظ...",
     save: "حفظ",
+    creating: "جاري الإنشاء...",
     cancel: "إلغاء",
     delete: "حذف",
     edit: "تعديل",
@@ -35,6 +36,11 @@ const ar = {
     more: "المزيد",
     less: "أقل",
     all: "الكل",
+    add: "إضافة",
+    adding: "جاري الإضافة...",
+    updating: "جاري التحديث...",
+    deleting: "جاري الحذف...",
+    saveChanges: "حفظ التغييرات",
     none: "لا شيء",
     today: "اليوم",
     yesterday: "أمس",
@@ -572,6 +578,50 @@ const ar = {
     departmentDeleted: "تم حذف القسم بنجاح",
     memberAddedToDepartment: "تمت إضافة العضو إلى القسم بنجاح",
     memberRemovedFromDepartment: "تمت إزالة العضو من القسم بنجاح",
+
+    // 🏢 الأقسام - Departments
+    departments: "الأقسام",
+    department: "قسم",
+    departmentsManagement: "إدارة الأقسام",
+    createNewDepartment: "إنشاء قسم جديد",
+    departmentDetails: "تفاصيل القسم",
+    departmentStatistics: "إحصائيات القسم",
+    departmentTasks: "مهام القسم",
+    departmentMeetings: "اجتماعات القسم",
+    noDepartmentDescription: "لا يوجد وصف للقسم",
+    departmentCreatedSuccessfully: "تم إنشاء القسم بنجاح",
+    errorCreatingDepartment: "حدث خطأ أثناء إنشاء القسم",
+    errorFetchingDepartments: "حدث خطأ أثناء جلب الأقسام",
+
+    // 👥 الأفراد - Individuals
+    individuals: "الأفراد",
+    individual: "فرد",
+    individualsInOrganization: "الأفراد في المؤسسة",
+    membersWithoutDepartment: "أعضاء بدون قسم",
+    unassignedMembers: "أعضاء غير معينين",
+    assignToDepartment: "تعيين إلى قسم",
+    noIndividuals: "لا يوجد أفراد",
+    noIndividualsInOrganization: "لا يوجد أفراد في المؤسسة",
+    allMembersAssigned: "جميع الأعضاء معينون إلى أقسام",
+
+    // 📊 مفاتيح إضافية للأعضاء والأقسام
+    member: "عضو",
+    departmentFormDescription: "أدخل معلومات القسم الجديد. اضغط على حفظ عند الانتهاء.",
+    canAssignToDepartment: "يمكن تعيين هؤلاء الأعضاء إلى أقسام",
+    noDepartmentMembers: "لا يوجد أعضاء في الأقسام",
+    assignMembersToDepartments: "قم بتعيين الأعضاء إلى أقسام",
+    membersAssignedToDepartments: "الأعضاء المعينون إلى أقسام المؤسسة",
+    unknownDepartment: "قسم غير معروف",
+    departmentMembers: "أعضاء الأقسام",
+    unassigned: "غير معين",
+    addMemberDescription: "أدخل بريد العضو الإلكتروني ودوره في المؤسسة",
+    selectRole: "اختر الدور",
+    selectDepartment: "اختر القسم",
+    noDepartment: "بدون قسم",
+    editMember: "تعديل بيانات العضو",
+    editMemberDescription: "تعديل دور العضو وقسمه في المؤسسة",
+    confirmDeleteMember: "هل أنت متأكد من حذف هذا العضو؟",
+    deleteMemberWarning: "سيتم إزالة العضو من المؤسسة. هذا الإجراء لا يمكن التراجع عنه",
   },
 
   // الإعدادات - Settings
@@ -728,6 +778,31 @@ const ar = {
     sortPromptsByDate: "ترتيب البرومبتات حسب التاريخ",
     sortPromptsByRating: "ترتيب البرومبتات حسب التقييم",
     sortPromptsByUsage: "ترتيب البرومبتات حسب الاستخدام",
+  },
+
+  // الاجتماعات - Meetings
+  meetings: {
+    meetings: "الاجتماعات",
+    meeting: "اجتماع",
+    createMeeting: "إنشاء اجتماع",
+    editMeeting: "تعديل الاجتماع",
+    deleteMeeting: "حذف الاجتماع",
+    meetingTitle: "عنوان الاجتماع",
+    meetingDescription: "وصف الاجتماع",
+    meetingDate: "تاريخ الاجتماع",
+    meetingTime: "وقت الاجتماع",
+    meetingLocation: "موقع الاجتماع",
+    meetingParticipants: "مشاركي الاجتماع",
+    meetingAgenda: "جدول أعمال الاجتماع",
+    meetingNotes: "ملاحظات الاجتماع",
+    meetingDecisions: "قرارات الاجتماع",
+    meetingTasks: "مهام الاجتماع",
+    meetingStatus: "حالة الاجتماع",
+    meetingType: "نوع الاجتماع",
+    noMeetings: "لا توجد اجتماعات",
+    upcomingMeetings: "الاجتماعات القادمة",
+    pastMeetings: "الاجتماعات السابقة",
+    todayMeetings: "اجتماعات اليوم",
   },
 
   // إدارة البيانات - Data Management

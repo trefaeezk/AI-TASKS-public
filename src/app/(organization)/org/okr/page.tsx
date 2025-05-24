@@ -91,10 +91,9 @@ export default function OkrPage() {
 
     const fetchData = async () => {
       try {
-        // جلب الأقسام
+        // 🏢 جلب الأقسام من المسار الموحد
         const departmentsQuery = query(
-          collection(db, 'departments'),
-          where('organizationId', '==', organizationId)
+          collection(db, 'organizations', organizationId, 'departments')
         );
 
         const departmentsSnapshot = await getDocs(departmentsQuery);

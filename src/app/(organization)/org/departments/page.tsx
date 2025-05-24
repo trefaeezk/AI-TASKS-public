@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Translate } from '@/components/Translate';
 import Link from 'next/link';
 
 interface Department {
@@ -51,10 +52,9 @@ export default function DepartmentsPage() {
 
     const fetchDepartments = async () => {
       try {
-        // جلب الأقسام
+        // 🏢 جلب الأقسام من المسار الموحد
         const departmentsQuery = query(
-          collection(db, 'departments'),
-          where('organizationId', '==', organizationId)
+          collection(db, 'organizations', organizationId, 'departments')
         );
 
         const departmentsSnapshot = await getDocs(departmentsQuery);
@@ -144,7 +144,8 @@ export default function DepartmentsPage() {
         updatedAt: serverTimestamp(),
       };
 
-      await addDoc(collection(db, 'departments'), departmentData);
+      // 🏢 إنشاء القسم في المسار الموحد
+      await addDoc(collection(db, 'organizations', organizationId, 'departments'), departmentData);
 
       toast({
         title: 'تم إنشاء القسم',
@@ -188,26 +189,30 @@ export default function DepartmentsPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold flex items-center">
           <FolderTree className="ml-2 h-6 w-6" />
-          أقسام المؤسسة
+          <Translate text="organization.departments" defaultValue="أقسام المؤسسة" />
         </h1>
         {canCreateDepartment && (
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button className="flex items-center">
                 <Plus className="ml-2 h-4 w-4" />
-                إنشاء قسم جديد
+                <Translate text="organization.createNewDepartment" defaultValue="إنشاء قسم جديد" />
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>إنشاء قسم جديد</DialogTitle>
+                <DialogTitle>
+                  <Translate text="organization.createNewDepartment" defaultValue="إنشاء قسم جديد" />
+                </DialogTitle>
                 <DialogDescription>
-                  أدخل معلومات القسم الجديد. اضغط على حفظ عند الانتهاء.
+                  <Translate text="organization.departmentFormDescription" defaultValue="أدخل معلومات القسم الجديد. اضغط على حفظ عند الانتهاء." />
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">اسم القسم</Label>
+                  <Label htmlFor="name">
+                    <Translate text="organization.departmentName" defaultValue="اسم القسم" />
+                  </Label>
                   <Input
                     id="name"
                     value={newDepartmentName}
@@ -216,7 +221,9 @@ export default function DepartmentsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="description">وصف القسم (اختياري)</Label>
+                  <Label htmlFor="description">
+                    <Translate text="organization.departmentDescription" defaultValue="وصف القسم" /> (<Translate text="general.optional" defaultValue="اختياري" />)
+                  </Label>
                   <Textarea
                     id="description"
                     value={newDepartmentDescription}
@@ -232,7 +239,11 @@ export default function DepartmentsPage() {
                   onClick={handleCreateDepartment}
                   disabled={isSubmitting || !newDepartmentName.trim()}
                 >
-                  {isSubmitting ? 'جاري الإنشاء...' : 'إنشاء القسم'}
+                  {isSubmitting ? (
+                    <Translate text="general.creating" defaultValue="جاري الإنشاء..." />
+                  ) : (
+                    <Translate text="organization.createDepartment" defaultValue="إنشاء القسم" />
+                  )}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -243,14 +254,16 @@ export default function DepartmentsPage() {
       {departments.length === 0 ? (
         <Card>
           <CardContent className="pt-6 text-center">
-            <p className="text-muted-foreground">لا توجد أقسام في المؤسسة.</p>
+            <p className="text-muted-foreground">
+              <Translate text="organization.noDepartments" defaultValue="لا توجد أقسام في المؤسسة." />
+            </p>
             {canCreateDepartment && (
               <Button
                 onClick={() => setIsCreateDialogOpen(true)}
                 className="mt-4"
               >
                 <Plus className="ml-2 h-4 w-4" />
-                إنشاء قسم جديد
+                <Translate text="organization.createNewDepartment" defaultValue="إنشاء قسم جديد" />
               </Button>
             )}
           </CardContent>
@@ -262,7 +275,9 @@ export default function DepartmentsPage() {
               <CardHeader>
                 <CardTitle className="text-lg">{department.name}</CardTitle>
                 <CardDescription>
-                  {department.description || 'لا يوجد وصف للقسم'}
+                  {department.description || (
+                    <Translate text="organization.noDepartmentDescription" defaultValue="لا يوجد وصف للقسم" />
+                  )}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -272,28 +287,34 @@ export default function DepartmentsPage() {
                       <Users className="h-5 w-5 text-blue-500" />
                     </div>
                     <div className="text-lg font-semibold">{department.membersCount}</div>
-                    <div className="text-xs text-muted-foreground">عضو</div>
+                    <div className="text-xs text-muted-foreground">
+                      <Translate text="organization.member" defaultValue="عضو" />
+                    </div>
                   </div>
                   <div>
                     <div className="flex justify-center">
                       <Calendar className="h-5 w-5 text-green-500" />
                     </div>
                     <div className="text-lg font-semibold">{department.meetingsCount}</div>
-                    <div className="text-xs text-muted-foreground">اجتماع</div>
+                    <div className="text-xs text-muted-foreground">
+                      <Translate text="meetings.meeting" defaultValue="اجتماع" />
+                    </div>
                   </div>
                   <div>
                     <div className="flex justify-center">
                       <BarChart3 className="h-5 w-5 text-purple-500" />
                     </div>
                     <div className="text-lg font-semibold">{department.tasksCount}</div>
-                    <div className="text-xs text-muted-foreground">مهمة</div>
+                    <div className="text-xs text-muted-foreground">
+                      <Translate text="tasks.task" defaultValue="مهمة" />
+                    </div>
                   </div>
                 </div>
               </CardContent>
               <CardFooter>
                 <Button asChild variant="outline" className="w-full">
                   <Link href={`/org/departments/${department.id}`}>
-                    عرض التفاصيل
+                    <Translate text="organization.departmentDetails" defaultValue="عرض التفاصيل" />
                   </Link>
                 </Button>
               </CardFooter>

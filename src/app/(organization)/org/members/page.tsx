@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, UserPlus, UserX, Shield, Edit, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
+import { Users, UserPlus, UserX, Shield, Edit, Trash2, AlertTriangle, Loader2, User, Building } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -36,6 +36,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Translate } from '@/components/Translate';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
@@ -69,10 +72,36 @@ export default function MembersPage() {
     departmentId: 'none',
   });
   const [formLoading, setFormLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
 
   const organizationId = userClaims?.organizationId;
   const isOwner = userClaims?.owner === true;
   const isAdmin = userClaims?.admin === true;
+
+  // 📊 تصفية الأعضاء حسب التبويب
+  const filteredMembers = members.filter(member => {
+    switch (activeTab) {
+      case 'individuals':
+        return !member.departmentId; // الأفراد (بدون قسم)
+      case 'departments':
+        return member.departmentId; // أعضاء الأقسام
+      default:
+        return true; // جميع الأعضاء
+    }
+  });
+
+  // 📊 إحصائيات الأعضاء
+  const membersStats = {
+    total: members.length,
+    individuals: members.filter(m => !m.departmentId).length,
+    inDepartments: members.filter(m => m.departmentId).length
+  };
+
+  // 🔍 تسجيل للتحقق من البيانات
+  console.log('📊 Members Stats:', membersStats);
+  console.log('👥 All Members:', members.map(m => ({ email: m.email, departmentId: m.departmentId })));
+  console.log('📋 Active Tab:', activeTab);
+  console.log('🔍 Filtered Members:', filteredMembers.length);
 
   // جلب الأعضاء والأقسام
   useEffect(() => {
@@ -114,6 +143,14 @@ export default function MembersPage() {
           const membersPromises = snapshot.docs.map(async (memberDoc) => {
             const memberData = memberDoc.data();
             const memberId = memberDoc.id;
+
+            // 🔍 تسجيل بيانات العضو الخام
+            console.log(`👤 Member ${memberId}:`, {
+              email: memberData.email,
+              role: memberData.role,
+              departmentId: memberData.departmentId,
+              rawData: memberData
+            });
 
             try {
               // 📊 استراتيجية مختلطة: Firestore + Auth
@@ -328,34 +365,51 @@ export default function MembersPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold flex items-center">
           <Users className="ml-2 h-6 w-6" />
-          أعضاء المؤسسة
+          <Translate text="organization.members" />
         </h1>
         {(isOwner || isAdmin) && (
           <Button onClick={() => setIsAddDialogOpen(true)} className="flex items-center">
             <UserPlus className="ml-2 h-4 w-4" />
-            إضافة عضو
+            <Translate text="organization.addMember" />
           </Button>
         )}
       </div>
 
-      {members.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          لا يوجد أعضاء في المؤسسة
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {members.map((member) => (
+      {/* 📋 تبويبات الأعضاء */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="all" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            <Translate text="general.all" />
+            <Badge variant="secondary">{membersStats.total}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="individuals" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            <Translate text="organization.individuals" />
+            <Badge variant="secondary">{membersStats.individuals}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="departments" className="flex items-center gap-2">
+            <Building className="h-4 w-4" />
+            <Translate text="organization.departments" />
+            <Badge variant="secondary">{membersStats.inDepartments}</Badge>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* 📋 جميع الأعضاء */}
+        <TabsContent value="all" className="mt-6">
+          {members.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Translate text="organization.noMembers" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {members.map((member) => (
             <Card key={member.uid}>
               <CardContent className="p-4 flex justify-between items-center">
                 <div>
                   <h3 className="font-medium">{member.email}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {member.role === 'owner' ? 'مالك' :
-                     member.role === 'admin' ? 'مسؤول' :
-                     member.role === 'engineer' ? 'مهندس' :
-                     member.role === 'supervisor' ? 'مشرف' :
-                     member.role === 'technician' ? 'فني' :
-                     member.role === 'assistant' ? 'مساعد فني' : 'مستخدم'}
+                    <Translate text={`roles.${member.role}`} defaultValue={member.role} />
                     {member.departmentId && departments.find(d => d.id === member.departmentId) &&
                       ` - ${departments.find(d => d.id === member.departmentId)?.name}`}
                   </p>
@@ -392,22 +446,183 @@ export default function MembersPage() {
                 )}
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* 👥 تبويب الأفراد */}
+        <TabsContent value="individuals" className="mt-6">
+          {filteredMembers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <User className="mx-auto h-12 w-12 mb-4 opacity-50" />
+              <p className="text-lg font-medium mb-2">
+                <Translate text="organization.noIndividuals" />
+              </p>
+              <p className="text-sm">
+                <Translate text="organization.allMembersAssigned" />
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center gap-2 text-blue-800">
+                  <User className="h-5 w-5" />
+                  <span className="font-medium">
+                    <Translate text="organization.membersWithoutDepartment" />
+                  </span>
+                </div>
+                <p className="text-sm text-blue-600 mt-1">
+                  <Translate text="organization.canAssignToDepartment" />
+                </p>
+              </div>
+              {filteredMembers.map((member) => (
+                <Card key={member.uid} className="border-l-4 border-l-blue-500">
+                  <CardContent className="p-4 flex justify-between items-center">
+                    <div>
+                      <h3 className="font-medium">{member.email}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {member.name} • {member.role}
+                      </p>
+                      <Badge variant="outline" className="mt-1">
+                        <Translate text="organization.unassigned" />
+                      </Badge>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {(isOwner || isAdmin) && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedMember(member);
+                              setFormData({
+                                email: member.email,
+                                role: member.role,
+                                departmentId: member.departmentId || 'none',
+                              });
+                              setIsEditDialogOpen(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedMember(member);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                          >
+                            <UserX className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* 🏢 تبويب أعضاء الأقسام */}
+        <TabsContent value="departments" className="mt-6">
+          {filteredMembers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Building className="mx-auto h-12 w-12 mb-4 opacity-50" />
+              <p className="text-lg font-medium mb-2">
+                <Translate text="organization.noDepartmentMembers" />
+              </p>
+              <p className="text-sm">
+                <Translate text="organization.assignMembersToDepartments" />
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center gap-2 text-green-800">
+                  <Building className="h-5 w-5" />
+                  <span className="font-medium">
+                    <Translate text="organization.departmentMembers" />
+                  </span>
+                </div>
+                <p className="text-sm text-green-600 mt-1">
+                  <Translate text="organization.membersAssignedToDepartments" />
+                </p>
+              </div>
+              {filteredMembers.map((member) => {
+                const department = departments.find(d => d.id === member.departmentId);
+                return (
+                  <Card key={member.uid} className="border-l-4 border-l-green-500">
+                    <CardContent className="p-4 flex justify-between items-center">
+                      <div>
+                        <h3 className="font-medium">{member.email}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {member.name} • {member.role}
+                        </p>
+                        <Badge variant="default" className="mt-1">
+                          {department?.name || (
+                            <Translate text="organization.unknownDepartment" />
+                          )}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {(isOwner || isAdmin) && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedMember(member);
+                                setFormData({
+                                  email: member.email,
+                                  role: member.role,
+                                  departmentId: member.departmentId || 'none',
+                                });
+                                setIsEditDialogOpen(true);
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedMember(member);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                            >
+                              <UserX className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* مربع حوار إضافة عضو */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>إضافة عضو جديد</DialogTitle>
+            <DialogTitle>
+              <Translate text="organization.addMember" />
+            </DialogTitle>
             <DialogDescription>
-              أدخل بريد العضو الإلكتروني ودوره في المؤسسة.
+              <Translate text="organization.addMemberDescription" />
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">البريد الإلكتروني</Label>
+              <Label htmlFor="email">
+                <Translate text="auth.email" />
+              </Label>
               <Input
                 id="email"
                 value={formData.email}
@@ -416,36 +631,42 @@ export default function MembersPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role">الدور</Label>
+              <Label htmlFor="role">
+                <Translate text="organization.role" />
+              </Label>
               <Select
                 value={formData.role}
                 onValueChange={(value) => setFormData({ ...formData, role: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="اختر الدور" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {isOwner && <SelectItem value="owner">مالك</SelectItem>}
-                  <SelectItem value="admin">مسؤول</SelectItem>
-                  <SelectItem value="engineer">مهندس</SelectItem>
-                  <SelectItem value="supervisor">مشرف</SelectItem>
-                  <SelectItem value="technician">فني</SelectItem>
-                  <SelectItem value="assistant">مساعد فني</SelectItem>
-                  <SelectItem value="user">مستخدم</SelectItem>
+                  {isOwner && <SelectItem value="owner"><Translate text="roles.owner" /></SelectItem>}
+                  <SelectItem value="admin"><Translate text="roles.admin" /></SelectItem>
+                  <SelectItem value="engineer"><Translate text="roles.engineer" /></SelectItem>
+                  <SelectItem value="supervisor"><Translate text="roles.supervisor" /></SelectItem>
+                  <SelectItem value="technician"><Translate text="roles.technician" /></SelectItem>
+                  <SelectItem value="assistant"><Translate text="roles.assistant" /></SelectItem>
+                  <SelectItem value="user"><Translate text="roles.user" /></SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="department">القسم</Label>
+              <Label htmlFor="department">
+                <Translate text="organization.department" />
+              </Label>
               <Select
                 value={formData.departmentId}
                 onValueChange={(value) => setFormData({ ...formData, departmentId: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="اختر القسم" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">بدون قسم</SelectItem>
+                  <SelectItem value="none">
+                    <Translate text="organization.noDepartment" />
+                  </SelectItem>
                   {departments.map((department) => (
                     <SelectItem key={department.id} value={department.id}>
                       {department.name}
@@ -457,16 +678,16 @@ export default function MembersPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-              إلغاء
+              <Translate text="general.cancel" />
             </Button>
             <Button onClick={handleAddMember} disabled={formLoading}>
               {formLoading ? (
                 <>
                   <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                  جاري الإضافة...
+                  <Translate text="general.adding" />
                 </>
               ) : (
-                'إضافة'
+                <Translate text="general.add" />
               )}
             </Button>
           </DialogFooter>
@@ -477,14 +698,18 @@ export default function MembersPage() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>تعديل بيانات العضو</DialogTitle>
+            <DialogTitle>
+              <Translate text="organization.editMember" />
+            </DialogTitle>
             <DialogDescription>
-              تعديل دور العضو وقسمه في المؤسسة.
+              <Translate text="organization.editMemberDescription" />
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">البريد الإلكتروني</Label>
+              <Label htmlFor="email">
+                <Translate text="auth.email" />
+              </Label>
               <Input
                 id="email"
                 value={formData.email}
@@ -492,37 +717,43 @@ export default function MembersPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role">الدور</Label>
+              <Label htmlFor="role">
+                <Translate text="organization.role" />
+              </Label>
               <Select
                 value={formData.role}
                 onValueChange={(value) => setFormData({ ...formData, role: value })}
                 disabled={selectedMember?.role === 'owner' && !isOwner}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="اختر الدور" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {isOwner && <SelectItem value="owner">مالك</SelectItem>}
-                  <SelectItem value="admin">مسؤول</SelectItem>
-                  <SelectItem value="engineer">مهندس</SelectItem>
-                  <SelectItem value="supervisor">مشرف</SelectItem>
-                  <SelectItem value="technician">فني</SelectItem>
-                  <SelectItem value="assistant">مساعد فني</SelectItem>
-                  <SelectItem value="user">مستخدم</SelectItem>
+                  {isOwner && <SelectItem value="owner"><Translate text="roles.owner" /></SelectItem>}
+                  <SelectItem value="admin"><Translate text="roles.admin" /></SelectItem>
+                  <SelectItem value="engineer"><Translate text="roles.engineer" /></SelectItem>
+                  <SelectItem value="supervisor"><Translate text="roles.supervisor" /></SelectItem>
+                  <SelectItem value="technician"><Translate text="roles.technician" /></SelectItem>
+                  <SelectItem value="assistant"><Translate text="roles.assistant" /></SelectItem>
+                  <SelectItem value="user"><Translate text="roles.user" /></SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="department">القسم</Label>
+              <Label htmlFor="department">
+                <Translate text="organization.department" />
+              </Label>
               <Select
                 value={formData.departmentId}
                 onValueChange={(value) => setFormData({ ...formData, departmentId: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="اختر القسم" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">بدون قسم</SelectItem>
+                  <SelectItem value="none">
+                    <Translate text="organization.noDepartment" />
+                  </SelectItem>
                   {departments.map((department) => (
                     <SelectItem key={department.id} value={department.id}>
                       {department.name}
@@ -534,16 +765,16 @@ export default function MembersPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              إلغاء
+              <Translate text="general.cancel" />
             </Button>
             <Button onClick={handleEditMember} disabled={formLoading}>
               {formLoading ? (
                 <>
                   <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                  جاري التعديل...
+                  <Translate text="general.updating" />
                 </>
               ) : (
-                'حفظ التغييرات'
+                <Translate text="general.saveChanges" />
               )}
             </Button>
           </DialogFooter>
@@ -554,21 +785,25 @@ export default function MembersPage() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>هل أنت متأكد من حذف هذا العضو؟</AlertDialogTitle>
+            <AlertDialogTitle>
+              <Translate text="organization.confirmDeleteMember" />
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              سيتم إزالة العضو من المؤسسة. هذا الإجراء لا يمكن التراجع عنه.
+              <Translate text="organization.deleteMemberWarning" />
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogCancel>
+              <Translate text="general.cancel" />
+            </AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteMember} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {formLoading ? (
                 <>
                   <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                  جاري الحذف...
+                  <Translate text="general.deleting" />
                 </>
               ) : (
-                'حذف'
+                <Translate text="general.delete" />
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
