@@ -49,10 +49,16 @@ export const updateUserRoleHttp = functions.region('us-central1').https.onReques
 
       console.log(`[updateUserRoleHttp] Updating role for user ${uid} to ${role}`);
 
-      // التحقق من أن المستخدم لا يحاول تعيين دور مالك إلا إذا كان هو نفسه مالكًا
-      if (role === 'owner' && !decodedToken.owner) {
-        console.error(`[updateUserRoleHttp] User ${decodedToken.uid} is not an owner and cannot set owner role`);
-        res.status(403).json({ error: 'يجب أن تكون مالكًا لتعيين دور مالك.' });
+      // التحقق من الصلاحيات للأدوار عالية المستوى في النظام الجديد
+      if ((role === 'system_owner' || role === 'owner') && !decodedToken.system_owner && !decodedToken.owner) {
+        console.error(`[updateUserRoleHttp] User ${decodedToken.uid} is not a system owner and cannot set system owner role`);
+        res.status(403).json({ error: 'يجب أن تكون مالك النظام لتعيين دور مالك النظام.' });
+        return;
+      }
+
+      if (role === 'system_admin' && !decodedToken.system_owner && !decodedToken.system_admin && !decodedToken.owner) {
+        console.error(`[updateUserRoleHttp] User ${decodedToken.uid} cannot set system admin role`);
+        res.status(403).json({ error: 'يجب أن تكون مالك النظام أو أدمن النظام لتعيين دور أدمن النظام.' });
         return;
       }
 
@@ -60,22 +66,38 @@ export const updateUserRoleHttp = functions.region('us-central1').https.onReques
       const userRecord = await admin.auth().getUser(uid);
       const currentClaims = userRecord.customClaims || {};
 
-      // تعيين الدور الجديد مع الحفاظ على الخصائص الأخرى
+      // تعيين الدور الجديد مع الحفاظ على الخصائص الأخرى - النظام الجديد
       const newClaims = {
         ...currentClaims,
         role,
-        admin: role === 'admin' || role === 'owner',
-        owner: role === 'owner'
+
+        // الأدوار الجديدة
+        system_owner: role === 'system_owner',
+        system_admin: role === 'system_admin',
+        organization_owner: role === 'organization_owner',
+        admin: role === 'admin',
+
+        // التوافق مع النظام القديم
+        owner: role === 'owner' || role === 'system_owner',
+        individual_admin: role === 'individual_admin' || role === 'system_admin'
       };
 
       // تحديث custom claims
       await admin.auth().setCustomUserClaims(uid, newClaims);
 
-      // تحديث وثيقة المستخدم في Firestore
+      // تحديث وثيقة المستخدم في Firestore - النظام الجديد
       await db.collection('users').doc(uid).update({
         role,
-        isOwner: role === 'owner',
-        isAdmin: role === 'admin' || role === 'owner',
+
+        // الأدوار الجديدة
+        isSystemOwner: role === 'system_owner',
+        isSystemAdmin: role === 'system_admin',
+        isOrganizationOwner: role === 'organization_owner',
+        isAdmin: role === 'admin',
+
+        // التوافق مع النظام القديم
+        isOwner: role === 'owner' || role === 'system_owner',
+
         updatedAt: new Date()
       });
 
@@ -270,20 +292,31 @@ export const setAdminRoleHttp = functions.region('us-central1').https.onRequest(
       const userRecord = await admin.auth().getUser(uid);
       const currentClaims = userRecord.customClaims || {};
 
-      // تعيين دور المسؤول مع الحفاظ على الخصائص الأخرى
+      // تعيين دور المسؤول مع الحفاظ على الخصائص الأخرى - النظام الجديد
       const newClaims = {
         ...currentClaims,
         role: 'admin',
-        admin: true
+        admin: true,
+
+        // إضافة الأدوار الجديدة
+        system_owner: false,
+        system_admin: false,
+        organization_owner: false
       };
 
       // تحديث custom claims
       await admin.auth().setCustomUserClaims(uid, newClaims);
 
-      // تحديث وثيقة المستخدم في Firestore
+      // تحديث وثيقة المستخدم في Firestore - النظام الجديد
       await db.collection('users').doc(uid).update({
         role: 'admin',
         isAdmin: true,
+
+        // إضافة الأدوار الجديدة
+        isSystemOwner: false,
+        isSystemAdmin: false,
+        isOrganizationOwner: false,
+
         updatedAt: new Date()
       });
 
@@ -349,11 +382,19 @@ export const createUserHttp = functions.region('us-central1').https.onRequest(as
         disabled: false
       });
 
-      // تعيين custom claims
+      // تعيين custom claims للنظام الجديد
       const claims: Record<string, any> = {
-        role: role || 'user',
-        admin: role === 'admin' || role === 'owner',
-        owner: role === 'owner'
+        role: role || 'assistant',
+
+        // الأدوار الجديدة
+        system_owner: role === 'system_owner',
+        system_admin: role === 'system_admin',
+        organization_owner: role === 'organization_owner',
+        admin: role === 'admin',
+
+        // التوافق مع النظام القديم
+        owner: role === 'owner' || role === 'system_owner',
+        individual_admin: role === 'individual_admin' || role === 'system_admin'
       };
 
       // إذا كان هناك معرف مؤسسة، نضيفه إلى custom claims
@@ -366,13 +407,21 @@ export const createUserHttp = functions.region('us-central1').https.onRequest(as
 
       await admin.auth().setCustomUserClaims(userRecord.uid, claims);
 
-      // إنشاء وثيقة المستخدم في Firestore
+      // إنشاء وثيقة المستخدم في Firestore - النظام الجديد
       await db.collection('users').doc(userRecord.uid).set({
         email,
         displayName: displayName || email,
-        role: role || 'user',
-        isAdmin: role === 'admin' || role === 'owner',
-        isOwner: role === 'owner',
+        role: role || 'assistant',
+
+        // الأدوار الجديدة
+        isSystemOwner: role === 'system_owner',
+        isSystemAdmin: role === 'system_admin',
+        isOrganizationOwner: role === 'organization_owner',
+        isAdmin: role === 'admin',
+
+        // التوافق مع النظام القديم
+        isOwner: role === 'owner' || role === 'system_owner',
+
         accountType: organizationId ? 'organization' : 'individual',
         organizationId: organizationId || null,
         createdAt: new Date(),
@@ -383,7 +432,7 @@ export const createUserHttp = functions.region('us-central1').https.onRequest(as
       // إذا كان هناك معرف مؤسسة، نضيف المستخدم كعضو في المؤسسة
       if (organizationId) {
         await db.collection('organizations').doc(organizationId).collection('members').doc(userRecord.uid).set({
-          role: role || 'user',
+          role: role || 'assistant',
           joinedAt: new Date(),
           addedBy: decodedToken.uid
         });

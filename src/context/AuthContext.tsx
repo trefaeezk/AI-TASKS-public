@@ -12,15 +12,16 @@ import { db } from '@/lib/firebase';
 import { doc, onSnapshot, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { SystemType } from '@/types/system';
+import { UserRole, PermissionKey } from '@/types/roles';
 import { firestoreListenerManager, handleFirestoreError } from '@/utils/firestoreListenerManager';
 
 interface UserClaims {
-  // الأدوار المتاحة:
-  // - أدوار النظام: 'system_owner', 'system_admin', 'independent'
-  // - أدوار المؤسسة: 'organization_owner', 'admin', 'supervisor', 'engineer', 'technician', 'assistant'
-  role?: string;
+  // الأدوار المتاحة في النظام الجديد:
+  // - أدوار النظام العامة: 'system_owner', 'system_admin', 'independent'
+  // - أدوار المؤسسات: 'organization_owner', 'admin', 'supervisor', 'engineer', 'technician', 'assistant'
+  role?: UserRole;
 
-  // الصلاحيات الخاصة
+  // الصلاحيات الخاصة (للتوافق مع النظام الجديد)
   system_owner?: boolean;       // مالك النظام (أعلى صلاحية)
   system_admin?: boolean;       // أدمن النظام العام
   organization_owner?: boolean; // مالك المؤسسة
@@ -31,6 +32,9 @@ interface UserClaims {
   organizationId?: string;      // معرف المؤسسة (للمؤسسات فقط)
   organizationName?: string;    // اسم المؤسسة (للمؤسسات فقط)
   departmentId?: string;        // معرف القسم (اختياري)
+
+  // صلاحيات مخصصة (للنظام الجديد)
+  customPermissions?: PermissionKey[];
 
   [key: string]: any;
 }
@@ -102,15 +106,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // 🧑 حساب فردي
         console.log("[AuthContext] 👤 الخطوة 2: معالجة حساب فردي");
 
-        let individualRole = userData.role || 'independent';
+        let individualRole: UserRole = userData.role || 'independent';
         const isSystemOwner = userData.system_owner || false;
         const isSystemAdmin = userData.system_admin || false;
 
-        // تصحيح الدور بناءً على الصلاحيات
+        // تصحيح الدور بناءً على الصلاحيات والتوافق مع النظام القديم
         if (isSystemOwner) {
           individualRole = 'system_owner';
         } else if (isSystemAdmin) {
           individualRole = 'system_admin';
+        } else if (userData.role === 'owner') {
+          // للتوافق مع النظام القديم - تحويل إلى النظام الجديد
+          individualRole = 'system_owner';
+        } else if (userData.role === 'admin') {
+          // للتوافق مع النظام القديم - تحويل إلى النظام الجديد
+          individualRole = 'system_admin';
+        } else if (userData.role === 'individual_admin') {
+          // للتوافق مع النظام القديم - تحويل إلى النظام الجديد
+          individualRole = 'system_admin';
+        } else if (userData.role === 'user') {
+          // للتوافق مع النظام القديم - تحويل إلى النظام الجديد
+          individualRole = 'independent';
+        } else {
+          // التأكد من أن الدور صحيح في النظام الجديد
+          const validIndividualRoles: UserRole[] = ['system_owner', 'system_admin', 'independent'];
+          if (!validIndividualRoles.includes(individualRole as UserRole)) {
+            individualRole = 'independent';
+          }
         }
 
         console.log("  - userData.role:", userData.role);
@@ -122,7 +144,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           accountType: 'individual' as SystemType,
           role: individualRole,
           system_owner: isSystemOwner,
-          system_admin: isSystemAdmin
+          system_admin: isSystemAdmin,
+          customPermissions: userData.customPermissions || [],
+          departmentId: userData.departmentId
         };
 
         console.log("[AuthContext] ✅ البيانات النهائية للحساب الفردي:", individualClaims);
@@ -157,7 +181,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log("[AuthContext] 🎯 الخطوة 4: تحديد دور المستخدم في المؤسسة");
 
         // التحقق من دور المستخدم في المؤسسة
-        let userRole = userData.role || 'assistant';
+        let userRole: UserRole = userData.role || 'assistant';
         let isOwner = false;
         let isAdmin = false;
 
@@ -188,13 +212,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const memberData = memberDocSnap.data();
             console.log("  - memberData:", memberData);
             userRole = memberData.role || userData.role || 'assistant';
+
+            // تحديث منطق تحديد الأدوار للنظام الجديد
             isAdmin = userRole === 'admin';
+
+            // التوافق مع النظام القديم - تحويل الأدوار القديمة
+            if (userData.role === 'owner' && !isOwner) {
+              userRole = 'admin'; // تحويل owner قديم إلى admin في المؤسسة
+            } else if (userData.role === 'individual_admin') {
+              userRole = 'admin'; // تحويل individual_admin إلى admin
+            }
+
+            // التأكد من أن الدور صحيح في النظام الجديد للمؤسسات
+            const validOrgRoles: UserRole[] = ['organization_owner', 'admin', 'supervisor', 'engineer', 'technician', 'assistant'];
+            if (!validOrgRoles.includes(userRole as UserRole)) {
+              userRole = 'assistant'; // الدور الافتراضي للمؤسسات
+            }
+
             console.log("[AuthContext] 👥 المستخدم عضو في المؤسسة، الدور:", userRole);
           } else {
             console.log("[AuthContext] ⚠️ المستخدم ليس عضو في المؤسسة");
             console.log("  - userData.role:", userData.role);
             console.log("  - سيتم استخدام الدور من userData أو assistant");
+
+            // تطبيق نفس منطق التوافق مع النظام القديم
             userRole = userData.role || 'assistant';
+            if (userData.role === 'owner' && !isOwner) {
+              userRole = 'admin';
+            } else if (userData.role === 'individual_admin') {
+              userRole = 'admin';
+            }
+
+            // التأكد من أن الدور صحيح
+            const validOrgRoles: UserRole[] = ['organization_owner', 'admin', 'supervisor', 'engineer', 'technician', 'assistant'];
+            if (!validOrgRoles.includes(userRole as UserRole)) {
+              userRole = 'assistant';
+            }
           }
         }
 
@@ -206,7 +259,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           organization_owner: isOwner,
           admin: isAdmin,
           system_owner: userData.system_owner || false,
-          system_admin: userData.system_admin || false
+          system_admin: userData.system_admin || false,
+          customPermissions: userData.customPermissions || [],
+          departmentId: userData.departmentId
         };
 
         console.log("[AuthContext] 🎯 الخطوة 7: النتيجة النهائية");

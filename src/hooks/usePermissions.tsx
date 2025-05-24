@@ -18,7 +18,7 @@ import { db } from '@/lib/firebase';
  */
 export function usePermissions() {
   const { user, userClaims, loading: authContextLoading, refreshUserData } = useAuthFromContext(); // Use renamed import
-  const [role, setRole] = useState<UserRole>('user'); // Default role
+  const [role, setRole] = useState<UserRole>('assistant'); // Default role for new system
   const [customPermissions, setCustomPermissions] = useState<PermissionKey[]>([]);
   const [internalLoading, setInternalLoading] = useState(true); // Internal loading state for this hook
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +26,7 @@ export function usePermissions() {
   const determinePermissions = useCallback(async () => {
     if (!user) {
       console.log("[usePermissions] No user, setting default role and permissions, internalLoading false.");
-      setRole('user'); // Or a 'guest' role if you have one
+      setRole('assistant'); // Default role for new system
       setCustomPermissions([]);
       setInternalLoading(false);
       return;
@@ -46,31 +46,54 @@ export function usePermissions() {
 
     try {
       let effectiveRole: UserRole;
-      if (userClaims.owner) {
-        effectiveRole = 'owner';
+
+      // تحديد الدور بناءً على النظام الجديد
+      if (userClaims.system_owner) {
+        effectiveRole = 'system_owner';
+      } else if (userClaims.system_admin) {
+        effectiveRole = 'system_admin';
+      } else if (userClaims.organization_owner) {
+        effectiveRole = 'organization_owner';
       } else if (userClaims.admin) {
         effectiveRole = 'admin';
+      } else if (userClaims.role) {
+        effectiveRole = userClaims.role as UserRole;
       } else {
-        effectiveRole = userClaims.role as UserRole || (userClaims.accountType === 'individual' ? 'independent' : 'user');
+        // الدور الافتراضي بناءً على نوع الحساب
+        effectiveRole = userClaims.accountType === 'individual' ? 'independent' : 'assistant';
       }
+
+      // التوافق مع النظام القديم - تحويل الأدوار القديمة
+      if (userClaims.owner) {
+        effectiveRole = 'system_owner';
+      } else if (effectiveRole === 'owner') {
+        effectiveRole = 'system_owner';
+      } else if (effectiveRole === 'individual_admin') {
+        effectiveRole = 'system_admin';
+      } else if (effectiveRole === 'user') {
+        effectiveRole = userClaims.accountType === 'individual' ? 'independent' : 'assistant';
+      }
+
       console.log("[usePermissions] Effective role from claims:", effectiveRole);
       setRole(effectiveRole);
 
-      // Fetch custom permissions from Firestore
-      let userDocPath: string | null = null;
-      if (userClaims.accountType === 'organization' && userClaims.organizationId) {
-        // For organization members, permissions might be on the main user doc or member doc.
-        // Assuming for now they are on the main 'users' doc if they exist.
-        // If specific member permissions are needed, this logic needs adjustment.
-        userDocPath = `users/${user.uid}`; // Or `organizations/${userClaims.organizationId}/members/${user.uid}` if perms are there
-      } else if (userClaims.accountType === 'individual') {
-        userDocPath = `individuals/${user.uid}`;
-      } else {
-         // Fallback for users not clearly individual or org (e.g., during initial setup or if claims are sparse)
-         userDocPath = `users/${user.uid}`;
-      }
-      
-      if (userDocPath) {
+      // الحصول على الصلاحيات المخصصة من userClaims أولاً
+      let fetchedCustomPermissions: PermissionKey[] = userClaims.customPermissions || [];
+
+      // إذا لم تكن موجودة في claims، جلبها من Firestore
+      if (fetchedCustomPermissions.length === 0) {
+        let userDocPath: string | null = null;
+        if (userClaims.accountType === 'organization' && userClaims.organizationId) {
+          // للمؤسسات، تحقق من مجموعة users أولاً ثم members
+          userDocPath = `users/${user.uid}`;
+        } else if (userClaims.accountType === 'individual') {
+          userDocPath = `individuals/${user.uid}`;
+        } else {
+          // احتياطي للمستخدمين غير المحددين بوضوح
+          userDocPath = `users/${user.uid}`;
+        }
+
+        if (userDocPath) {
         console.log("[usePermissions] Fetching custom permissions from path:", userDocPath);
         const userDoc = await getDoc(doc(db, userDocPath));
         if (userDoc.exists()) {
@@ -83,25 +106,33 @@ export function usePermissions() {
             setCustomPermissions([]);
             console.log("[usePermissions] No custom permissions in Firestore doc.");
           }
-           // If Firestore role differs from claims role (and not owner/admin), refresh claims
-           if (userData.role && effectiveRole !== 'owner' && effectiveRole !== 'admin' && userData.role !== effectiveRole) {
-            console.warn(`[usePermissions] Role mismatch: Claims ('${effectiveRole}') vs Firestore ('${userData.role}'). Consider refreshing claims.`);
-            // Potentially call refreshUserData() here, but be cautious of loops
-            // For now, we trust the claims as the primary source after initial determination.
+           // التحقق من تطابق الأدوار مع النظام الجديد
+           if (userData.role && userData.role !== effectiveRole) {
+            // تحقق من الأدوار عالية المستوى التي لا يجب تغييرها
+            const highLevelRoles = ['system_owner', 'system_admin', 'organization_owner'];
+            if (!highLevelRoles.includes(effectiveRole)) {
+              console.warn(`[usePermissions] Role mismatch: Claims ('${effectiveRole}') vs Firestore ('${userData.role}'). Consider refreshing claims.`);
+              // يمكن استدعاء refreshUserData() هنا، لكن احذر من الحلقات اللانهائية
+              // حالياً، نثق في claims كمصدر أساسي بعد التحديد الأولي
+            }
           }
         } else {
           setCustomPermissions([]);
           console.log("[usePermissions] User document not found at path:", userDocPath, "No custom permissions loaded.");
         }
-      } else {
+        } else {
           setCustomPermissions([]);
           console.log("[usePermissions] No valid userDocPath, no custom permissions loaded.");
+        }
       }
+
+      console.log("[usePermissions] Final custom permissions:", fetchedCustomPermissions);
+      setCustomPermissions(fetchedCustomPermissions);
 
     } catch (err: any) {
       console.error('[usePermissions] Error in determinePermissions:', err);
       setError(err.message || 'Error fetching user permissions');
-      setRole('user'); // Fallback role
+      setRole('assistant'); // Fallback role for new system
       setCustomPermissions([]);
     } finally {
       console.log("[usePermissions] Finished determinePermissions, setting internalLoading to false.");

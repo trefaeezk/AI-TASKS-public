@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/config/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/context/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { handleFirestoreError } from '@/utils/firestoreListenerManager';
 

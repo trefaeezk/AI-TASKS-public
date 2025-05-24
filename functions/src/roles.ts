@@ -91,7 +91,7 @@ export const updateUserRole = createCallableFunction<UpdateUserRoleRequest>(asyn
             throw new functions.https.HttpsError("invalid-argument", "يجب توفير معرف المستخدم.");
         }
 
-        const validRoles = ['admin', 'engineer', 'supervisor', 'technician', 'assistant', 'user', 'independent'];
+        const validRoles = ['system_owner', 'system_admin', 'organization_owner', 'admin', 'engineer', 'supervisor', 'technician', 'assistant', 'independent'];
         if (!role || typeof role !== "string" || !validRoles.includes(role)) {
             throw new functions.https.HttpsError(
                 "invalid-argument",
@@ -200,7 +200,7 @@ export const updateUserPermissions = createCallableFunction<UpdateUserPermission
 
             // الحصول على دور المستخدم من custom claims
             const userClaims = (await admin.auth().getUser(uid)).customClaims || {};
-            const userRole = userClaims.role || 'independent';
+            const userRole = userClaims.role || 'assistant';
 
             await db.collection('users').doc(uid).set({
                 role: userRole,

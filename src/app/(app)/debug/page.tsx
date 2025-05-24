@@ -531,7 +531,7 @@ export default function DebugPage() {
                         className={`p-2 border rounded-md cursor-pointer hover:bg-accent ${selectedUserId === user.uid ? 'bg-accent' : ''}`}
                         onClick={() => {
                           setSelectedUserId(user.uid);
-                          setSelectedUserRole(user.role || 'independent');
+                          setSelectedUserRole(user.role || 'assistant');
                           setSelectedUserPermissions(user.customPermissions || []);
                           // فتح مربع حوار تفاصيل المستخدم
                           openUserDetailsDialog(user);

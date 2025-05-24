@@ -6,17 +6,20 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { db } from './utils';
 
-// استيراد أنواع الصلاحيات من ملف types/user.ts
+// استيراد أنواع الصلاحيات من ملف types/user.ts - النظام الجديد
 export type UserRole =
-  | 'owner'       // مالك النظام (أعلى صلاحية)
-  | 'admin'       // مسؤول النظام
-  | 'individual_admin' // مسؤول نظام الأفراد
-  | 'engineer'    // مهندس
-  | 'supervisor'  // مشرف
-  | 'technician'  // فني
-  | 'assistant'   // مساعد فني
-  | 'user'        // مستخدم عادي
-  | 'independent';// مستخدم مستقل (فردي)
+  // أدوار النظام العامة
+  | 'system_owner'    // مالك النظام (أعلى صلاحية)
+  | 'system_admin'    // أدمن النظام العام
+  | 'independent'     // مستخدم مستقل (فردي)
+
+  // أدوار المؤسسات
+  | 'organization_owner' // مالك المؤسسة
+  | 'admin'           // أدمن المؤسسة
+  | 'supervisor'      // مشرف
+  | 'engineer'        // مهندس
+  | 'technician'      // فني
+  | 'assistant';      // مساعد فني
 
 export type PermissionArea =
   | 'users'      // إدارة المستخدمين
@@ -52,10 +55,10 @@ export const keyToPermission = (key: PermissionKey): Permission => {
   return { area, action };
 };
 
-// الصلاحيات الافتراضية لكل دور
+// الصلاحيات الافتراضية لكل دور - النظام الجديد
 export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
-  // المالك لديه جميع الصلاحيات بما فيها إدارة المسؤولين وطلبات المؤسسات
-  owner: [
+  // مالك النظام - أعلى صلاحية في النظام بالكامل
+  system_owner: [
     'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
@@ -65,19 +68,30 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
     'data:view', 'data:create', 'data:edit', 'data:delete'
   ],
 
-  // المسؤول لديه جميع الصلاحيات ما عدا إدارة المالكين وطلبات المؤسسات
+  // أدمن النظام العام - صلاحيات واسعة لإدارة النظام
+  system_admin: [
+    'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
+    'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
+    'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
+    'settings:view', 'settings:create', 'settings:edit', 'settings:delete', 'settings:approve', 'settings:assign',
+    'tools:view', 'tools:create', 'tools:edit', 'tools:delete', 'tools:approve', 'tools:assign',
+    'dashboard:view', 'dashboard:create', 'dashboard:edit', 'dashboard:delete', 'dashboard:approve', 'dashboard:assign',
+    'data:view', 'data:create', 'data:edit', 'data:delete'
+  ],
+
+  // مالك المؤسسة - صلاحيات كاملة داخل المؤسسة
+  organization_owner: [
+    'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
+    'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
+    'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
+    'settings:view', 'settings:create', 'settings:edit', 'settings:delete', 'settings:approve', 'settings:assign',
+    'tools:view', 'tools:create', 'tools:edit', 'tools:delete', 'tools:approve', 'tools:assign',
+    'dashboard:view', 'dashboard:create', 'dashboard:edit', 'dashboard:delete', 'dashboard:approve', 'dashboard:assign',
+    'data:view', 'data:create', 'data:edit', 'data:delete'
+  ],
+
+  // أدمن المؤسسة - صلاحيات إدارية واسعة داخل المؤسسة
   admin: [
-    'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
-    'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
-    'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
-    'settings:view', 'settings:create', 'settings:edit', 'settings:delete', 'settings:approve', 'settings:assign',
-    'tools:view', 'tools:create', 'tools:edit', 'tools:delete', 'tools:approve', 'tools:assign',
-    'dashboard:view', 'dashboard:create', 'dashboard:edit', 'dashboard:delete', 'dashboard:approve', 'dashboard:assign',
-    'data:view', 'data:create', 'data:edit', 'data:delete'
-  ],
-
-  // مسؤول نظام الأفراد لديه صلاحيات إدارة حسابات الأفراد فقط
-  individual_admin: [
     'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
@@ -123,13 +137,6 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
     'dashboard:view'
   ],
 
-  // المستخدم العادي لديه صلاحيات العرض فقط
-  user: [
-    'tasks:view',
-    'dashboard:view',
-    'data:view', 'data:create', 'data:edit', 'data:delete'
-  ],
-
   // المستخدم المستقل (الفردي) لديه صلاحيات كاملة على المحتوى الخاص به فقط
   independent: [
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete',
@@ -155,39 +162,42 @@ export const hasPermission = async (
     // الحصول على معلومات المستخدم من Firebase Auth
     const userRecord = await admin.auth().getUser(userId);
     const customClaims = userRecord.customClaims || {};
-    const userRole = customClaims.role as UserRole || 'user';
+    const userRole = customClaims.role as UserRole || 'assistant';
 
     // الحصول على الصلاحيات الافتراضية للدور
     const defaultPermissions = DEFAULT_ROLE_PERMISSIONS[userRole] || [];
 
-    // إذا كان المستخدم مالكًا، فلديه جميع الصلاحيات
+    // التحقق من الأدوار عالية المستوى في النظام الجديد
+
+    // مالك النظام - أعلى صلاحية
+    if (customClaims.system_owner === true || userRole === 'system_owner') {
+      return true;
+    }
+
+    // أدمن النظام العام - صلاحيات واسعة
+    if (customClaims.system_admin === true || userRole === 'system_admin') {
+      return true;
+    }
+
+    // مالك المؤسسة - صلاحيات كاملة داخل المؤسسة
+    if (customClaims.organization_owner === true || userRole === 'organization_owner') {
+      return true;
+    }
+
+    // أدمن المؤسسة - صلاحيات إدارية واسعة داخل المؤسسة
+    if (customClaims.admin === true || userRole === 'admin') {
+      return true;
+    }
+
+    // التوافق مع النظام القديم
     if (customClaims.owner === true) {
-      return true;
+      return true; // تحويل owner قديم إلى system_owner
     }
 
-    // إذا كان المستخدم مسؤولاً، فلديه جميع الصلاحيات ما عدا إدارة المالكين وطلبات المؤسسات
-    if (customClaims.admin === true) {
-      // التحقق من أن الصلاحية المطلوبة ليست خاصة بالمالك فقط
-      const ownerOnlyPermissions = [
-        'users:create', 'users:edit', 'users:delete', 'users:approve' // للمستخدمين ذوي دور المالك أو المسؤول
-      ];
-
-      if (ownerOnlyPermissions.includes(permissionKey)) {
-        // التحقق من أن المستخدم المستهدف ليس مالكًا أو مسؤولًا
-        // هذا التحقق سيتم في الدوال المحددة التي تتطلب هذه الصلاحيات
-        return false;
-      }
-
-      return true;
-    }
-
-    // إذا كان المستخدم مسؤول نظام الأفراد، فلديه صلاحيات على حسابات الأفراد فقط
     if (customClaims.individual_admin === true) {
-      // التحقق من أن الصلاحية المطلوبة متعلقة بإدارة الأفراد
-      if (permissionKey.startsWith('users:')) {
-        // سيتم التحقق من نوع الحساب في الدوال المحددة
-        return true;
-      }
+      // تحويل individual_admin إلى system_admin مع قيود
+      const adminPermissions = DEFAULT_ROLE_PERMISSIONS.system_admin || [];
+      return adminPermissions.includes(permissionKey);
     }
 
     // التحقق من الصلاحيات الافتراضية للدور
@@ -234,29 +244,40 @@ export const getUserPermissions = async (userId: string): Promise<PermissionKey[
     // الحصول على معلومات المستخدم من Firebase Auth
     const userRecord = await admin.auth().getUser(userId);
     const customClaims = userRecord.customClaims || {};
-    const userRole = customClaims.role as UserRole || 'user';
+    const userRole = customClaims.role as UserRole || 'assistant';
 
     // الحصول على الصلاحيات الافتراضية للدور
     const defaultPermissions = DEFAULT_ROLE_PERMISSIONS[userRole] || [];
 
-    // إذا كان المستخدم مالكًا، فلديه جميع الصلاحيات
-    if (customClaims.owner === true) {
+    // التحقق من الأدوار عالية المستوى في النظام الجديد
+
+    // مالك النظام - جميع الصلاحيات
+    if (customClaims.system_owner === true || userRole === 'system_owner') {
       return Object.values(DEFAULT_ROLE_PERMISSIONS).flat();
     }
 
-    // إذا كان المستخدم مسؤولاً، فلديه جميع الصلاحيات ما عدا إدارة المالكين وطلبات المؤسسات
-    if (customClaims.admin === true) {
-      const allPermissions = Object.values(DEFAULT_ROLE_PERMISSIONS).flat();
-      const ownerOnlyPermissions = [
-        'users:create', 'users:edit', 'users:delete', 'users:approve' // للمستخدمين ذوي دور المالك أو المسؤول
-      ];
-
-      return allPermissions.filter(permission => !ownerOnlyPermissions.includes(permission));
+    // أدمن النظام العام - صلاحيات واسعة
+    if (customClaims.system_admin === true || userRole === 'system_admin') {
+      return DEFAULT_ROLE_PERMISSIONS.system_admin;
     }
 
-    // إذا كان المستخدم مسؤول نظام الأفراد، فلديه صلاحيات على حسابات الأفراد فقط
+    // مالك المؤسسة - صلاحيات كاملة داخل المؤسسة
+    if (customClaims.organization_owner === true || userRole === 'organization_owner') {
+      return DEFAULT_ROLE_PERMISSIONS.organization_owner;
+    }
+
+    // أدمن المؤسسة - صلاحيات إدارية واسعة داخل المؤسسة
+    if (customClaims.admin === true || userRole === 'admin') {
+      return DEFAULT_ROLE_PERMISSIONS.admin;
+    }
+
+    // التوافق مع النظام القديم
+    if (customClaims.owner === true) {
+      return Object.values(DEFAULT_ROLE_PERMISSIONS).flat(); // تحويل owner قديم إلى system_owner
+    }
+
     if (customClaims.individual_admin === true) {
-      return DEFAULT_ROLE_PERMISSIONS.individual_admin;
+      return DEFAULT_ROLE_PERMISSIONS.system_admin; // تحويل individual_admin إلى system_admin
     }
 
     // الحصول على الصلاحيات المخصصة للمستخدم من Firestore

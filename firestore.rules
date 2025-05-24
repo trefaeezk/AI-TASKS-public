@@ -303,6 +303,24 @@ service cloud.firestore {
       );
     }
 
+    // ===== قواعد فئات المهام =====
+    match /taskCategories/{categoryId} {
+      allow read, write: if isAuthenticated() && (
+        hasSystemAccess() ||
+        hasCustomPermission('settings:view') ||
+        hasCustomPermission('settings:edit') ||
+        (resource != null && resource.data.userId == getUserId()) ||
+        // السماح للمستخدمين المسجلين بقراءة الفئات الخاصة بهم
+        (resource != null && resource.data.userId == getUserId())
+      );
+
+      allow create: if isAuthenticated() && (
+        hasSystemAccess() ||
+        hasCustomPermission('settings:edit') ||
+        request.resource.data.userId == getUserId()
+      );
+    }
+
     // ===== قواعد الأهداف (OKRs) =====
     match /okrs/{okrId} {
       allow read: if isAuthenticated() && (
@@ -327,6 +345,84 @@ service cloud.firestore {
         (resource.data.organizationId != null && (
           isOrganizationOwner(resource.data.organizationId) ||
           isOrganizationAdmin(resource.data.organizationId)
+        ))
+      );
+    }
+
+    // ===== قواعد الأهداف (Objectives) =====
+    match /objectives/{objectiveId} {
+      allow read: if isAuthenticated() && (
+        hasSystemAccess() ||
+        (resource.data.organizationId == null && resource.data.userId == getUserId()) ||
+        (resource.data.organizationId != null && isOrganizationMember(resource.data.organizationId))
+      );
+
+      allow create, update: if isAuthenticated() && (
+        hasSystemAccess() ||
+        (request.resource.data.organizationId == null &&
+         request.resource.data.userId == getUserId()) ||
+        (request.resource.data.organizationId != null && (
+          isOrganizationOwner(request.resource.data.organizationId) ||
+          isOrganizationAdmin(request.resource.data.organizationId)
+        ))
+      );
+
+      allow delete: if isAuthenticated() && (
+        hasSystemAccess() ||
+        (resource.data.organizationId == null && resource.data.userId == getUserId()) ||
+        (resource.data.organizationId != null && (
+          isOrganizationOwner(resource.data.organizationId) ||
+          isOrganizationAdmin(resource.data.organizationId)
+        ))
+      );
+    }
+
+    // ===== قواعد الأقسام =====
+    match /departments/{departmentId} {
+      allow read: if isAuthenticated() && (
+        hasSystemAccess() ||
+        isOrganizationMember(resource.data.organizationId)
+      );
+
+      allow create, update: if isAuthenticated() && (
+        hasSystemAccess() ||
+        isOrganizationOwner(request.resource.data.organizationId) ||
+        isOrganizationAdmin(request.resource.data.organizationId)
+      );
+
+      allow delete: if isAuthenticated() && (
+        hasSystemAccess() ||
+        isOrganizationOwner(resource.data.organizationId) ||
+        isOrganizationAdmin(resource.data.organizationId)
+      );
+    }
+
+    // ===== قواعد الاجتماعات =====
+    match /meetings/{meetingId} {
+      allow read: if isAuthenticated() && (
+        hasSystemAccess() ||
+        (resource.data.organizationId == null && resource.data.userId == getUserId()) ||
+        (resource.data.organizationId != null && isOrganizationMember(resource.data.organizationId))
+      );
+
+      allow create, update: if isAuthenticated() && (
+        hasSystemAccess() ||
+        (request.resource.data.organizationId == null &&
+         request.resource.data.userId == getUserId()) ||
+        (request.resource.data.organizationId != null && (
+          isOrganizationOwner(request.resource.data.organizationId) ||
+          isOrganizationAdmin(request.resource.data.organizationId) ||
+          request.resource.data.createdBy == getUserId()
+        ))
+      );
+
+      allow delete: if isAuthenticated() && (
+        hasSystemAccess() ||
+        (resource.data.organizationId == null && resource.data.userId == getUserId()) ||
+        (resource.data.organizationId != null && (
+          isOrganizationOwner(resource.data.organizationId) ||
+          isOrganizationAdmin(resource.data.organizationId) ||
+          resource.data.createdBy == getUserId()
         ))
       );
     }
@@ -375,6 +471,13 @@ service cloud.firestore {
       );
     }
 
+    // ===== قواعد السجلات =====
+    match /logs/{logId} {
+      allow read: if hasSystemAccess();
+      allow create: if isAuthenticated();
+      allow update, delete: if hasSystemAccess();
+    }
+
     // ===== قواعد الأدمن (للتوافق مع النظام القديم) =====
     match /admins/{adminId} {
       allow read: if hasSystemAccess();
@@ -385,6 +488,12 @@ service cloud.firestore {
     match /owners/{ownerId} {
       allow read: if hasSystemAccess();
       allow write: if isSystemOwner();
+    }
+
+    // ===== قواعد عامة للمجموعات الأخرى =====
+    match /{document=**} {
+      // قاعدة احتياطية للمجموعات غير المحددة
+      allow read, write: if hasSystemAccess();
     }
   }
 }

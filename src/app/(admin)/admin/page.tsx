@@ -32,6 +32,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
 import { CreateUserDialog } from '@/components/admin/CreateUserDialog';
 import { UserDetailsDialog } from '@/components/admin/UserDetailsDialog';
+import { Translate } from '@/components/Translate';
 
 
 // Initialize Firebase App if it hasn't been already
@@ -895,20 +896,7 @@ export default function AdminDashboardPage() {
                         }
                         className={`text-xs py-0.5 px-1.5 h-auto ${u.role === 'owner' ? 'bg-purple-600 hover:bg-purple-700' : ''}`}
                       >
-                        {(() => {
-                          switch(u.role) {
-                            case 'owner': return 'مالك النظام';
-                            case 'admin': return 'مسؤول';
-                            case 'individual_admin': return 'مسؤول نظام الأفراد';
-                            case 'engineer': return 'مهندس';
-                            case 'supervisor': return 'مشرف';
-                            case 'technician': return 'فني';
-                            case 'assistant': return 'مساعد فني';
-                            case 'user': return 'مستخدم';
-                            case 'independent': return 'مستخدم مستقل';
-                            default: return u.role;
-                          }
-                        })()}
+                        <Translate text={`roles.${u.role}`} defaultValue={u.role} />
                       </Badge>
 
                       {/* Status Badge */}

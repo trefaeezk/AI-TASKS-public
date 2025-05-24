@@ -20,7 +20,7 @@ const createUserSchema = z.object({
   email: z.string().email({ message: 'البريد الإلكتروني غير صالح.' }),
   password: z.string().min(6, { message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل.' }),
   name: z.string().min(1, { message: 'الاسم مطلوب.' }),
-  role: z.enum(['owner', 'admin', 'individual_admin', 'engineer', 'supervisor', 'technician', 'assistant', 'user', 'independent'], {
+  role: z.enum(['system_owner', 'system_admin', 'organization_owner', 'admin', 'supervisor', 'engineer', 'technician', 'assistant', 'independent'], {
     errorMap: () => ({ message: 'الدور مطلوب.' })
   }),
   accountType: z.enum(['individual', 'organization'], {
@@ -151,15 +151,18 @@ export function CreateUserDialog({ isOpen, onOpenChange, onSubmit, loading }: Cr
                   <SelectValue placeholder="اختر دورًا" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="owner">مالك النظام</SelectItem>
-                  <SelectItem value="admin">مسؤول</SelectItem>
-                  <SelectItem value="individual_admin">مسؤول نظام الأفراد</SelectItem>
-                  <SelectItem value="engineer">مهندس</SelectItem>
+                  {/* أدوار النظام العامة */}
+                  <SelectItem value="system_owner">مالك النظام</SelectItem>
+                  <SelectItem value="system_admin">أدمن النظام العام</SelectItem>
+                  <SelectItem value="independent">مستخدم مستقل</SelectItem>
+
+                  {/* أدوار المؤسسات */}
+                  <SelectItem value="organization_owner">مالك المؤسسة</SelectItem>
+                  <SelectItem value="admin">أدمن المؤسسة</SelectItem>
                   <SelectItem value="supervisor">مشرف</SelectItem>
+                  <SelectItem value="engineer">مهندس</SelectItem>
                   <SelectItem value="technician">فني</SelectItem>
                   <SelectItem value="assistant">مساعد فني</SelectItem>
-                  <SelectItem value="user">مستخدم</SelectItem>
-                  <SelectItem value="independent">مستخدم مستقل</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -203,7 +203,7 @@ export const updateUserPermissionsHttp = createHttpFunction((req, res) => {
 
                 // الحصول على دور المستخدم من custom claims
                 const userClaims = (await admin.auth().getUser(uid)).customClaims || {};
-                const userRole = userClaims.role || 'independent';
+                const userRole = userClaims.role || 'assistant';
 
                 await db.collection('users').doc(uid).set({
                     role: userRole,

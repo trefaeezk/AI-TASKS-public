@@ -16,6 +16,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { UserRole } from '@/types/roles';
 import { CreateUserDialog } from '@/components/admin/CreateUserDialog';
 import { UserDetailsDialog } from '@/components/admin/UserDetailsDialog';
+import { Translate } from '@/components/Translate';
 import { ManagedUser } from '@/types/user';
 import { useToast } from '@/hooks/use-toast';
 
@@ -447,18 +448,7 @@ export default function UsersPage() {
                 <div>
                   <h3 className="font-medium">{user.email}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {(() => {
-                      switch(user.role) {
-                        case 'admin': return 'مسؤول';
-                        case 'engineer': return 'مهندس';
-                        case 'supervisor': return 'مشرف';
-                        case 'technician': return 'فني';
-                        case 'assistant': return 'مساعد فني';
-                        case 'user': return 'مستخدم';
-                        case 'independent': return 'مستخدم مستقل';
-                        default: return user.role;
-                      }
-                    })()}
+                    <Translate text={`roles.${user.role}`} defaultValue={user.role} />
                   </p>
                 </div>
                 <Button variant="ghost" size="sm">عرض التفاصيل</Button>

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       console.log('User found in users collection, updating...');
       // تحديث بيانات المستخدم
       await updateDoc(doc(db, 'users', userId), {
-        role: role || 'independent',
+        role: role || 'assistant',
         customPermissions: permissions || [],
         updatedAt: new Date()
       });
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       console.log('User not found in users collection, creating...');
       // إنشاء وثيقة جديدة للمستخدم
       await setDoc(doc(db, 'users', userId), {
-        role: role || 'independent',
+        role: role || 'assistant',
         customPermissions: permissions || [],
         createdAt: new Date(),
         updatedAt: new Date()
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       console.log('User found in individuals collection, updating...');
       // تحديث بيانات المستخدم
       await updateDoc(doc(db, 'individuals', userId), {
-        role: role || 'independent',
+        role: role || 'assistant',
         customPermissions: permissions || [],
         updatedAt: new Date()
       });
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       console.log('User not found in individuals collection, creating...');
       // إنشاء وثيقة جديدة للمستخدم
       await setDoc(doc(db, 'individuals', userId), {
-        role: role || 'independent',
+        role: role || 'assistant',
         customPermissions: permissions || [],
         createdAt: new Date(),
         updatedAt: new Date()

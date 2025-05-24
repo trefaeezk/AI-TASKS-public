@@ -38,7 +38,7 @@ export function UserDetailsDialog({
   const { toast } = useToast();
   const { refreshUserData } = useAuth();
   const [activeTab, setActiveTab] = useState('details');
-  const [selectedRole, setSelectedRole] = useState<UserRole>('user');
+  const [selectedRole, setSelectedRole] = useState<UserRole>('assistant');
   const [customPermissions, setCustomPermissions] = useState<PermissionKey[]>([]);
   const [isDisabled, setIsDisabled] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -46,7 +46,7 @@ export function UserDetailsDialog({
   // Update state when user changes
   useEffect(() => {
     if (user) {
-      setSelectedRole(user.role || 'user');
+      setSelectedRole(user.role || 'assistant');
       setCustomPermissions(user.customPermissions || []);
       setIsDisabled(user.disabled);
     }

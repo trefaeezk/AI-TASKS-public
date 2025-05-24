@@ -136,15 +136,38 @@ const en = {
   },
 
   roles: {
-    owner: "System Owner",
-    admin: "Admin",
-    individual_admin: "Individual System Admin",
-    engineer: "Engineer",
+    // System-wide roles
+    system_owner: "System Owner",
+    system_admin: "System Admin",
+    independent: "Independent User",
+
+    // Organization roles
+    organization_owner: "Organization Owner",
+    admin: "Organization Admin",
     supervisor: "Supervisor",
+    engineer: "Engineer",
     technician: "Technician",
     assistant: "Assistant",
-    user: "User",
-    independent: "Independent User"
+
+    // Legacy roles (for backward compatibility)
+    owner: "System Owner",
+    individual_admin: "Individual System Admin",
+    user: "User"
+  },
+
+  roleDescriptions: {
+    // System-wide roles
+    system_owner: "System Owner - Highest authority in the entire system, manages all systems and organizations",
+    system_admin: "System Admin - Broad permissions to manage the system and organizations",
+    independent: "Independent User - Manages only their personal tasks and data",
+
+    // Organization roles
+    organization_owner: "Organization Owner - Full permissions within the organization",
+    admin: "Organization Admin - Broad administrative permissions within the organization",
+    supervisor: "Supervisor - Supervises teams and tasks, manages operations",
+    engineer: "Engineer - Designs and plans projects and technical solutions",
+    technician: "Technician - Executes technical tasks and maintenance",
+    assistant: "Assistant - Helps with simple tasks execution"
   },
 
   common: {

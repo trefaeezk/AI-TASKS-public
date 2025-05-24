@@ -4,15 +4,18 @@
 
 // الأدوار المتاحة في النظام
 export type UserRole =
-  | 'owner'           // مالك النظام (أعلى صلاحية)
-  | 'admin'           // مسؤول النظام
-  | 'individual_admin' // مسؤول نظام الأفراد
-  | 'engineer'        // مهندس
+  // أدوار النظام العامة
+  | 'system_owner'    // مالك النظام (أعلى صلاحية)
+  | 'system_admin'    // أدمن النظام العام
+  | 'independent'     // مستخدم مستقل (فردي)
+
+  // أدوار المؤسسات
+  | 'organization_owner' // مالك المؤسسة
+  | 'admin'           // أدمن المؤسسة
   | 'supervisor'      // مشرف
+  | 'engineer'        // مهندس
   | 'technician'      // فني
-  | 'assistant'       // مساعد فني
-  | 'user'            // مستخدم عادي
-  | 'independent';    // مستخدم مستقل (فردي)
+  | 'assistant';      // مساعد فني
 
 // تعريف مجموعات الصلاحيات
 export type PermissionArea =
@@ -61,30 +64,41 @@ export type RolePermissions = {
 
 // الصلاحيات الافتراضية لكل دور
 export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
-  // المالك لديه جميع الصلاحيات بما فيها إدارة المسؤولين وطلبات المؤسسات
-  owner: [
+  // مالك النظام - أعلى صلاحية في النظام بالكامل
+  system_owner: [
     'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
     'settings:view', 'settings:create', 'settings:edit', 'settings:delete', 'settings:approve', 'settings:assign',
     'tools:view', 'tools:create', 'tools:edit', 'tools:delete', 'tools:approve', 'tools:assign',
     'dashboard:view', 'dashboard:create', 'dashboard:edit', 'dashboard:delete', 'dashboard:approve', 'dashboard:assign',
-    'data:view', 'data:create', 'data:edit', 'data:delete' // صلاحيات إدارة البيانات (تصدير/استيراد)
+    'data:view', 'data:create', 'data:edit', 'data:delete'
   ],
 
-  // المسؤول لديه جميع الصلاحيات ما عدا إدارة المالكين وطلبات المؤسسات
+  // أدمن النظام العام - صلاحيات واسعة لإدارة النظام
+  system_admin: [
+    'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
+    'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
+    'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
+    'settings:view', 'settings:create', 'settings:edit', 'settings:delete', 'settings:approve', 'settings:assign',
+    'tools:view', 'tools:create', 'tools:edit', 'tools:delete', 'tools:approve', 'tools:assign',
+    'dashboard:view', 'dashboard:create', 'dashboard:edit', 'dashboard:delete', 'dashboard:approve', 'dashboard:assign',
+    'data:view', 'data:create', 'data:edit', 'data:delete'
+  ],
+
+  // مالك المؤسسة - صلاحيات كاملة داخل المؤسسة
+  organization_owner: [
+    'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
+    'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
+    'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
+    'settings:view', 'settings:create', 'settings:edit', 'settings:delete', 'settings:approve', 'settings:assign',
+    'tools:view', 'tools:create', 'tools:edit', 'tools:delete', 'tools:approve', 'tools:assign',
+    'dashboard:view', 'dashboard:create', 'dashboard:edit', 'dashboard:delete', 'dashboard:approve', 'dashboard:assign',
+    'data:view', 'data:create', 'data:edit', 'data:delete'
+  ],
+
+  // أدمن المؤسسة - صلاحيات إدارية واسعة داخل المؤسسة
   admin: [
-    'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
-    'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
-    'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
-    'settings:view', 'settings:create', 'settings:edit', 'settings:delete', 'settings:approve', 'settings:assign',
-    'tools:view', 'tools:create', 'tools:edit', 'tools:delete', 'tools:approve', 'tools:assign',
-    'dashboard:view', 'dashboard:create', 'dashboard:edit', 'dashboard:delete', 'dashboard:approve', 'dashboard:assign',
-    'data:view', 'data:create', 'data:edit', 'data:delete' // صلاحيات إدارة البيانات (تصدير/استيراد)
-  ],
-
-  // مسؤول نظام الأفراد لديه صلاحيات إدارة حسابات الأفراد فقط
-  individual_admin: [
     'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
@@ -163,29 +177,37 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ]
 };
 
-// وصف الأدوار
-export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
-  owner: 'مالك النظام - لديه جميع الصلاحيات بما فيها إدارة المسؤولين وطلبات المؤسسات',
-  admin: 'مسؤول النظام - لديه جميع الصلاحيات ما عدا إدارة المالكين وطلبات المؤسسات',
-  individual_admin: 'مسؤول نظام الأفراد - لديه صلاحيات إدارة حسابات الأفراد فقط',
-  engineer: 'مهندس - يقوم بتصميم وتخطيط المهام والمشاريع',
-  supervisor: 'مشرف - يقوم بالإشراف على تنفيذ المهام',
-  technician: 'فني - يقوم بتنفيذ المهام الفنية',
-  assistant: 'مساعد فني - يساعد في تنفيذ المهام البسيطة',
-  user: 'مستخدم عادي - صلاحيات محدودة للعرض فقط',
-  independent: 'مستخدم مستقل - لديه صلاحيات كاملة على المحتوى الخاص به فقط'
+// مفاتيح ترجمة وصف الأدوار
+export const ROLE_DESCRIPTION_KEYS: Record<UserRole, string> = {
+  // أدوار النظام العامة
+  system_owner: 'roleDescriptions.system_owner',
+  system_admin: 'roleDescriptions.system_admin',
+  independent: 'roleDescriptions.independent',
+
+  // أدوار المؤسسات
+  organization_owner: 'roleDescriptions.organization_owner',
+  admin: 'roleDescriptions.admin',
+  supervisor: 'roleDescriptions.supervisor',
+  engineer: 'roleDescriptions.engineer',
+  technician: 'roleDescriptions.technician',
+  assistant: 'roleDescriptions.assistant'
 };
 
 // ترتيب الأدوار حسب المستوى (للعرض والمقارنة)
 export const ROLE_HIERARCHY: UserRole[] = [
-  'owner',
+  // أدوار النظام العامة (أعلى مستوى)
+  'system_owner',
+  'system_admin',
+
+  // أدوار المؤسسات (حسب المستوى)
+  'organization_owner',
   'admin',
-  'individual_admin',
-  'engineer',
   'supervisor',
+  'engineer',
   'technician',
   'assistant',
-  'user',
+
+  // المستخدمين المستقلين
   'independent'
 ];
 

@@ -10,6 +10,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { ROLE_DESCRIPTIONS, ROLE_HIERARCHY, UserRole } from '@/types/roles';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface RoleSelectorProps {
   value: UserRole;
@@ -18,36 +19,29 @@ interface RoleSelectorProps {
   className?: string;
 }
 
-// Map roles to icons
+// Map roles to icons - النظام الجديد
 const roleIcons: Record<UserRole, React.ReactNode> = {
-  owner: <ShieldAlert className="h-4 w-4 ml-2 text-purple-600" />,
+  // أدوار النظام العامة
+  system_owner: <ShieldAlert className="h-4 w-4 ml-2 text-purple-600" />,
+  system_admin: <ShieldAlert className="h-4 w-4 ml-2 text-blue-600" />,
+  independent: <UserCog className="h-4 w-4 ml-2" />,
+
+  // أدوار المؤسسات
+  organization_owner: <ShieldAlert className="h-4 w-4 ml-2 text-orange-600" />,
   admin: <ShieldAlert className="h-4 w-4 ml-2" />,
-  individual_admin: <ShieldAlert className="h-4 w-4 ml-2 text-blue-600" />,
-  engineer: <ShieldCheck className="h-4 w-4 ml-2" />,
   supervisor: <Shield className="h-4 w-4 ml-2" />,
+  engineer: <ShieldCheck className="h-4 w-4 ml-2" />,
   technician: <ShieldQuestion className="h-4 w-4 ml-2" />,
-  assistant: <Shield className="h-4 w-4 ml-2 opacity-70" />,
-  user: <User className="h-4 w-4 ml-2" />,
-  independent: <UserCog className="h-4 w-4 ml-2" />
+  assistant: <Shield className="h-4 w-4 ml-2 opacity-70" />
 };
 
 export function RoleSelector({ value, onValueChange, disabled = false, className }: RoleSelectorProps) {
   const [open, setOpen] = useState(false);
+  const { t } = useLanguage();
 
-  // Translate role to Arabic
+  // Translate role using translation keys
   const getRoleLabel = (role: UserRole): string => {
-    switch (role) {
-      case 'owner': return 'مالك النظام';
-      case 'admin': return 'مسؤول';
-      case 'individual_admin': return 'مسؤول نظام الأفراد';
-      case 'engineer': return 'مهندس';
-      case 'supervisor': return 'مشرف';
-      case 'technician': return 'فني';
-      case 'assistant': return 'مساعد فني';
-      case 'user': return 'مستخدم';
-      case 'independent': return 'مستخدم مستقل';
-      default: return role;
-    }
+    return t(`roles.${role}`, role);
   };
 
   return (

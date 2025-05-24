@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { User } from 'firebase/auth';
-import { db } from '@/lib/firebase';
+import { db } from '@/config/firebase';
 import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc, orderBy } from 'firebase/firestore';
 import type { TaskCategoryDefinition } from '@/types/task';
 import { useToast } from '@/hooks/use-toast'; // Import useToast here
