@@ -630,6 +630,13 @@ export {
   exportOkrToExcel
 } from './organization';
 
+// Import migration functions
+export {
+  migrateOrganizationToNewRoleSystem,
+  migrateAllOrganizationsToNewRoleSystem,
+  checkMigrationStatus
+} from './migration';
+
 // وظائف المصادقة والذكاء الاصطناعي تم تصديرها بالفعل في بداية الملف
 
 /**

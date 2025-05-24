@@ -28,17 +28,25 @@ export default function DepartmentMeetingsPage() {
   const router = useRouter();
   const params = useParams();
   const departmentId = params.id as string;
-  
+
   const [loading, setLoading] = useState(true);
   const [department, setDepartment] = useState<Department | null>(null);
   const [activeTab, setActiveTab] = useState('daily');
 
   const organizationId = userClaims?.organizationId;
+
+  // النظام الجديد للأدوار
+  const isSystemOwner = userClaims?.system_owner === true || userClaims?.role === 'system_owner';
+  const isSystemAdmin = userClaims?.system_admin === true || userClaims?.role === 'system_admin';
+  const isOrgOwner = userClaims?.organization_owner === true || userClaims?.role === 'organization_owner';
+  const isAdmin = userClaims?.admin === true || userClaims?.role === 'admin';
+  const isSupervisor = userClaims?.role === 'supervisor';
+  const isEngineer = userClaims?.role === 'engineer';
+
+  // التوافق مع النظام القديم
   const isOwner = userClaims?.owner === true;
-  const isAdmin = userClaims?.admin === true;
-  const isEngineer = userClaims?.engineer === true;
-  const isSupervisor = userClaims?.supervisor === true;
-  const canManageMeetings = isOwner || isAdmin || isEngineer || isSupervisor;
+
+  const canManageMeetings = isSystemOwner || isSystemAdmin || isOrgOwner || isAdmin || isEngineer || isSupervisor || isOwner;
 
   // تحميل معلومات القسم
   useEffect(() => {
@@ -50,7 +58,7 @@ export default function DepartmentMeetingsPage() {
     const fetchDepartment = async () => {
       try {
         const departmentDoc = await getDoc(doc(db, 'departments', departmentId));
-        
+
         if (!departmentDoc.exists()) {
           toast({
             title: 'خطأ',
@@ -60,9 +68,9 @@ export default function DepartmentMeetingsPage() {
           router.push('/org/departments');
           return;
         }
-        
+
         const departmentData = departmentDoc.data() as Department;
-        
+
         // التحقق من أن القسم ينتمي للمؤسسة الحالية
         if (departmentData.organizationId !== organizationId) {
           toast({
@@ -73,7 +81,7 @@ export default function DepartmentMeetingsPage() {
           router.push('/org/departments');
           return;
         }
-        
+
         setDepartment({
           id: departmentDoc.id,
           ...departmentData,
@@ -165,11 +173,11 @@ export default function DepartmentMeetingsPage() {
 
         <TabsContent value="daily">
           <div className="grid grid-cols-1 gap-6">
-            <DailyMeetingGenerator 
-              departmentId={departmentId} 
-              onSuccess={handleMeetingCreated} 
+            <DailyMeetingGenerator
+              departmentId={departmentId}
+              onSuccess={handleMeetingCreated}
             />
-            
+
             <Card>
               <CardHeader>
                 <CardTitle>تعليمات الاجتماع اليومي</CardTitle>
@@ -184,28 +192,28 @@ export default function DepartmentMeetingsPage() {
                     استخدم أداة توليد جدول الأعمال قبل الاجتماع بوقت كافٍ، وأضف توجيهات مخصصة لتركيز الاجتماع على النقاط المهمة.
                   </p>
                 </div>
-                
+
                 <div>
                   <h3 className="font-medium mb-1">2. الالتزام بالوقت</h3>
                   <p className="text-sm text-muted-foreground">
                     حافظ على مدة الاجتماع بين 15-30 دقيقة، والتزم بالوقت المخصص لكل بند في جدول الأعمال.
                   </p>
                 </div>
-                
+
                 <div>
                   <h3 className="font-medium mb-1">3. التركيز على الحلول</h3>
                   <p className="text-sm text-muted-foreground">
                     عند مناقشة المهام المتأخرة، ركز على الحلول وليس اللوم، وحدد خطوات عملية للمضي قدمًا.
                   </p>
                 </div>
-                
+
                 <div>
                   <h3 className="font-medium mb-1">4. توثيق القرارات والمهام</h3>
                   <p className="text-sm text-muted-foreground">
                     سجل جميع القرارات والمهام الجديدة في نهاية الاجتماع، وتأكد من تعيين مسؤول لكل مهمة.
                   </p>
                 </div>
-                
+
                 <div>
                   <h3 className="font-medium mb-1">5. المتابعة</h3>
                   <p className="text-sm text-muted-foreground">

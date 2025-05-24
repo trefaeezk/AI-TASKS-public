@@ -54,15 +54,33 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
         // Force refresh to get the latest claims
         const idTokenResult = await user.getIdTokenResult(true); // FORCE REFRESH = TRUE
         console.log('[AdminProtectedRoute] User Claims:', idTokenResult.claims); // Log claims
-        // التحقق من دور المالك أو المسؤول
-        const userIsAdmin = idTokenResult.claims.admin === true;
-        const userIsOwner = idTokenResult.claims.owner === true;
-        console.log('[AdminProtectedRoute] Is user admin?', userIsAdmin); // Log check result
-        console.log('[AdminProtectedRoute] Is user owner?', userIsOwner); // Log check result
-        setIsAdmin(userIsAdmin);
-        setIsOwner(userIsOwner);
+        // التحقق من الأدوار في النظام الجديد
+        const claims = idTokenResult.claims;
+        const userRole = claims.role as string;
 
-        if (!userIsAdmin && !userIsOwner) {
+        // التحقق من الأدوار الجديدة
+        const userIsSystemOwner = claims.system_owner === true || userRole === 'system_owner';
+        const userIsSystemAdmin = claims.system_admin === true || userRole === 'system_admin';
+        const userIsOrgOwner = claims.organization_owner === true || userRole === 'organization_owner';
+        const userIsAdmin = claims.admin === true || userRole === 'admin';
+
+        // التوافق مع النظام القديم
+        const userIsOwner = claims.owner === true;
+        const userIsOldAdmin = claims.admin === true;
+
+        console.log('[AdminProtectedRoute] User role:', userRole);
+        console.log('[AdminProtectedRoute] System owner?', userIsSystemOwner);
+        console.log('[AdminProtectedRoute] System admin?', userIsSystemAdmin);
+        console.log('[AdminProtectedRoute] Org owner?', userIsOrgOwner);
+        console.log('[AdminProtectedRoute] Admin?', userIsAdmin);
+        console.log('[AdminProtectedRoute] Old owner?', userIsOwner);
+
+        const hasAdminAccess = userIsSystemOwner || userIsSystemAdmin || userIsOrgOwner || userIsAdmin || userIsOwner || userIsOldAdmin;
+
+        setIsAdmin(hasAdminAccess);
+        setIsOwner(userIsSystemOwner || userIsOwner);
+
+        if (!hasAdminAccess) {
           console.log('[AdminProtectedRoute] User is NOT admin or owner, redirecting to home.');
           toast({
               title: 'غير مصرح به',

@@ -76,11 +76,19 @@ export default function OkrPage() {
   });
 
   const organizationId = userClaims?.organizationId;
+
+  // النظام الجديد للأدوار
+  const isSystemOwner = userClaims?.system_owner === true || userClaims?.role === 'system_owner';
+  const isSystemAdmin = userClaims?.system_admin === true || userClaims?.role === 'system_admin';
+  const isOrgOwner = userClaims?.organization_owner === true || userClaims?.role === 'organization_owner';
+  const isAdmin = userClaims?.admin === true || userClaims?.role === 'admin';
+  const isSupervisor = userClaims?.role === 'supervisor';
+  const isEngineer = userClaims?.role === 'engineer';
+
+  // التوافق مع النظام القديم
   const isOwner = userClaims?.owner === true;
-  const isAdmin = userClaims?.admin === true;
-  const isEngineer = userClaims?.engineer === true;
-  const isSupervisor = userClaims?.supervisor === true;
-  const canManageOkrs = isOwner || isAdmin || isEngineer || isSupervisor;
+
+  const canManageOkrs = isSystemOwner || isSystemAdmin || isOrgOwner || isAdmin || isEngineer || isSupervisor || isOwner;
 
   // تحميل الأهداف والأقسام
   useEffect(() => {

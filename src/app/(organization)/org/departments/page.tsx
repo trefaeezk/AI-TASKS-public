@@ -38,9 +38,17 @@ export default function DepartmentsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const organizationId = userClaims?.organizationId;
+
+  // النظام الجديد للأدوار
+  const isSystemOwner = userClaims?.system_owner === true || userClaims?.role === 'system_owner';
+  const isSystemAdmin = userClaims?.system_admin === true || userClaims?.role === 'system_admin';
+  const isOrgOwner = userClaims?.organization_owner === true || userClaims?.role === 'organization_owner';
+  const isAdmin = userClaims?.admin === true || userClaims?.role === 'admin';
+
+  // التوافق مع النظام القديم
   const isOwner = userClaims?.owner === true;
-  const isAdmin = userClaims?.admin === true;
-  const canCreateDepartment = isOwner || isAdmin;
+
+  const canCreateDepartment = isSystemOwner || isSystemAdmin || isOrgOwner || isAdmin || isOwner;
 
   // تحميل الأقسام
   useEffect(() => {

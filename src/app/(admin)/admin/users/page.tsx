@@ -94,7 +94,7 @@ export default function UsersPage() {
         const allUsers = result.data.users.map((user: any) => ({
           uid: user.uid,
           email: user.email || '',
-          role: (user.customClaims?.role as UserRole) || 'user',
+          role: (user.customClaims?.role as UserRole) || 'assistant',
           name: user.displayName || '',
           disabled: user.disabled || false,
           customPermissions: user.customClaims?.customPermissions || [],
