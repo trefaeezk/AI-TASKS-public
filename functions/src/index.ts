@@ -634,6 +634,8 @@ export {
 export {
   migrateOrganizationToNewRoleSystem,
   migrateAllOrganizationsToNewRoleSystem,
+  migrateIndependentUserToNewRoleSystem,
+  migrateAllIndependentUsersToNewRoleSystem,
   checkMigrationStatus
 } from './migration';
 

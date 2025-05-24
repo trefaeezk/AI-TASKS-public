@@ -222,6 +222,230 @@ export const migrateOrganizationToNewRoleSystem = createCallableFunction<{ organ
 });
 
 /**
+ * ترحيل مستخدم مستقل واحد إلى النظام الجديد
+ */
+export const migrateIndependentUserToNewRoleSystem = createCallableFunction<{ userId: string }>(async (request) => {
+  try {
+    // التحقق من الصلاحيات
+    if (!request.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'يجب تسجيل الدخول');
+    }
+
+    const userRecord = await admin.auth().getUser(request.auth.uid);
+    const customClaims = userRecord.customClaims || {};
+
+    if (!customClaims.system_owner && !customClaims.owner && customClaims.role !== 'system_owner') {
+      throw new functions.https.HttpsError('permission-denied', 'يجب أن تكون مالك النظام لتنفيذ هذه العملية');
+    }
+
+    const { userId } = request.data;
+
+    // الحصول على معلومات المستخدم
+    const targetUserRecord = await admin.auth().getUser(userId);
+    const currentClaims = targetUserRecord.customClaims || {};
+
+    // التأكد من أنه مستخدم مستقل
+    if (currentClaims.accountType !== 'individual' && currentClaims.accountType !== undefined) {
+      throw new functions.https.HttpsError('invalid-argument', 'هذا المستخدم ليس مستقلاً');
+    }
+
+    // تحديد الدور الجديد
+    const oldRole = currentClaims.role || 'user';
+    const isOwner = currentClaims.owner === true;
+    const isAdmin = currentClaims.individual_admin === true;
+
+    let newRole: NewUserRole;
+    if (isOwner) {
+      newRole = 'system_owner';
+    } else if (isAdmin) {
+      newRole = 'system_admin';
+    } else {
+      newRole = 'independent';
+    }
+
+    console.log(`Migrating independent user ${userId}: ${oldRole} -> ${newRole}`);
+
+    // تحديث Custom Claims
+    const newClaims: Record<string, any> = {
+      ...currentClaims,
+      role: newRole,
+      accountType: 'individual'
+    };
+
+    // إضافة الخصائص الجديدة حسب الدور
+    if (newRole === 'system_owner') {
+      newClaims.system_owner = true;
+    } else if (newRole === 'system_admin') {
+      newClaims.system_admin = true;
+    }
+
+    // إزالة الخصائص القديمة
+    delete newClaims.owner;
+    delete newClaims.individual_admin;
+
+    await admin.auth().setCustomUserClaims(userId, newClaims);
+
+    // تحديث وثيقة المستخدم في Firestore
+    const userDocRef = db.collection('users').doc(userId);
+    const userDoc = await userDocRef.get();
+
+    const userData = {
+      role: newRole,
+      accountType: 'individual',
+      email: targetUserRecord.email || '',
+      name: targetUserRecord.displayName || '',
+      migratedToNewRoleSystem: true,
+      migrationDate: admin.firestore.FieldValue.serverTimestamp(),
+      migratedBy: request.auth.uid,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    };
+
+    if (userDoc.exists) {
+      await userDocRef.update(userData);
+    } else {
+      await userDocRef.set({
+        ...userData,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    return {
+      success: true,
+      userId,
+      oldRole,
+      newRole,
+      email: targetUserRecord.email
+    };
+
+  } catch (error: any) {
+    console.error('migrateIndependentUserToNewRoleSystem Error:', error);
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    throw new functions.https.HttpsError('internal', `خطأ في ترحيل المستخدم: ${error.message}`);
+  }
+});
+
+/**
+ * ترحيل جميع المستخدمين المستقلين إلى النظام الجديد
+ */
+export const migrateAllIndependentUsersToNewRoleSystem = createCallableFunction<{}>(async (request) => {
+  const functionName = 'migrateAllIndependentUsersToNewRoleSystem';
+  console.log(`[${functionName}] Starting migration for all independent users`);
+
+  try {
+    // التحقق من الصلاحيات
+    if (!request.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'يجب تسجيل الدخول');
+    }
+
+    const userRecord = await admin.auth().getUser(request.auth.uid);
+    const customClaims = userRecord.customClaims || {};
+
+    if (!customClaims.system_owner && !customClaims.owner && customClaims.role !== 'system_owner') {
+      throw new functions.https.HttpsError('permission-denied', 'يجب أن تكون مالك النظام لتنفيذ هذه العملية');
+    }
+
+    // الحصول على جميع المستخدمين المستقلين
+    const usersSnapshot = await db.collection('users')
+      .where('accountType', '==', 'individual')
+      .where('migratedToNewRoleSystem', '!=', true)
+      .get();
+
+    const results: any[] = [];
+
+    for (const userDoc of usersSnapshot.docs) {
+      const userData = userDoc.data();
+      const userId = userDoc.id;
+
+      try {
+        // الحصول على معلومات المستخدم من Firebase Auth
+        const targetUserRecord = await admin.auth().getUser(userId);
+        const currentClaims = targetUserRecord.customClaims || {};
+
+        // تحديد الدور الجديد
+        const oldRole = currentClaims.role || userData.role || 'user';
+        const isOwner = currentClaims.owner === true;
+        const isAdmin = currentClaims.individual_admin === true;
+
+        let newRole: NewUserRole;
+        if (isOwner) {
+          newRole = 'system_owner';
+        } else if (isAdmin) {
+          newRole = 'system_admin';
+        } else {
+          newRole = 'independent';
+        }
+
+        console.log(`[${functionName}] Migrating user ${userId}: ${oldRole} -> ${newRole}`);
+
+        // تحديث Custom Claims
+        const newClaims: Record<string, any> = {
+          ...currentClaims,
+          role: newRole,
+          accountType: 'individual'
+        };
+
+        // إضافة الخصائص الجديدة حسب الدور
+        if (newRole === 'system_owner') {
+          newClaims.system_owner = true;
+        } else if (newRole === 'system_admin') {
+          newClaims.system_admin = true;
+        }
+
+        // إزالة الخصائص القديمة
+        delete newClaims.owner;
+        delete newClaims.individual_admin;
+
+        await admin.auth().setCustomUserClaims(userId, newClaims);
+
+        // تحديث وثيقة المستخدم في Firestore
+        await db.collection('users').doc(userId).update({
+          role: newRole,
+          accountType: 'individual',
+          migratedToNewRoleSystem: true,
+          migrationDate: admin.firestore.FieldValue.serverTimestamp(),
+          migratedBy: request.auth.uid,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        results.push({
+          userId,
+          email: targetUserRecord.email,
+          oldRole,
+          newRole,
+          success: true
+        });
+
+      } catch (error: any) {
+        console.error(`[${functionName}] Error migrating user ${userId}:`, error);
+        results.push({
+          userId,
+          email: userData.email || 'unknown',
+          success: false,
+          error: error.message
+        });
+      }
+    }
+
+    console.log(`[${functionName}] Migration completed. Results:`, results);
+
+    return {
+      success: true,
+      totalUsers: usersSnapshot.size,
+      results
+    };
+
+  } catch (error: any) {
+    console.error(`[${functionName}] Error:`, error);
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    throw new functions.https.HttpsError('internal', `خطأ في ترحيل المستخدمين: ${error.message}`);
+  }
+});
+
+/**
  * ترحيل جميع المؤسسات إلى النظام الجديد
  */
 export const migrateAllOrganizationsToNewRoleSystem = createCallableFunction<{}>(async (request) => {
@@ -294,7 +518,7 @@ export const migrateAllOrganizationsToNewRoleSystem = createCallableFunction<{}>
 });
 
 /**
- * التحقق من حالة الترحيل للمؤسسات
+ * التحقق من حالة الترحيل للمؤسسات والمستخدمين المستقلين
  */
 export const checkMigrationStatus = createCallableFunction<{}>(async (request) => {
   const functionName = 'checkMigrationStatus';
@@ -333,15 +557,55 @@ export const checkMigrationStatus = createCallableFunction<{}>(async (request) =
       });
     }
 
-    const migratedCount = organizations.filter(org => org.migrated).length;
-    const notMigratedCount = organizations.filter(org => !org.migrated).length;
+    const migratedOrgsCount = organizations.filter(org => org.migrated).length;
+    const notMigratedOrgsCount = organizations.filter(org => !org.migrated).length;
+
+    // الحصول على جميع المستخدمين المستقلين
+    const independentUsersSnapshot = await db.collection('users')
+      .where('accountType', '==', 'individual')
+      .get();
+
+    const independentUsers: any[] = [];
+
+    for (const userDoc of independentUsersSnapshot.docs) {
+      const userData = userDoc.data();
+
+      independentUsers.push({
+        id: userDoc.id,
+        email: userData.email,
+        name: userData.name,
+        migrated: userData.migratedToNewRoleSystem === true,
+        migrationDate: userData.migrationDate,
+        migratedBy: userData.migratedBy,
+        role: userData.role
+      });
+    }
+
+    const migratedUsersCount = independentUsers.filter(user => user.migrated).length;
+    const notMigratedUsersCount = independentUsers.filter(user => !user.migrated).length;
 
     return {
       success: true,
-      totalOrganizations: organizations.length,
-      migratedCount,
-      notMigratedCount,
-      organizations
+      organizations: {
+        total: organizations.length,
+        migrated: migratedOrgsCount,
+        notMigrated: notMigratedOrgsCount,
+        list: organizations
+      },
+      independentUsers: {
+        total: independentUsers.length,
+        migrated: migratedUsersCount,
+        notMigrated: notMigratedUsersCount,
+        list: independentUsers
+      },
+      summary: {
+        totalOrganizations: organizations.length,
+        migratedOrganizations: migratedOrgsCount,
+        notMigratedOrganizations: notMigratedOrgsCount,
+        totalIndependentUsers: independentUsers.length,
+        migratedIndependentUsers: migratedUsersCount,
+        notMigratedIndependentUsers: notMigratedUsersCount
+      }
     };
 
   } catch (error: any) {
