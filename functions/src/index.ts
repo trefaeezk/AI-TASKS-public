@@ -392,6 +392,26 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
             throw new functions.https.HttpsError("invalid-argument", "Organization ID is required for organization accounts.");
         }
 
+        // التحقق من وجود البريد الإلكتروني مسبقاً
+        try {
+            const existingUser = await admin.auth().getUserByEmail(email);
+            if (existingUser) {
+                console.error(`${functionName} error: Email ${email} already exists with UID ${existingUser.uid}`);
+                throw new functions.https.HttpsError("already-exists", "فشل إنشاء المستخدم: البريد الإلكتروني مستخدم بالفعل.");
+            }
+        } catch (error: any) {
+            if (error.code === 'auth/user-not-found') {
+                // البريد الإلكتروني غير موجود، يمكن المتابعة
+                console.log(`${functionName}: Email ${email} is available for new user creation`);
+            } else if (error instanceof functions.https.HttpsError) {
+                // إعادة رمي الخطأ إذا كان من النوع المطلوب
+                throw error;
+            } else {
+                // خطأ آخر في التحقق، نسجله ونتابع
+                console.warn(`${functionName}: Error checking email existence, proceeding with creation:`, error);
+            }
+        }
+
         console.log(`Attempting to create user ${email} by admin ${request.auth?.uid}`);
         const userRecord = await admin.auth().createUser({ email, password, displayName: name });
         console.log(`User ${email} created with UID ${userRecord.uid}.`);

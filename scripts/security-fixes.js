@@ -2,7 +2,7 @@
 
 /**
  * سكريبت الإصلاح السريع للمشاكل الأمنية
- * 
+ *
  * الاستخدام:
  * node scripts/security-fixes.js --fix=all
  * node scripts/security-fixes.js --fix=user --uid=USER_ID
@@ -13,9 +13,55 @@ const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
 
+// تحميل متغيرات البيئة
+require('dotenv').config();
+
 // تهيئة Firebase Admin
 if (admin.apps.length === 0) {
-  admin.initializeApp();
+  try {
+    // البحث عن ملف Service Account
+    const serviceAccountPaths = [
+      './functions/serviceAccountKey.json',
+      './serviceAccountKey.json',
+      './firebase-adminsdk.json'
+    ];
+
+    let serviceAccountPath = null;
+    for (const path of serviceAccountPaths) {
+      if (fs.existsSync(path)) {
+        serviceAccountPath = path;
+        break;
+      }
+    }
+
+    if (serviceAccountPath) {
+      // التهيئة باستخدام Service Account Key
+      const serviceAccount = require(serviceAccountPath);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: serviceAccount.project_id
+      });
+      console.log(`✅ تم تهيئة Firebase Admin باستخدام: ${serviceAccountPath}`);
+    } else if (process.env.FIREBASE_PROJECT_ID) {
+      // التهيئة باستخدام متغيرات البيئة
+      admin.initializeApp({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        credential: admin.credential.applicationDefault()
+      });
+      console.log('✅ تم تهيئة Firebase Admin باستخدام متغيرات البيئة');
+    } else {
+      // التهيئة الافتراضية
+      admin.initializeApp();
+      console.log('✅ تم تهيئة Firebase Admin بالإعدادات الافتراضية');
+    }
+  } catch (error) {
+    console.error('❌ خطأ في تهيئة Firebase Admin:', error.message);
+    console.log('\n💡 حلول مقترحة:');
+    console.log('1. ضع ملف serviceAccountKey.json في مجلد functions/');
+    console.log('2. أو اضبط متغير البيئة FIREBASE_PROJECT_ID');
+    console.log('3. أو استخدم: firebase login');
+    process.exit(1);
+  }
 }
 
 const db = admin.firestore();
@@ -127,7 +173,7 @@ class SecurityFixer {
     console.log('🔧 إصلاح إعدادات CORS...');
 
     const corsConfigPath = path.join(process.cwd(), 'functions/src/shared/function-utils.ts');
-    
+
     if (!fs.existsSync(corsConfigPath)) {
       throw new Error('ملف CORS غير موجود');
     }
@@ -136,7 +182,7 @@ class SecurityFixer {
 
     // استبدال الإعداد غير الآمن
     const unsafePattern = /cors\(\s*{\s*origin:\s*true\s*}\s*\)/g;
-    const safeConfig = `cors({ 
+    const safeConfig = `cors({
   origin: [
     'https://yourdomain.com',
     'https://www.yourdomain.com',
@@ -175,7 +221,7 @@ class SecurityFixer {
 
     for (const filePath of files) {
       const fullPath = path.join(process.cwd(), filePath);
-      
+
       if (!fs.existsSync(fullPath)) {
         console.log(`⚠️ الملف غير موجود: ${filePath}`);
         continue;
@@ -216,7 +262,7 @@ class SecurityFixer {
     console.log('🔧 إعداد نظام التشفير...');
 
     const cryptoUtilsPath = path.join(process.cwd(), 'functions/src/shared/crypto-utils.ts');
-    
+
     const cryptoUtilsContent = `import crypto from 'crypto';
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'your-32-char-secret-key-here!!';
@@ -258,7 +304,7 @@ export class CryptoUtils {
     console.log('🔧 إعداد Rate Limiting...');
 
     const rateLimiterPath = path.join(process.cwd(), 'functions/src/shared/rate-limiter.ts');
-    
+
     const rateLimiterContent = `interface RateLimitConfig {
   maxAttempts: number;
   windowMs: number;
@@ -295,9 +341,9 @@ export class RateLimiter {
       return { allowed: false, blockedUntil: record.blockedUntil };
     }
 
-    return { 
-      allowed: true, 
-      remainingAttempts: this.config.maxAttempts - record.count 
+    return {
+      allowed: true,
+      remainingAttempts: this.config.maxAttempts - record.count
     };
   }
 

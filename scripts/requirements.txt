@@ -1,0 +1,32 @@
+# متطلبات سكريبت إصلاح Firebase الأمني
+# Firebase Security Fixes Script Requirements
+
+# Firebase Admin SDK - للتعامل مع Firebase
+firebase-admin>=6.2.0
+
+# Google Cloud Firestore - قاعدة البيانات
+google-cloud-firestore>=2.11.0
+
+# Google Auth - للمصادقة
+google-auth>=2.17.0
+
+# Requests - للطلبات HTTP (اختياري)
+requests>=2.28.0
+
+# Python-dotenv - لمتغيرات البيئة (اختياري)
+python-dotenv>=1.0.0
+
+# Cryptography - للتشفير المتقدم (اختياري)
+cryptography>=40.0.0
+
+# تبعيات إضافية للأمان
+# Additional security dependencies
+
+# PyJWT - للتعامل مع JWT tokens
+PyJWT>=2.6.0
+
+# Bcrypt - لتشفير كلمات المرور
+bcrypt>=4.0.0
+
+# Passlib - مكتبة تشفير شاملة
+passlib>=1.7.4

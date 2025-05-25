@@ -8,6 +8,7 @@ import {
   signOut,
   sendPasswordResetEmail,
   signInWithPopup,
+  fetchSignInMethodsForEmail,
   type AuthError,
 } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
@@ -89,6 +90,21 @@ export function useFirebaseAuth() {
     setLoading(true);
     setError(null);
     try {
+      // التحقق من وجود البريد الإلكتروني مسبقاً
+      try {
+        const methods = await fetchSignInMethodsForEmail(auth, email);
+        if (methods.length > 0) {
+          throw new Error('auth/email-already-in-use');
+        }
+      } catch (checkError: any) {
+        if (checkError.message === 'auth/email-already-in-use') {
+          handleAuthError({ code: 'auth/email-already-in-use' });
+          return false;
+        }
+        // إذا كان خطأ آخر في التحقق، نستمر مع التسجيل العادي
+        console.warn("[useFirebaseAuth] Email check failed, proceeding with normal signup:", checkError);
+      }
+
       // إنشاء المستخدم باستخدام Firebase Authentication
       await createUserWithEmailAndPassword(auth, email, password);
 
