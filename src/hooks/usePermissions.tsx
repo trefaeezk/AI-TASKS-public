@@ -82,16 +82,8 @@ export function usePermissions() {
 
       // إذا لم تكن موجودة في claims، جلبها من Firestore
       if (fetchedCustomPermissions.length === 0) {
-        let userDocPath: string | null = null;
-        if (userClaims.accountType === 'organization' && userClaims.organizationId) {
-          // للمؤسسات، تحقق من مجموعة users أولاً ثم members
-          userDocPath = `users/${user.uid}`;
-        } else if (userClaims.accountType === 'individual') {
-          userDocPath = `individuals/${user.uid}`;
-        } else {
-          // احتياطي للمستخدمين غير المحددين بوضوح
-          userDocPath = `users/${user.uid}`;
-        }
+        // جميع المستخدمين الآن في مجموعة users الموحدة
+        const userDocPath = `users/${user.uid}`;
 
         if (userDocPath) {
         console.log("[usePermissions] Fetching custom permissions from path:", userDocPath);

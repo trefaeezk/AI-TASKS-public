@@ -254,8 +254,8 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
      // Sort tasks within each category
      Object.values(categories).forEach(categoryTasks => {
         categoryTasks.sort((a, b) => {
-            const priorityA = a.priority ?? Infinity;
-            const priorityB = b.priority ?? Infinity;
+            const priorityA = typeof a.priority === 'number' ? a.priority : Infinity;
+            const priorityB = typeof b.priority === 'number' ? b.priority : Infinity;
             if (priorityA !== priorityB) return priorityA - priorityB;
 
             const dateAObj = a.dueDate;

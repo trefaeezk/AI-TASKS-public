@@ -86,7 +86,7 @@ export function useFirebaseAuth() {
      setLoading(false); // Ensure loading is reset
   };
 
-  const signUp = async (email: string, password: string): Promise<boolean> => {
+  const signUp = async (email: string, password: string, name?: string): Promise<boolean> => {
     setLoading(true);
     setError(null);
     try {
@@ -106,7 +106,61 @@ export function useFirebaseAuth() {
       }
 
       // إنشاء المستخدم باستخدام Firebase Authentication
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+      // تحديث اسم المستخدم إذا تم توفيره
+      if (name && userCredential.user) {
+        try {
+          const { updateProfile } = await import('firebase/auth');
+          await updateProfile(userCredential.user, {
+            displayName: name
+          });
+          console.log("[useFirebaseAuth] User display name updated to:", name);
+        } catch (profileError) {
+          console.error("[useFirebaseAuth] Error updating user profile:", profileError);
+          // نستمر حتى لو فشل تحديث الاسم
+        }
+      }
+
+      // إنشاء وثيقة المستخدم في Firestore مع جميع العناصر المطلوبة
+      if (userCredential.user) {
+        try {
+          const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+          const { db } = await import('@/lib/firebase');
+
+          const userData = {
+            uid: userCredential.user.uid,           // ✅ معرف المستخدم
+            name: name || userCredential.user.email?.split('@')[0] || 'مستخدم',
+            email: userCredential.user.email,
+            displayName: name || userCredential.user.email?.split('@')[0] || 'مستخدم',
+            accountType: 'individual',
+            role: 'independent',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            disabled: false,
+            // الأدوار الجديدة
+            isSystemOwner: false,
+            isSystemAdmin: false,
+            isOrganizationOwner: false,
+            isAdmin: false,
+            isOwner: false,
+            isIndividualAdmin: false,
+            // معلومات المؤسسة (null للأفراد)
+            organizationId: null,                   // ✅ معرف المؤسسة
+            departmentId: null,                     // ✅ معرف القسم
+            // الصلاحيات المخصصة
+            customPermissions: [],                  // ✅ الصلاحيات المخصصة
+            // من أنشأ المستخدم
+            createdBy: userCredential.user.uid      // ✅ المستخدم أنشأ نفسه
+          };
+
+          await setDoc(doc(db, 'users', userCredential.user.uid), userData);
+          console.log("[useFirebaseAuth] ✅ User document created in Firestore with all required fields");
+        } catch (firestoreError) {
+          console.error("[useFirebaseAuth] Error creating user document in Firestore:", firestoreError);
+          // نستمر حتى لو فشل إنشاء الوثيقة، سيتم إنشاؤها في AuthContext
+        }
+      }
 
       // تعيين نوع الحساب كمستقل (individual) والدور كمستخدم مستقل (independent)
       try {
@@ -224,9 +278,45 @@ export function useFirebaseAuth() {
       // التحقق مما إذا كان المستخدم جديدًا
       const isNewUser = result.user.metadata.creationTime === result.user.metadata.lastSignInTime;
 
-      // إذا كان المستخدم جديدًا، نقوم بتعيين نوع الحساب كمستقل
+      // إذا كان المستخدم جديدًا، نقوم بإنشاء وثيقة Firestore وتعيين نوع الحساب
       if (isNewUser) {
         try {
+          // إنشاء وثيقة المستخدم في Firestore مع جميع العناصر المطلوبة
+          const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+          const { db } = await import('@/lib/firebase');
+
+          const userName = result.user.displayName || result.user.email?.split('@')[0] || 'مستخدم';
+
+          const userData = {
+            uid: result.user.uid,                   // ✅ معرف المستخدم
+            name: userName,
+            email: result.user.email,
+            displayName: userName,
+            accountType: 'individual',
+            role: 'independent',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            disabled: false,
+            // الأدوار الجديدة
+            isSystemOwner: false,
+            isSystemAdmin: false,
+            isOrganizationOwner: false,
+            isAdmin: false,
+            isOwner: false,
+            isIndividualAdmin: false,
+            // معلومات المؤسسة (null للأفراد)
+            organizationId: null,                   // ✅ معرف المؤسسة
+            departmentId: null,                     // ✅ معرف القسم
+            // الصلاحيات المخصصة
+            customPermissions: [],                  // ✅ الصلاحيات المخصصة
+            // من أنشأ المستخدم
+            createdBy: result.user.uid              // ✅ المستخدم أنشأ نفسه
+          };
+
+          await setDoc(doc(db, 'users', result.user.uid), userData);
+          console.log("[useFirebaseAuth] ✅ Google user document created in Firestore with all required fields");
+
+          // تعيين نوع الحساب في Custom Claims
           const updateAccountTypeFunc = httpsCallable(functions, 'updateAccountType');
           await updateAccountTypeFunc({
             accountType: 'individual'

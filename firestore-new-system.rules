@@ -1,0 +1,401 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== دوال مساعدة =====
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserId() {
+      return request.auth.uid;
+    }
+
+    function getUserToken() {
+      return request.auth.token;
+    }
+
+    // التحقق من مالك النظام (النظام الجديد الموحد)
+    function isSystemOwner() {
+      return isAuthenticated() && (
+        getUserToken().isSystemOwner == true ||
+        getUserToken().role == 'system_owner'
+      );
+    }
+
+    // التحقق من أدمن النظام (النظام الجديد الموحد)
+    function isSystemAdmin() {
+      return isAuthenticated() && (
+        getUserToken().isSystemAdmin == true ||
+        getUserToken().role == 'system_admin'
+      );
+    }
+
+    // التحقق من صلاحيات النظام العليا
+    function hasSystemAccess() {
+      return isSystemOwner() || isSystemAdmin();
+    }
+
+    // التحقق من مالك المؤسسة (النظام الجديد)
+    function isOrganizationOwner(orgId) {
+      return isAuthenticated() && (
+        getUserToken().isOrganizationOwner == true ||
+        (getUserToken().organizationId == orgId && getUserToken().isOwner == true) ||
+        getUserToken().role == 'organization_owner'
+      );
+    }
+
+    // التحقق من أدمن المؤسسة (النظام الجديد)
+    function isOrganizationAdmin(orgId) {
+      return isAuthenticated() && (
+        (getUserToken().organizationId == orgId && getUserToken().isAdmin == true) ||
+        getUserToken().role == 'organization_admin'
+      );
+    }
+
+    // التحقق من أدمن فردي (النظام الجديد)
+    function isIndividualAdmin() {
+      return isAuthenticated() && (
+        getUserToken().isIndividualAdmin == true ||
+        (getUserToken().accountType == 'individual' && getUserToken().isAdmin == true)
+      );
+    }
+
+    // التحقق من عضوية المؤسسة
+    function isOrganizationMember(orgId) {
+      return isAuthenticated() && (
+        getUserToken().organizationId == orgId ||
+        exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(getUserId()))
+      );
+    }
+
+    // التحقق من صلاحية مخصصة
+    function hasCustomPermission(permission) {
+      return isAuthenticated() && (
+        getUserToken().customPermissions != null &&
+        permission in getUserToken().customPermissions
+      );
+    }
+
+    // ===== قواعد المستخدمين الموحدة =====
+    match /users/{userId} {
+      // قراءة البيانات الشخصية
+      allow read: if isAuthenticated() && getUserId() == userId;
+
+      // قراءة عامة للبيانات الأساسية (للتحقق من الأدوار)
+      allow read: if isAuthenticated();
+
+      // كتابة البيانات الشخصية (مع قيود على الأدوار الحساسة)
+      allow write: if isAuthenticated() && getUserId() == userId && (
+        // منع تعديل الأدوار الحساسة بنفسه
+        !('isSystemOwner' in request.resource.data) &&
+        !('isSystemAdmin' in request.resource.data) &&
+        !('isOrganizationOwner' in request.resource.data) &&
+        !('isOwner' in request.resource.data) &&
+        !('isAdmin' in request.resource.data) &&
+        !('role' in request.resource.data)
+      );
+
+      // صلاحيات النظام العليا
+      allow read, write: if hasSystemAccess();
+
+      // أدمن المؤسسة يمكنه قراءة أعضاء مؤسسته
+      allow read: if isAuthenticated() &&
+        resource.data.organizationId != null &&
+        isOrganizationAdmin(resource.data.organizationId);
+
+      // إنشاء مستخدم جديد
+      allow create: if isAuthenticated() && (
+        hasSystemAccess() ||
+        request.resource.data.createdBy == getUserId()
+      );
+    }
+
+    // ===== قواعد المؤسسات =====
+    match /organizations/{orgId} {
+      // قراءة المؤسسة
+      allow read: if isAuthenticated() && (
+        hasSystemAccess() ||
+        isOrganizationOwner(orgId) ||
+        isOrganizationMember(orgId)
+      );
+
+      // كتابة المؤسسة
+      allow write: if isAuthenticated() && (
+        hasSystemAccess() ||
+        isOrganizationOwner(orgId) ||
+        isOrganizationAdmin(orgId)
+      );
+
+      // إنشاء مؤسسة جديدة
+      allow create: if isAuthenticated() && (
+        hasSystemAccess() ||
+        request.resource.data.ownerId == getUserId() ||
+        request.resource.data.createdBy == getUserId()
+      );
+
+      // أعضاء المؤسسة
+      match /members/{memberId} {
+        allow read: if isAuthenticated() && (
+          hasSystemAccess() ||
+          isOrganizationOwner(orgId) ||
+          isOrganizationMember(orgId) ||
+          memberId == getUserId()
+        );
+
+        allow write: if isAuthenticated() && (
+          hasSystemAccess() ||
+          isOrganizationOwner(orgId) ||
+          isOrganizationAdmin(orgId)
+        );
+      }
+
+      // أقسام المؤسسة
+      match /departments/{departmentId} {
+        allow read: if isAuthenticated() && (
+          hasSystemAccess() ||
+          isOrganizationOwner(orgId) ||
+          isOrganizationMember(orgId)
+        );
+
+        allow write: if isAuthenticated() && (
+          hasSystemAccess() ||
+          isOrganizationOwner(orgId) ||
+          isOrganizationAdmin(orgId)
+        );
+      }
+    }
+
+    // ===== قواعد المهام =====
+    match /tasks/{taskId} {
+      // قراءة المهام
+      allow read: if isAuthenticated() && (
+        hasSystemAccess() ||
+        // مهام فردية
+        (resource.data.organizationId == null && (
+          resource.data.userId == getUserId() ||
+          resource.data.createdBy == getUserId() ||
+          hasCustomPermission('tasks:view')
+        )) ||
+        // مهام المؤسسة
+        (resource.data.organizationId != null &&
+         isOrganizationMember(resource.data.organizationId))
+      );
+
+      // إنشاء المهام
+      allow create: if isAuthenticated() && (
+        hasSystemAccess() ||
+        hasCustomPermission('tasks:create') ||
+        // مهام فردية
+        (request.resource.data.organizationId == null &&
+         request.resource.data.userId == getUserId()) ||
+        // مهام المؤسسة
+        (request.resource.data.organizationId != null &&
+         isOrganizationMember(request.resource.data.organizationId))
+      );
+
+      // تحديث المهام
+      allow update: if isAuthenticated() && (
+        hasSystemAccess() ||
+        hasCustomPermission('tasks:edit') ||
+        // مهام فردية
+        (resource.data.organizationId == null && (
+          resource.data.userId == getUserId() ||
+          resource.data.createdBy == getUserId()
+        )) ||
+        // مهام المؤسسة
+        (resource.data.organizationId != null && (
+          isOrganizationMember(resource.data.organizationId) ||
+          resource.data.createdBy == getUserId()
+        ))
+      );
+
+      // حذف المهام
+      allow delete: if isAuthenticated() && (
+        hasSystemAccess() ||
+        hasCustomPermission('tasks:delete') ||
+        // مهام فردية
+        (resource.data.organizationId == null && (
+          resource.data.userId == getUserId() ||
+          resource.data.createdBy == getUserId()
+        )) ||
+        // مهام المؤسسة
+        (resource.data.organizationId != null && (
+          isOrganizationOwner(resource.data.organizationId) ||
+          isOrganizationAdmin(resource.data.organizationId) ||
+          resource.data.createdBy == getUserId()
+        ))
+      );
+    }
+
+    // ===== قواعد التقارير =====
+    match /reports/{reportId} {
+      allow read: if isAuthenticated() && (
+        hasSystemAccess() ||
+        hasCustomPermission('reports:view') ||
+        (resource.data.organizationId == null && resource.data.userId == getUserId()) ||
+        (resource.data.organizationId != null && isOrganizationMember(resource.data.organizationId))
+      );
+
+      allow create, update: if isAuthenticated() && (
+        hasSystemAccess() ||
+        hasCustomPermission('reports:create') ||
+        hasCustomPermission('reports:edit') ||
+        (request.resource.data.organizationId == null &&
+         request.resource.data.userId == getUserId()) ||
+        (request.resource.data.organizationId != null &&
+         isOrganizationMember(request.resource.data.organizationId))
+      );
+
+      allow delete: if isAuthenticated() && (
+        hasSystemAccess() ||
+        hasCustomPermission('reports:delete') ||
+        (resource.data.organizationId == null && resource.data.userId == getUserId()) ||
+        resource.data.createdBy == getUserId()
+      );
+    }
+
+    // ===== قواعد الإشعارات =====
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && (
+        hasSystemAccess() ||
+        resource.data.userId == getUserId() ||
+        resource.data.recipientId == getUserId()
+      );
+
+      allow update: if isAuthenticated() && (
+        resource.data.userId == getUserId() ||
+        resource.data.recipientId == getUserId()
+      );
+
+      allow create: if isAuthenticated();
+
+      allow delete: if isAuthenticated() && (
+        hasSystemAccess() ||
+        resource.data.userId == getUserId()
+      );
+    }
+
+    // ===== قواعد فئات المهام =====
+    match /taskCategories/{categoryId} {
+      allow read: if isAuthenticated();
+
+      allow write: if isAuthenticated() && (
+        hasSystemAccess() ||
+        hasCustomPermission('settings:edit') ||
+        (resource != null && resource.data.userId == getUserId())
+      );
+
+      allow create: if isAuthenticated() && (
+        hasSystemAccess() ||
+        hasCustomPermission('settings:edit') ||
+        request.resource.data.userId == getUserId()
+      );
+    }
+
+    // ===== قواعد الأهداف (Objectives) =====
+    match /objectives/{objectiveId} {
+      allow read: if isAuthenticated() && (
+        hasSystemAccess() ||
+        (resource.data.organizationId == null && resource.data.userId == getUserId()) ||
+        (resource.data.organizationId != null && isOrganizationMember(resource.data.organizationId))
+      );
+
+      allow create, update: if isAuthenticated() && (
+        hasSystemAccess() ||
+        (request.resource.data.organizationId == null &&
+         request.resource.data.userId == getUserId()) ||
+        (request.resource.data.organizationId != null && (
+          isOrganizationOwner(request.resource.data.organizationId) ||
+          isOrganizationAdmin(request.resource.data.organizationId)
+        ))
+      );
+
+      allow delete: if isAuthenticated() && (
+        hasSystemAccess() ||
+        (resource.data.organizationId == null && resource.data.userId == getUserId()) ||
+        (resource.data.organizationId != null && (
+          isOrganizationOwner(resource.data.organizationId) ||
+          isOrganizationAdmin(resource.data.organizationId)
+        ))
+      );
+    }
+
+    // ===== قواعد الاجتماعات =====
+    match /meetings/{meetingId} {
+      allow read: if isAuthenticated() && (
+        hasSystemAccess() ||
+        (resource.data.organizationId == null && resource.data.userId == getUserId()) ||
+        (resource.data.organizationId != null && isOrganizationMember(resource.data.organizationId))
+      );
+
+      allow create, update: if isAuthenticated() && (
+        hasSystemAccess() ||
+        (request.resource.data.organizationId == null &&
+         request.resource.data.userId == getUserId()) ||
+        (request.resource.data.organizationId != null && (
+          isOrganizationOwner(request.resource.data.organizationId) ||
+          isOrganizationAdmin(request.resource.data.organizationId) ||
+          request.resource.data.createdBy == getUserId()
+        ))
+      );
+
+      allow delete: if isAuthenticated() && (
+        hasSystemAccess() ||
+        (resource.data.organizationId == null && resource.data.userId == getUserId()) ||
+        (resource.data.organizationId != null && (
+          isOrganizationOwner(resource.data.organizationId) ||
+          isOrganizationAdmin(resource.data.organizationId) ||
+          resource.data.createdBy == getUserId()
+        ))
+      );
+    }
+
+    // ===== قواعد إعدادات الإشعارات =====
+    match /notificationSettings/{userId} {
+      allow read, write: if isAuthenticated() && (
+        hasSystemAccess() ||
+        getUserId() == userId
+      );
+    }
+
+    // ===== إعدادات النظام =====
+    match /system/{document=**} {
+      allow read: if true; // السماح للجميع بقراءة إعدادات النظام
+      allow write: if hasSystemAccess();
+    }
+
+    // ===== قواعد طلبات الانضمام للمؤسسات =====
+    match /organizationRequests/{requestId} {
+      allow read: if isAuthenticated() && (
+        hasSystemAccess() ||
+        resource.data.userId == getUserId() ||
+        isOrganizationOwner(resource.data.organizationId) ||
+        isOrganizationAdmin(resource.data.organizationId)
+      );
+
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == getUserId();
+
+      allow update, delete: if isAuthenticated() && (
+        hasSystemAccess() ||
+        resource.data.userId == getUserId() ||
+        isOrganizationOwner(resource.data.organizationId) ||
+        isOrganizationAdmin(resource.data.organizationId)
+      );
+    }
+
+    // ===== قواعد السجلات =====
+    match /logs/{logId} {
+      allow read: if hasSystemAccess();
+      allow create: if isAuthenticated();
+      allow update, delete: if hasSystemAccess();
+    }
+
+    // ===== قواعد عامة للمجموعات الأخرى =====
+    match /{document=**} {
+      // قاعدة احتياطية - صلاحيات النظام العليا فقط
+      allow read, write: if hasSystemAccess();
+    }
+  }
+}

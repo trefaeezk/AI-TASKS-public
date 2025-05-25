@@ -318,7 +318,7 @@ export const setUserDisabledStatus = createCallableFunction<SetUserDisabledStatu
 interface CreateUserRequest {
     email: string;
     password: string;
-    name: string;
+    name?: string; // الاسم اختياري الآن
     role: string;
     accountType?: string;
     organizationId?: string;
@@ -357,9 +357,10 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
             console.error(`${functionName} error: Invalid password provided (must be at least 6 characters).`);
             throw new functions.https.HttpsError("invalid-argument", "A valid password (at least 6 characters) must be provided.");
         }
-        if (!name || typeof name !== "string") {
+        // الاسم اختياري - إذا لم يتم توفيره، سنستخدم جزء من البريد الإلكتروني
+        if (name && typeof name !== "string") {
             console.error(`${functionName} error: Invalid name provided.`);
-            throw new functions.https.HttpsError("invalid-argument", "A valid name must be provided.");
+            throw new functions.https.HttpsError("invalid-argument", "Name must be a valid string if provided.");
         }
         const validRoles = ['owner', 'admin', 'individual_admin', 'engineer', 'supervisor', 'technician', 'assistant', 'user', 'independent'];
         if (!validRoles.includes(role)) { // Validate role input
@@ -413,13 +414,22 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
         }
 
         console.log(`Attempting to create user ${email} by admin ${request.auth?.uid}`);
-        const userRecord = await admin.auth().createUser({ email, password, displayName: name });
+        const userName = name || (email ? email.split('@')[0] : '') || 'مستخدم';
+        const userRecord = await admin.auth().createUser({ email, password, displayName: userName });
         console.log(`User ${email} created with UID ${userRecord.uid}.`);
 
         // تعيين الخصائص حسب الدور والنوع
         const customClaims: Record<string, any> = {
             role,
-            accountType
+            accountType,
+
+            // الأدوار الجديدة
+            system_owner: role === 'system_owner',
+            system_admin: role === 'system_admin',
+            organization_owner: role === 'organization_owner',
+            admin: role === 'admin',
+            owner: role === 'owner',
+            individual_admin: role === 'individual_admin'
         };
 
         // إضافة معلومات المؤسسة إذا كان نوع الحساب مؤسسة
@@ -430,57 +440,71 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
             }
         }
 
-        if (role === 'owner') {
-            customClaims.owner = true;
-            customClaims.admin = true; // المالك هو مسؤول أيضًا
-            console.log(`Setting owner and admin claims for user ${userRecord.uid}.`);
-        } else if (role === 'admin') {
-            customClaims.admin = true;
-            console.log(`Setting admin claim for user ${userRecord.uid}.`);
-        } else if (role === 'individual_admin') {
-            customClaims.individual_admin = true;
-            console.log(`Setting individual_admin claim for user ${userRecord.uid}.`);
-        } else {
-            console.log(`Setting role claim '${role}' for user ${userRecord.uid}.`);
-        }
+        // تسجيل العملية
+        console.log(`Setting custom claims for user ${userRecord.uid}:`, {
+            role,
+            accountType,
+            system_owner: customClaims.system_owner,
+            system_admin: customClaims.system_admin,
+            organization_owner: customClaims.organization_owner,
+            admin: customClaims.admin
+        });
 
-        console.log(`Setting account type claim '${accountType}' for user ${userRecord.uid}.`);
         await admin.auth().setCustomUserClaims(userRecord.uid, customClaims);
 
         // Save additional user data in Firestore
         console.log(`Saving user data to Firestore for user ${userRecord.uid}`);
 
+        // إنشاء البيانات الأساسية للمستخدم (استخدام userName المحسوب مسبقاً)
+        const completeUserData = {
+            uid: userRecord.uid,                     // ✅ إضافة uid
+            name: userName,
+            email: email,
+            displayName: userName,
+            role: role,
+            accountType: accountType,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdBy: request.auth?.uid,
+            disabled: false,
+            customPermissions: [],                   // ✅ إضافة customPermissions
+
+            // الأدوار الجديدة
+            isSystemOwner: role === 'system_owner',
+            isSystemAdmin: role === 'system_admin',
+            isOrganizationOwner: role === 'organization_owner',
+            isAdmin: role === 'admin',
+            isOwner: role === 'owner',
+            isIndividualAdmin: role === 'individual_admin'
+        };
+
         if (accountType === 'individual') {
-            // إذا كان نوع الحساب فردي، نحفظ البيانات في مجموعة individuals
-            await db.collection('individuals').doc(userRecord.uid).set({
-                name: name,
-                email: email,
-                role: role,
-                accountType: accountType,
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                updatedAt: admin.firestore.FieldValue.serverTimestamp()
-            });
+            // للحسابات الفردية: حفظ في مجموعة users فقط
+            await db.collection('users').doc(userRecord.uid).set(completeUserData);
+            console.log(`Created individual user in users collection`);
         } else {
-            // إذا كان نوع الحساب مؤسسة، نحفظ البيانات في مجموعة users
-            await db.collection('users').doc(userRecord.uid).set({
-                name: name,
-                email: email,
-                role: role,
-                accountType: accountType,
+            // للحسابات التنظيمية: حفظ في مجموعة users مع معلومات المؤسسة
+            const orgUserData = {
+                ...completeUserData,
                 organizationId: organizationId,
-                departmentId: departmentId || null,
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                updatedAt: admin.firestore.FieldValue.serverTimestamp()
-            });
+                departmentId: departmentId || null
+            };
+
+            await db.collection('users').doc(userRecord.uid).set(orgUserData);
 
             // إضافة المستخدم كعضو في المؤسسة
             if (organizationId) {
                 await db.collection('organizations').doc(organizationId).collection('members').doc(userRecord.uid).set({
                     role: role,
                     departmentId: departmentId || null,
-                    joinedAt: admin.firestore.FieldValue.serverTimestamp()
+                    joinedAt: admin.firestore.FieldValue.serverTimestamp(),
+                    addedBy: request.auth?.uid
                 });
+
+                console.log(`Added user to organization ${organizationId} as member`);
             }
+
+            console.log(`Created organization user in users collection`);
         }
 
         console.log(`Successfully created user ${email} (UID: ${userRecord.uid}) with role '${role}'.`);

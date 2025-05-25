@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Mail, Lock, UserPlus, Loader2 } from 'lucide-react'; // Changed icon to UserPlus
+import { Mail, Lock, UserPlus, Loader2, User } from 'lucide-react'; // Added User icon
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,7 @@ export default function SignupPage() {
 
   // تعريف مخطط التحقق مع رسائل مترجمة
   const signupSchema = z.object({
+    name: z.string().min(1, { message: t('auth.nameRequired') }),
     email: z.string().email({ message: t('auth.invalidEmail') }),
     password: z.string().min(6, { message: t('auth.passwordMinLength', { length: '6' }) }),
     confirmPassword: z.string().min(1, { message: t('auth.confirmPasswordRequired') }),
@@ -44,7 +45,7 @@ export default function SignupPage() {
 
   const onSubmit = async (data: SignupFormValues) => {
     setFormError(null);
-    const success = await signUp(data.email, data.password);
+    const success = await signUp(data.email, data.password, data.name);
     if (success) {
       router.push('/'); // Redirect to home page after successful signup
     } else {
@@ -81,6 +82,21 @@ export default function SignupPage() {
         {formError && !error && (
             <p className="text-sm font-medium text-destructive text-center">{formError}</p>
         )}
+
+        <div className="relative">
+          <User className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
+          <Input
+            id="name"
+            type="text"
+            placeholder={t('auth.namePlaceholder')}
+            {...register('name')}
+            className={`${direction === 'rtl' ? 'pr-10' : 'pl-10'} bg-input border-input focus:ring-primary`}
+            aria-invalid={errors.name ? "true" : "false"}
+            aria-describedby="name-error"
+            required
+          />
+        </div>
+        {errors.name && <p id="name-error" className="text-sm font-medium text-destructive">{errors.name.message}</p>}
 
         <div className="relative">
           <Mail className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground`} />

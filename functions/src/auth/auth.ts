@@ -409,6 +409,8 @@ export const createUserHttp = functions.region('us-central1').https.onRequest(as
 
       // إنشاء وثيقة المستخدم في Firestore - النظام الجديد
       await db.collection('users').doc(userRecord.uid).set({
+        uid: userRecord.uid,                     // ✅ إضافة uid
+        name: displayName || email,              // ✅ إضافة name
         email,
         displayName: displayName || email,
         role: role || 'assistant',
@@ -424,6 +426,9 @@ export const createUserHttp = functions.region('us-central1').https.onRequest(as
 
         accountType: organizationId ? 'organization' : 'individual',
         organizationId: organizationId || null,
+        departmentId: null,                      // ✅ إضافة departmentId (يمكن تحديثه لاحقاً)
+        disabled: false,                         // ✅ إضافة disabled
+        customPermissions: [],                   // ✅ إضافة customPermissions
         createdAt: new Date(),
         updatedAt: new Date(),
         createdBy: decodedToken.uid

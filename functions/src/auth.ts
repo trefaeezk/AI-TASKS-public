@@ -270,18 +270,39 @@ export const updateAccountType = createCallableFunction<UpdateAccountTypeRequest
             // تعيين الدور إلى 'independent' للحسابات الفردية
             newClaims.role = 'independent';
 
-            // التحقق من وجود وثيقة المستخدم الفردي وإنشائها إذا لم تكن موجودة
-            const individualDoc = await db.collection('individuals').doc(uid).get();
-            if (!individualDoc.exists) {
-                console.log(`Creating individual document for user ${uid} during updateAccountType`);
+            // التحقق من وجود وثيقة المستخدم في مجموعة users أولاً
+            const userDoc = await db.collection('users').doc(uid).get();
 
-                // إنشاء وثيقة المستخدم الفردي
-                await db.collection('individuals').doc(uid).set({
-                    name: userRecord.displayName || '',
+            if (!userDoc.exists) {
+                console.log(`Creating user document for user ${uid} during updateAccountType`);
+
+                // إنشاء وثيقة المستخدم في مجموعة users
+                const userName = userRecord.displayName ||
+                               (userRecord.email ? userRecord.email.split('@')[0] : '') ||
+                               'مستخدم';
+
+                await db.collection('users').doc(uid).set({
+                    name: userName,
                     email: userRecord.email || '',
+                    displayName: userName,
                     role: 'independent',
                     accountType: 'individual',
                     createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                    disabled: false,
+                    // الأدوار الجديدة
+                    isSystemOwner: false,
+                    isSystemAdmin: false,
+                    isOrganizationOwner: false,
+                    isAdmin: false,
+                    isOwner: false,
+                    isIndividualAdmin: false
+                });
+            } else {
+                // تحديث البيانات الموجودة
+                await db.collection('users').doc(uid).update({
+                    accountType: 'individual',
+                    role: 'independent',
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 });
             }

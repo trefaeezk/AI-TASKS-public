@@ -41,16 +41,32 @@ export interface ManagedUser {
  * Represents user data stored in Firestore
  */
 export interface UserData {
-  uid: string;
+  uid: string;                          // ✅ معرف المستخدم
   email: string;
   name: string;
+  displayName: string;                  // ✅ اسم العرض
   role: UserRole;
-  accountType: SystemType; // نوع الحساب (فرد/مؤسسة)
-  organizationId?: string; // معرف المؤسسة (إذا كان نوع الحساب مؤسسة)
-  departmentId?: string; // معرف القسم (إذا كان نوع الحساب مؤسسة)
-  customPermissions?: PermissionKey[];
-  createdAt: any; // Firestore timestamp
-  lastLogin?: any; // Firestore timestamp
+  accountType: SystemType;              // نوع الحساب (فرد/مؤسسة)
+  organizationId?: string;              // معرف المؤسسة (إذا كان نوع الحساب مؤسسة)
+  departmentId?: string;                // معرف القسم (إذا كان نوع الحساب مؤسسة)
+
+  // الأدوار الجديدة
+  isSystemOwner: boolean;
+  isSystemAdmin: boolean;
+  isOrganizationOwner: boolean;
+  isAdmin: boolean;
+  isOwner: boolean;
+  isIndividualAdmin: boolean;
+
+  // الحالة والصلاحيات
+  disabled: boolean;                    // ✅ حالة التفعيل
+  customPermissions?: PermissionKey[];  // ✅ الصلاحيات المخصصة
+
+  // التتبع والتواريخ
+  createdAt: any;                       // Firestore timestamp
+  updatedAt: any;                       // Firestore timestamp
+  createdBy?: string;                   // ✅ من أنشأ المستخدم
+  lastLogin?: any;                      // Firestore timestamp
 }
 
 /**

@@ -221,6 +221,8 @@ const en = {
     logoutSuccess: "Logged out successfully",
     loginDescription: "Welcome back! Log in to access your tasks.",
     registerDescription: "Join us to manage your tasks intelligently.",
+    namePlaceholder: "Full Name",
+    nameRequired: "Name is required",
     emailPlaceholder: "Email",
     passwordPlaceholder: "Password",
     confirmPasswordPlaceholder: "Confirm Password",

@@ -54,15 +54,26 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
         // Force refresh to get the latest claims
         const idTokenResult = await user.getIdTokenResult(true); // FORCE REFRESH = TRUE
         console.log('[AdminProtectedRoute] User Claims:', idTokenResult.claims); // Log claims
-        // التحقق من دور المالك أو المسؤول
-        const userIsAdmin = idTokenResult.claims.admin === true;
+        // التحقق من دور المالك أو المسؤول (النظام الجديد والقديم)
+        const userIsSystemOwner = idTokenResult.claims.system_owner === true;
+        const userIsSystemAdmin = idTokenResult.claims.system_admin === true;
         const userIsOwner = idTokenResult.claims.owner === true;
-        console.log('[AdminProtectedRoute] Is user admin?', userIsAdmin); // Log check result
-        console.log('[AdminProtectedRoute] Is user owner?', userIsOwner); // Log check result
-        setIsAdmin(userIsAdmin);
-        setIsOwner(userIsOwner);
+        const userIsAdmin = idTokenResult.claims.admin === true;
 
-        if (!userIsAdmin && !userIsOwner) {
+        // دعم كلا النظامين
+        const hasOwnerAccess = userIsSystemOwner || userIsOwner;
+        const hasAdminAccess = userIsSystemAdmin || userIsAdmin;
+
+        console.log('[AdminProtectedRoute] System Owner:', userIsSystemOwner);
+        console.log('[AdminProtectedRoute] System Admin:', userIsSystemAdmin);
+        console.log('[AdminProtectedRoute] Legacy Owner:', userIsOwner);
+        console.log('[AdminProtectedRoute] Legacy Admin:', userIsAdmin);
+        console.log('[AdminProtectedRoute] Has Owner Access:', hasOwnerAccess);
+        console.log('[AdminProtectedRoute] Has Admin Access:', hasAdminAccess);
+        setIsAdmin(hasAdminAccess);
+        setIsOwner(hasOwnerAccess);
+
+        if (!hasAdminAccess && !hasOwnerAccess) {
           console.log('[AdminProtectedRoute] User is NOT admin or owner, redirecting to home.');
           toast({
               title: 'غير مصرح به',

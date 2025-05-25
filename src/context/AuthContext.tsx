@@ -75,16 +75,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log("[AuthContext] ⚠️ بيانات المستخدم غير موجودة، إنشاء حساب فردي جديد");
 
         // إنشاء حساب فردي جديد
+        const userName = currentUser.displayName || currentUser.email?.split('@')[0] || 'مستخدم';
+
         const newUserData = {
-          name: currentUser.displayName || currentUser.email || '',
+          uid: currentUser.uid,                    // ✅ إضافة uid
+          name: userName,
           email: currentUser.email,
+          displayName: userName,
           accountType: 'individual',
           role: 'independent',
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
+          disabled: false,
+          // الأدوار الجديدة
+          isSystemOwner: false,
+          isSystemAdmin: false,
+          isOrganizationOwner: false,
+          isAdmin: false,
+          isOwner: false,
+          isIndividualAdmin: false,
+          // معلومات المؤسسة (null للأفراد)
+          organizationId: null,                    // ✅ إضافة organizationId
+          departmentId: null,                      // ✅ إضافة departmentId
+          // الصلاحيات المخصصة
+          customPermissions: [],                   // ✅ إضافة customPermissions
+          // من أنشأ المستخدم
+          createdBy: currentUser.uid               // ✅ إضافة createdBy (المستخدم أنشأ نفسه)
         };
 
         await setDoc(userDocRef, newUserData);
+        console.log("[AuthContext] ✅ تم إنشاء حساب فردي جديد:", newUserData);
 
         return {
           accountType: 'individual',
@@ -106,29 +126,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // 🧑 حساب فردي
         console.log("[AuthContext] 👤 الخطوة 2: معالجة حساب فردي");
 
+        // تحديد الدور بناءً على البيانات المحفوظة
         let individualRole: UserRole = userData.role || 'independent';
-        const isSystemOwner = userData.system_owner || false;
-        const isSystemAdmin = userData.system_admin || false;
+        const isSystemOwner = userData.isSystemOwner || false;
+        const isSystemAdmin = userData.isSystemAdmin || false;
 
-        // تصحيح الدور بناءً على الصلاحيات والتوافق مع النظام القديم
+        // تحديد الدور بناءً على الصلاحيات
         if (isSystemOwner) {
           individualRole = 'system_owner';
         } else if (isSystemAdmin) {
           individualRole = 'system_admin';
-        } else if (userData.role === 'owner') {
-          // للتوافق مع النظام القديم - تحويل إلى النظام الجديد
-          individualRole = 'system_owner';
-        } else if (userData.role === 'admin') {
-          // للتوافق مع النظام القديم - تحويل إلى النظام الجديد
-          individualRole = 'system_admin';
-        } else if (userData.role === 'individual_admin') {
-          // للتوافق مع النظام القديم - تحويل إلى النظام الجديد
-          individualRole = 'system_admin';
-        } else if (userData.role === 'user') {
-          // للتوافق مع النظام القديم - تحويل إلى النظام الجديد
-          individualRole = 'independent';
         } else {
-          // التأكد من أن الدور صحيح في النظام الجديد
+          // التأكد من أن الدور صحيح
           const validIndividualRoles: UserRole[] = ['system_owner', 'system_admin', 'independent'];
           if (!validIndividualRoles.includes(individualRole as UserRole)) {
             individualRole = 'independent';
@@ -213,17 +222,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.log("  - memberData:", memberData);
             userRole = memberData.role || userData.role || 'assistant';
 
-            // تحديث منطق تحديد الأدوار للنظام الجديد
+            // تحديد الأدوار بناءً على الدور المحفوظ
             isAdmin = userRole === 'admin';
 
-            // التوافق مع النظام القديم - تحويل الأدوار القديمة
-            if (userData.role === 'owner' && !isOwner) {
-              userRole = 'admin'; // تحويل owner قديم إلى admin في المؤسسة
-            } else if (userData.role === 'individual_admin') {
-              userRole = 'admin'; // تحويل individual_admin إلى admin
-            }
-
-            // التأكد من أن الدور صحيح في النظام الجديد للمؤسسات
+            // التأكد من أن الدور صحيح للمؤسسات
             const validOrgRoles: UserRole[] = ['organization_owner', 'admin', 'supervisor', 'engineer', 'technician', 'assistant'];
             if (!validOrgRoles.includes(userRole as UserRole)) {
               userRole = 'assistant'; // الدور الافتراضي للمؤسسات
@@ -376,7 +378,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.log("[AuthContext] ✅ تم تعيين بيانات المستخدم:", finalProcessedClaims);
 
           // Routing logic based on final processed claims
-          const currentPath = pathname; // Use pathname from usePathname
+          const currentPath = pathname || '/'; // Use pathname from usePathname with fallback
           console.log("[AuthContext] Current path for routing:", currentPath);
           if (finalProcessedClaims.accountType === 'organization' && finalProcessedClaims.organizationId) {
             if (!currentPath.startsWith('/org')) {
@@ -446,7 +448,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (userClaims.accountType === 'organization' && userClaims.organizationId) {
         docPath = `organizations/${userClaims.organizationId}/members/${user.uid}`;
       } else if (userClaims.accountType === 'individual') {
-        docPath = `individuals/${user.uid}`;
+        docPath = `users/${user.uid}`;
       } else if (userClaims.role) { // Fallback to 'users' collection if role exists but type is unclear
         docPath = `users/${user.uid}`;
       }

@@ -223,6 +223,8 @@ const ar = {
     logoutSuccess: "تم تسجيل الخروج بنجاح",
     loginDescription: "مرحبًا بعودتك! قم بتسجيل الدخول للوصول إلى مهامك.",
     registerDescription: "انضم إلينا لإدارة مهامك بذكاء.",
+    namePlaceholder: "الاسم الكامل",
+    nameRequired: "الاسم مطلوب",
     emailPlaceholder: "البريد الإلكتروني",
     passwordPlaceholder: "كلمة المرور",
     confirmPasswordPlaceholder: "تأكيد كلمة المرور",
