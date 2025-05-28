@@ -7,7 +7,7 @@ import {
   Home, FileText, Settings, LogOut, PlusCircle, ListTodo, ListChecks,
   Edit3, ListPlus, TestTubeDiagonal, Menu, Shield, UserCircle,
   BarChart3, Filter, Users, Wrench, Database, Layers, Building,
-  Bell, Wand2, Target, Bug, BookOpen
+  Bell, Wand2, Target, BookOpen
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -397,6 +397,7 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                     requiredPermission={{ area: 'data', action: 'view' }}
                   />
                 )}
+
                 {role === 'independent' && (
                   <PermissionSidebarItem
                     href="/data"
@@ -448,13 +449,7 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                   tooltip={t('sidebar.documentationTooltip')}
                   requiredPermission={{ area: 'settings', action: 'view' }}
                 />
-                <PermissionSidebarItem
-                  href="/debug"
-                  icon={Bug}
-                  label={t('sidebar.diagnostics')}
-                  tooltip={t('sidebar.diagnosticsTooltip')}
-                  requiredRole="system_owner"
-                />
+
             </SidebarMenu>
             </SidebarContent>
 

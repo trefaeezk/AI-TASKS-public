@@ -20,8 +20,7 @@ export * from './invitations';
 // تصدير وظائف إدارة الحسابات
 export * from './account';
 
-// تصدير وظائف إدارة الأعضاء
-export * from './members';
+// تصدير وظائف إدارة الأعضاء - تم دمجها في هذا الملف
 
 // تصدير وظائف نظام التخطيط السنوي (OKRs)
 export * from './okr';
@@ -505,12 +504,3 @@ export const getOrganizationMembers = createCallableFunction<GetOrganizationMemb
     }
 });
 
-/**
- * دالة HTTP لجلب أعضاء المؤسسة
- * تتطلب أن يكون المستدعي عضوًا في المؤسسة
- * تم تعطيلها مؤقتًا لتقليل استهلاك الموارد واستخدام getOrganizationMembers بدلاً منها
- */
-// export const getOrganizationMembersHttp = functions.https.onRequest(async (req, res) => {
-//     // تم تعطيل هذه الوظيفة مؤقتًا لتقليل استهلاك الموارد
-//     // استخدم getOrganizationMembers بدلاً منها
-// });

@@ -1,6 +1,3 @@
-
-'use client'; // Required for useEffect
-
 import type { Metadata } from 'next';
 import { Cairo } from 'next/font/google'; // Changed font to Cairo for Arabic support
 import { Toaster } from '@/components/ui/toaster'; // Import Toaster
@@ -11,7 +8,7 @@ import { LanguageProvider } from '@/context/LanguageContext'; // Import Language
 import { ThemeProvider } from '@/context/ThemeContext'; // Import ThemeProvider
 // AuthProvider will be moved to the (app) group layout
 import './globals.css';
-import React, { useEffect } from 'react'; // Import useEffect
+import React from 'react';
 
 const cairo = Cairo({
   subsets: ['arabic', 'latin'], // Include Arabic and Latin subsets
@@ -28,23 +25,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-
-  // Add useEffect hook to unregister service workers
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(regs => {
-        if (regs.length > 0) {
-           console.log('Unregistering existing service workers...');
-           regs.forEach(r => r.unregister());
-           console.log('Service workers unregistered.');
-        }
-      }).catch(error => {
-         console.error('Error unregistering service workers:', error);
-      });
-    }
-  }, []); // Empty dependency array ensures this runs once on mount
-
-
   return (
     <html lang="ar" dir="rtl">
       <head>

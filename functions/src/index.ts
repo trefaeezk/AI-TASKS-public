@@ -762,13 +762,10 @@ export * from './roles';
 export * from './system';
 
 // Import and export individual user functions
-// تصدير كل الوظائف من ملف individual باستثناء importIndividualData
 import {
   getIndividualUserData,
   updateIndividualUserData,
   exportIndividualData
-  // importIndividualData تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
-  // createIndividualUser تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
 } from './individual';
 
 export {
@@ -778,7 +775,6 @@ export {
 };
 
 // Import and export organization functions
-// Exportamos todo excepto las funciones que causan conflicto
 export {
   createOrganization,
   getOrganization,
@@ -786,7 +782,6 @@ export {
   addOrganizationMember,
   removeOrganizationMember,
   getOrganizationMembers,
-  // getOrganizationMembersHttp, // تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
   requestOrganization,
   approveOrganizationRequest,
   rejectOrganizationRequest,
@@ -796,7 +791,6 @@ export {
   createOkrPeriod,
   getOkrPeriods,
   updateOkrPeriod,
-  // deleteOkrPeriod, // تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
   createObjective,
   createKeyResult,
   getKeyResultsByObjective,
@@ -816,21 +810,3 @@ export {
 } from './organization';
 
 // وظائف المصادقة والذكاء الاصطناعي تم تصديرها بالفعل في بداية الملف
-
-/**
- * دالة لتعيين المستخدم كمالك بشكل مباشر
- * تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
- */
-// export const setOwnerDirectHttp = onRequest(...);
-
-/**
- * دالة لجلب قائمة المستخدمين من Firebase Authentication
- * تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
- */
-// export const listUsersHttp = onRequest(...);
-
-/**
- * دالة لجلب معلومات مستخدم واحد بواسطة معرف المستخدم
- * تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
- */
-// export const getUserHttp = onRequest(...);

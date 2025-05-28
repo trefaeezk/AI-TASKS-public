@@ -29,17 +29,45 @@ export default function DocumentationPageApp() {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch('/api/documentation');
+        // Load static documentation data
+        const staticDocuments = [
+          {
+            id: 'user-system',
+            title: 'نظام المستخدمين',
+            description: 'دليل شامل لنظام المستخدمين والصلاحيات',
+            category: 'system',
+            path: 'USER_SYSTEM_DOCUMENTATION.md',
+            requiredPermission: 'user',
+          },
+          {
+            id: 'permissions-guide',
+            title: 'دليل الصلاحيات',
+            description: 'شرح تفصيلي لنظام الصلاحيات والأمان',
+            category: 'security',
+            path: 'USER_PERMISSIONS_GUIDE.md',
+            requiredPermission: 'user',
+          },
+          {
+            id: 'organization-management',
+            title: 'إدارة المؤسسات',
+            description: 'دليل إدارة المؤسسات والأعضاء',
+            category: 'organization',
+            path: 'ORGANIZATION_MANAGEMENT.md',
+            requiredPermission: 'user',
+          },
+          {
+            id: 'api-reference',
+            title: 'مرجع API',
+            description: 'توثيق شامل لجميع APIs المتاحة',
+            category: 'development',
+            path: 'API_REFERENCE.md',
+            requiredPermission: 'user',
+          }
+        ];
 
-        if (!response.ok) {
-          throw new Error(`Error fetching documentation data: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-
-        setDocuments(data.documents || []);
-        setInitialDocContent(data.initialDocContent || '');
-        setInitialDocId(data.initialDocId || 'general-overview');
+        setDocuments(staticDocuments);
+        setInitialDocContent('# مرحباً بك في التوثيق\n\nاختر وثيقة من القائمة الجانبية للبدء.');
+        setInitialDocId('user-system');
       } catch (error) {
         console.error('Error fetching documentation data:', error);
         setError('Error loading data from server');

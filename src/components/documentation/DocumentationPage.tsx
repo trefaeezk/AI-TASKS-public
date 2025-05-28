@@ -181,33 +181,9 @@ const DocumentationPage: React.FC<DocumentationPageProps> = ({
     try {
       console.log('Loading document content for:', doc.id, doc.path);
 
-      // استخدام API الوثائق مع إضافة رمز المصادقة
-      let token = '';
-
-      try {
-        token = await user?.getIdToken() || '';
-        console.log('Got user token:', token ? 'Yes' : 'No');
-      } catch (tokenError) {
-        console.error('Error getting token:', tokenError);
-        // استخدام رمز مصادقة وهمي في بيئة التطوير
-        if (process.env.NODE_ENV === 'development') {
-          token = 'test-token';
-          console.log('Using test token in development mode');
-        }
-      }
-
-      const apiPath = doc.path.startsWith('/') ? doc.path : `/${doc.path}`;
-      console.log('API path:', apiPath);
-
-      // استخدام API الوثائق
-      console.log('Fetching from:', `/api/docs${apiPath}`);
-      const response = await fetch(`/api/docs${apiPath}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        },
-        // إضافة معلمة عشوائية لتجنب التخزين المؤقت
-        cache: 'no-store'
-      });
+      // Load documentation content directly from docs folder
+      // Since we removed the API route, we'll load static content
+      const response = await fetch(`/docs/${doc.path}`);
 
       console.log('Response status:', response.status, response.statusText);
 
