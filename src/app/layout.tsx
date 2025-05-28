@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { Cairo } from 'next/font/google'; // Changed font to Cairo for Arabic support
 import { Toaster } from '@/components/ui/toaster'; // Import Toaster
-import { AuthProvider } from '@/context/AuthContext'; // Import AuthProvider for SystemSetupCheck
-import SystemSetupCheck from '@/components/setup/SystemSetupCheck'; // Import SystemSetupCheck
+import { AuthProvider } from '@/context/AuthContext'; // Import AuthProvider
+
 import { NotificationSettingsProvider } from '@/components/notifications/NotificationSettingsProvider'; // Import NotificationSettingsProvider
 import { LanguageProvider } from '@/context/LanguageContext'; // Import LanguageProvider
 import { ThemeProvider } from '@/context/ThemeContext'; // Import ThemeProvider
@@ -44,11 +44,9 @@ export default function RootLayout({
          <ThemeProvider>
            <LanguageProvider>
              <AuthProvider>
-                <SystemSetupCheck>
-                   <NotificationSettingsProvider>
-                      {children}
-                   </NotificationSettingsProvider>
-                </SystemSetupCheck>
+                <NotificationSettingsProvider>
+                   {children}
+                </NotificationSettingsProvider>
                 <Toaster /> {/* Add Toaster component here */}
              </AuthProvider>
            </LanguageProvider>

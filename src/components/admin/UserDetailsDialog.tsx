@@ -15,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Badge } from '../ui/badge';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
+import { Translate } from '../Translate';
 
 interface UserDetailsDialogProps {
   isOpen: boolean;
@@ -38,7 +39,7 @@ export function UserDetailsDialog({
   const { toast } = useToast();
   const { refreshUserData } = useAuth();
   const [activeTab, setActiveTab] = useState('details');
-  const [selectedRole, setSelectedRole] = useState<UserRole>('assistant');
+  const [selectedRole, setSelectedRole] = useState<UserRole>('org_assistant');
   const [customPermissions, setCustomPermissions] = useState<PermissionKey[]>([]);
   const [isDisabled, setIsDisabled] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -46,7 +47,7 @@ export function UserDetailsDialog({
   // Update state when user changes
   useEffect(() => {
     if (user) {
-      setSelectedRole(user.role || 'assistant');
+      setSelectedRole(user.role || 'org_assistant');
       setCustomPermissions(user.customPermissions || []);
       setIsDisabled(user.disabled);
     }
@@ -129,18 +130,32 @@ export function UserDetailsDialog({
                 <CardDescription>المعلومات الأساسية للمستخدم</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-4">
                   <div>
                     <Label className="text-muted-foreground">المعرف</Label>
-                    <p className="text-sm font-medium truncate">{user.uid}</p>
+                    <p className="text-sm font-medium break-all bg-muted p-2 rounded text-xs font-mono">
+                      {user.uid}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground">الاسم</Label>
+                      <p className="text-sm font-medium">{user.name || 'غير محدد'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">البريد الإلكتروني</Label>
+                      <p className="text-sm font-medium break-all">{user.email || 'غير محدد'}</p>
+                    </div>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">الاسم</Label>
-                    <p className="text-sm font-medium">{user.name || 'غير محدد'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">البريد الإلكتروني</Label>
-                    <p className="text-sm font-medium">{user.email || 'غير محدد'}</p>
+                    <Label className="text-muted-foreground">الدور الحالي</Label>
+                    <p className="text-sm font-medium bg-primary/10 text-primary px-2 py-1 rounded-md inline-block">
+                      {user.role ? (
+                        <Translate text={`roles.${user.role}`} defaultValue={user.role} />
+                      ) : (
+                        'غير محدد'
+                      )}
+                    </p>
                   </div>
                 </div>
 
@@ -155,15 +170,18 @@ export function UserDetailsDialog({
                       <SelectValue placeholder="اختر دورًا" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="owner">مالك النظام</SelectItem>
-                      <SelectItem value="admin">مسؤول</SelectItem>
-                      <SelectItem value="individual_admin">مسؤول نظام الأفراد</SelectItem>
-                      <SelectItem value="engineer">مهندس</SelectItem>
-                      <SelectItem value="supervisor">مشرف</SelectItem>
-                      <SelectItem value="technician">فني</SelectItem>
-                      <SelectItem value="assistant">مساعد فني</SelectItem>
-                      <SelectItem value="user">مستخدم</SelectItem>
+                      {/* أدوار النظام العامة */}
+                      <SelectItem value="system_owner">مالك النظام</SelectItem>
+                      <SelectItem value="system_admin">أدمن النظام العام</SelectItem>
                       <SelectItem value="independent">مستخدم مستقل</SelectItem>
+
+                      {/* أدوار المؤسسات */}
+                      <SelectItem value="organization_owner">مالك المؤسسة</SelectItem>
+                      <SelectItem value="org_admin">أدمن المؤسسة</SelectItem>
+                      <SelectItem value="org_supervisor">مشرف</SelectItem>
+                      <SelectItem value="org_engineer">مهندس</SelectItem>
+                      <SelectItem value="org_technician">فني</SelectItem>
+                      <SelectItem value="org_assistant">مساعد فني</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
