@@ -58,7 +58,7 @@ export const canInviteToOrganization = async (userId: string, organizationId: st
         const role = memberData?.role;
 
         // الأدوار التي يمكنها إضافة أعضاء
-        const rolesWithInvitePermission = ['admin', 'engineer', 'supervisor'];
+        const rolesWithInvitePermission = ['org_admin', 'org_engineer', 'org_supervisor'];
 
         return rolesWithInvitePermission.includes(role);
     } catch (error) {

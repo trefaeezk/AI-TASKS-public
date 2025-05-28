@@ -78,7 +78,7 @@ export const updateUserRoleHttp = createHttpFunction((req, res) => {
                 return;
             }
 
-            const validRoles = ['admin', 'engineer', 'supervisor', 'technician', 'assistant', 'user', 'independent'];
+            const validRoles = ['org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant', 'independent'];
             if (!role || typeof role !== "string" || !validRoles.includes(role)) {
                 res.status(400).json({
                     error: `يجب توفير دور صالح. الأدوار الصالحة هي: ${validRoles.join(', ')}`
@@ -87,9 +87,9 @@ export const updateUserRoleHttp = createHttpFunction((req, res) => {
             }
 
             // تحديث claims المستخدم
-            const claims: { admin?: boolean; role: string } = { role };
-            if (role === 'admin') {
-                claims.admin = true;
+            const claims: { org_admin?: boolean; role: string } = { role };
+            if (role === 'org_admin') {
+                claims.org_admin = true;
             }
 
             await admin.auth().setCustomUserClaims(uid, claims);
@@ -203,7 +203,7 @@ export const updateUserPermissionsHttp = createHttpFunction((req, res) => {
 
                 // الحصول على دور المستخدم من custom claims
                 const userClaims = (await admin.auth().getUser(uid)).customClaims || {};
-                const userRole = userClaims.role || 'assistant';
+                const userRole = userClaims.role || 'org_assistant';
 
                 await db.collection('users').doc(uid).set({
                     role: userRole,

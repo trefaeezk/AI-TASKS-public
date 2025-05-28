@@ -54,24 +54,13 @@ export function usePermissions() {
         effectiveRole = 'system_admin';
       } else if (userClaims.organization_owner) {
         effectiveRole = 'organization_owner';
-      } else if (userClaims.admin) {
-        effectiveRole = 'admin';
+      } else if (userClaims.org_admin) {
+        effectiveRole = 'org_admin';
       } else if (userClaims.role) {
         effectiveRole = userClaims.role as UserRole;
       } else {
         // الدور الافتراضي بناءً على نوع الحساب
-        effectiveRole = userClaims.accountType === 'individual' ? 'independent' : 'assistant';
-      }
-
-      // التوافق مع النظام القديم - تحويل الأدوار القديمة
-      if (userClaims.owner) {
-        effectiveRole = 'system_owner';
-      } else if (effectiveRole === 'owner') {
-        effectiveRole = 'system_owner';
-      } else if (effectiveRole === 'individual_admin') {
-        effectiveRole = 'system_admin';
-      } else if (effectiveRole === 'user') {
-        effectiveRole = userClaims.accountType === 'individual' ? 'independent' : 'assistant';
+        effectiveRole = userClaims.accountType === 'individual' ? 'independent' : 'org_assistant';
       }
 
       console.log("[usePermissions] Effective role from claims:", effectiveRole);
@@ -124,7 +113,7 @@ export function usePermissions() {
     } catch (err: any) {
       console.error('[usePermissions] Error in determinePermissions:', err);
       setError(err.message || 'Error fetching user permissions');
-      setRole('assistant'); // Fallback role for new system
+      setRole('org_assistant'); // Fallback role for new system
       setCustomPermissions([]);
     } finally {
       console.log("[usePermissions] Finished determinePermissions, setting internalLoading to false.");

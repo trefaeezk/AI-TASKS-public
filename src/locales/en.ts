@@ -149,16 +149,11 @@ const en = {
 
     // Organization roles
     organization_owner: "Organization Owner",
-    admin: "Organization Admin",
-    supervisor: "Supervisor",
-    engineer: "Engineer",
-    technician: "Technician",
-    assistant: "Assistant",
-
-    // Legacy roles (for backward compatibility)
-    owner: "System Owner",
-    individual_admin: "Individual System Admin",
-    user: "User"
+    org_admin: "Organization Admin",
+    org_supervisor: "Supervisor",
+    org_engineer: "Engineer",
+    org_technician: "Technician",
+    org_assistant: "Assistant"
   },
 
   roleDescriptions: {
@@ -169,11 +164,11 @@ const en = {
 
     // Organization roles
     organization_owner: "Organization Owner - Full permissions within the organization",
-    admin: "Organization Admin - Broad administrative permissions within the organization",
-    supervisor: "Supervisor - Supervises teams and tasks, manages operations",
-    engineer: "Engineer - Designs and plans projects and technical solutions",
-    technician: "Technician - Executes technical tasks and maintenance",
-    assistant: "Assistant - Helps with simple tasks execution"
+    org_admin: "Organization Admin - Broad administrative permissions within the organization",
+    org_supervisor: "Supervisor - Supervises teams and tasks, manages operations",
+    org_engineer: "Engineer - Designs and plans projects and technical solutions",
+    org_technician: "Technician - Executes technical tasks and maintenance",
+    org_assistant: "Assistant - Helps with simple tasks execution"
   },
 
   common: {

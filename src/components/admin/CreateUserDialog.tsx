@@ -20,7 +20,7 @@ const createUserSchema = z.object({
   email: z.string().email({ message: 'البريد الإلكتروني غير صالح.' }),
   password: z.string().min(6, { message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل.' }),
   name: z.string().min(1, { message: 'الاسم مطلوب.' }),
-  role: z.enum(['system_owner', 'system_admin', 'organization_owner', 'admin', 'supervisor', 'engineer', 'technician', 'assistant', 'independent'], {
+  role: z.enum(['system_owner', 'system_admin', 'organization_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant', 'independent'], {
     errorMap: () => ({ message: 'الدور مطلوب.' })
   }),
   accountType: z.enum(['individual', 'organization'], {
@@ -158,11 +158,11 @@ export function CreateUserDialog({ isOpen, onOpenChange, onSubmit, loading }: Cr
 
                   {/* أدوار المؤسسات */}
                   <SelectItem value="organization_owner">مالك المؤسسة</SelectItem>
-                  <SelectItem value="admin">أدمن المؤسسة</SelectItem>
-                  <SelectItem value="supervisor">مشرف</SelectItem>
-                  <SelectItem value="engineer">مهندس</SelectItem>
-                  <SelectItem value="technician">فني</SelectItem>
-                  <SelectItem value="assistant">مساعد فني</SelectItem>
+                  <SelectItem value="org_admin">أدمن المؤسسة</SelectItem>
+                  <SelectItem value="org_supervisor">مشرف</SelectItem>
+                  <SelectItem value="org_engineer">مهندس</SelectItem>
+                  <SelectItem value="org_technician">فني</SelectItem>
+                  <SelectItem value="org_assistant">مساعد فني</SelectItem>
                 </SelectContent>
               </Select>
             </div>

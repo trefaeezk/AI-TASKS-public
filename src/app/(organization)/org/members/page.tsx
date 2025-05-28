@@ -643,13 +643,12 @@ export default function MembersPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {isOwner && <SelectItem value="owner"><Translate text="roles.owner" /></SelectItem>}
-                  <SelectItem value="admin"><Translate text="roles.admin" /></SelectItem>
-                  <SelectItem value="engineer"><Translate text="roles.engineer" /></SelectItem>
-                  <SelectItem value="supervisor"><Translate text="roles.supervisor" /></SelectItem>
-                  <SelectItem value="technician"><Translate text="roles.technician" /></SelectItem>
-                  <SelectItem value="assistant"><Translate text="roles.assistant" /></SelectItem>
-                  <SelectItem value="user"><Translate text="roles.user" /></SelectItem>
+                  {isOwner && <SelectItem value="organization_owner"><Translate text="roles.organization_owner" /></SelectItem>}
+                  <SelectItem value="org_admin"><Translate text="roles.org_admin" /></SelectItem>
+                  <SelectItem value="org_engineer"><Translate text="roles.org_engineer" /></SelectItem>
+                  <SelectItem value="org_supervisor"><Translate text="roles.org_supervisor" /></SelectItem>
+                  <SelectItem value="org_technician"><Translate text="roles.org_technician" /></SelectItem>
+                  <SelectItem value="org_assistant"><Translate text="roles.org_assistant" /></SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -730,13 +729,12 @@ export default function MembersPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {isOwner && <SelectItem value="owner"><Translate text="roles.owner" /></SelectItem>}
-                  <SelectItem value="admin"><Translate text="roles.admin" /></SelectItem>
-                  <SelectItem value="engineer"><Translate text="roles.engineer" /></SelectItem>
-                  <SelectItem value="supervisor"><Translate text="roles.supervisor" /></SelectItem>
-                  <SelectItem value="technician"><Translate text="roles.technician" /></SelectItem>
-                  <SelectItem value="assistant"><Translate text="roles.assistant" /></SelectItem>
-                  <SelectItem value="user"><Translate text="roles.user" /></SelectItem>
+                  {isOwner && <SelectItem value="organization_owner"><Translate text="roles.organization_owner" /></SelectItem>}
+                  <SelectItem value="org_admin"><Translate text="roles.org_admin" /></SelectItem>
+                  <SelectItem value="org_engineer"><Translate text="roles.org_engineer" /></SelectItem>
+                  <SelectItem value="org_supervisor"><Translate text="roles.org_supervisor" /></SelectItem>
+                  <SelectItem value="org_technician"><Translate text="roles.org_technician" /></SelectItem>
+                  <SelectItem value="org_assistant"><Translate text="roles.org_assistant" /></SelectItem>
                 </SelectContent>
               </Select>
             </div>

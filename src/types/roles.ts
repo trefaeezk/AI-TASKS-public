@@ -11,11 +11,11 @@ export type UserRole =
 
   // أدوار المؤسسات
   | 'organization_owner' // مالك المؤسسة
-  | 'admin'           // أدمن المؤسسة
-  | 'supervisor'      // مشرف
-  | 'engineer'        // مهندس
-  | 'technician'      // فني
-  | 'assistant';      // مساعد فني
+  | 'org_admin'       // أدمن المؤسسة
+  | 'org_supervisor'  // مشرف
+  | 'org_engineer'    // مهندس
+  | 'org_technician'  // فني
+  | 'org_assistant';  // مساعد فني
 
 // تعريف مجموعات الصلاحيات
 export type PermissionArea =
@@ -98,7 +98,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // أدمن المؤسسة - صلاحيات إدارية واسعة داخل المؤسسة
-  admin: [
+  org_admin: [
     'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
@@ -109,7 +109,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // المهندس لديه صلاحيات واسعة ولكن أقل من المسؤول
-  engineer: [
+  org_engineer: [
     'users:view', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:approve',
@@ -119,7 +119,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // المشرف يركز على إدارة المهام والتقارير
-  supervisor: [
+  org_supervisor: [
     'users:view',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit',
@@ -129,7 +129,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // الفني يركز على تنفيذ المهام
-  technician: [
+  org_technician: [
     'tasks:view', 'tasks:edit',
     'reports:view', 'reports:create',
     'tools:view', 'tools:edit',
@@ -137,7 +137,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // مساعد الفني لديه صلاحيات محدودة
-  assistant: [
+  org_assistant: [
     'tasks:view',
     'reports:view', 'reports:create',
     'tools:view',
@@ -186,11 +186,11 @@ export const ROLE_DESCRIPTION_KEYS: Record<UserRole, string> = {
 
   // أدوار المؤسسات
   organization_owner: 'roleDescriptions.organization_owner',
-  admin: 'roleDescriptions.admin',
-  supervisor: 'roleDescriptions.supervisor',
-  engineer: 'roleDescriptions.engineer',
-  technician: 'roleDescriptions.technician',
-  assistant: 'roleDescriptions.assistant'
+  org_admin: 'roleDescriptions.org_admin',
+  org_supervisor: 'roleDescriptions.org_supervisor',
+  org_engineer: 'roleDescriptions.org_engineer',
+  org_technician: 'roleDescriptions.org_technician',
+  org_assistant: 'roleDescriptions.org_assistant'
 };
 
 // ترتيب الأدوار حسب المستوى (للعرض والمقارنة)
@@ -201,11 +201,11 @@ export const ROLE_HIERARCHY: UserRole[] = [
 
   // أدوار المؤسسات (حسب المستوى)
   'organization_owner',
-  'admin',
-  'supervisor',
-  'engineer',
-  'technician',
-  'assistant',
+  'org_admin',
+  'org_supervisor',
+  'org_engineer',
+  'org_technician',
+  'org_assistant',
 
   // المستخدمين المستقلين
   'independent'

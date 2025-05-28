@@ -15,11 +15,11 @@ export type UserRole =
 
   // أدوار المؤسسات
   | 'organization_owner' // مالك المؤسسة
-  | 'admin'           // أدمن المؤسسة
-  | 'supervisor'      // مشرف
-  | 'engineer'        // مهندس
-  | 'technician'      // فني
-  | 'assistant';      // مساعد فني
+  | 'org_admin'       // أدمن المؤسسة
+  | 'org_supervisor'  // مشرف
+  | 'org_engineer'    // مهندس
+  | 'org_technician'  // فني
+  | 'org_assistant';  // مساعد فني
 
 export type PermissionArea =
   | 'users'      // إدارة المستخدمين
@@ -91,7 +91,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // أدمن المؤسسة - صلاحيات إدارية واسعة داخل المؤسسة
-  admin: [
+  org_admin: [
     'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
@@ -102,7 +102,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // المهندس لديه صلاحيات واسعة ولكن أقل من المسؤول
-  engineer: [
+  org_engineer: [
     'users:view', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:approve',
@@ -112,7 +112,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // المشرف يركز على إدارة المهام والتقارير
-  supervisor: [
+  org_supervisor: [
     'users:view',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit',
@@ -122,7 +122,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // الفني يركز على تنفيذ المهام
-  technician: [
+  org_technician: [
     'tasks:view', 'tasks:edit',
     'reports:view', 'reports:create',
     'tools:view', 'tools:edit',
@@ -130,7 +130,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // مساعد الفني لديه صلاحيات محدودة
-  assistant: [
+  org_assistant: [
     'tasks:view',
     'reports:view', 'reports:create',
     'tools:view',
@@ -162,7 +162,7 @@ export const hasPermission = async (
     // الحصول على معلومات المستخدم من Firebase Auth
     const userRecord = await admin.auth().getUser(userId);
     const customClaims = userRecord.customClaims || {};
-    const userRole = customClaims.role as UserRole || 'assistant';
+    const userRole = customClaims.role as UserRole || 'org_assistant';
 
     // الحصول على الصلاحيات الافتراضية للدور
     const defaultPermissions = DEFAULT_ROLE_PERMISSIONS[userRole] || [];
@@ -185,19 +185,8 @@ export const hasPermission = async (
     }
 
     // أدمن المؤسسة - صلاحيات إدارية واسعة داخل المؤسسة
-    if (customClaims.admin === true || userRole === 'admin') {
+    if (customClaims.org_admin === true || userRole === 'org_admin') {
       return true;
-    }
-
-    // التوافق مع النظام القديم
-    if (customClaims.owner === true) {
-      return true; // تحويل owner قديم إلى system_owner
-    }
-
-    if (customClaims.individual_admin === true) {
-      // تحويل individual_admin إلى system_admin مع قيود
-      const adminPermissions = DEFAULT_ROLE_PERMISSIONS.system_admin || [];
-      return adminPermissions.includes(permissionKey);
     }
 
     // التحقق من الصلاحيات الافتراضية للدور
@@ -244,7 +233,7 @@ export const getUserPermissions = async (userId: string): Promise<PermissionKey[
     // الحصول على معلومات المستخدم من Firebase Auth
     const userRecord = await admin.auth().getUser(userId);
     const customClaims = userRecord.customClaims || {};
-    const userRole = customClaims.role as UserRole || 'assistant';
+    const userRole = customClaims.role as UserRole || 'org_assistant';
 
     // الحصول على الصلاحيات الافتراضية للدور
     const defaultPermissions = DEFAULT_ROLE_PERMISSIONS[userRole] || [];
@@ -267,17 +256,8 @@ export const getUserPermissions = async (userId: string): Promise<PermissionKey[
     }
 
     // أدمن المؤسسة - صلاحيات إدارية واسعة داخل المؤسسة
-    if (customClaims.admin === true || userRole === 'admin') {
-      return DEFAULT_ROLE_PERMISSIONS.admin;
-    }
-
-    // التوافق مع النظام القديم
-    if (customClaims.owner === true) {
-      return Object.values(DEFAULT_ROLE_PERMISSIONS).flat(); // تحويل owner قديم إلى system_owner
-    }
-
-    if (customClaims.individual_admin === true) {
-      return DEFAULT_ROLE_PERMISSIONS.system_admin; // تحويل individual_admin إلى system_admin
+    if (customClaims.org_admin === true || userRole === 'org_admin') {
+      return DEFAULT_ROLE_PERMISSIONS.org_admin;
     }
 
     // الحصول على الصلاحيات المخصصة للمستخدم من Firestore

@@ -93,10 +93,7 @@ export const updateUserRoleHttp = functions.region('us-central1').https.onReques
         isSystemOwner: role === 'system_owner',
         isSystemAdmin: role === 'system_admin',
         isOrganizationOwner: role === 'organization_owner',
-        isAdmin: role === 'admin',
-
-        // التوافق مع النظام القديم
-        isOwner: role === 'owner' || role === 'system_owner',
+        isOrgAdmin: role === 'org_admin',
 
         updatedAt: new Date()
       });
@@ -135,9 +132,9 @@ export const updateUserPermissionsHttp = functions.region('us-central1').https.o
       const decodedToken = await admin.auth().verifyIdToken(idToken);
 
       // التحقق من صلاحيات المستخدم
-      if (!decodedToken.owner && !decodedToken.admin) {
-        console.error(`[updateUserPermissionsHttp] User ${decodedToken.uid} is not an owner or admin`);
-        res.status(403).json({ error: 'يجب أن تكون مالكًا أو مسؤولًا لتحديث صلاحيات المستخدم.' });
+      if (!decodedToken.system_owner && !decodedToken.org_admin) {
+        console.error(`[updateUserPermissionsHttp] User ${decodedToken.uid} is not a system owner or org admin`);
+        res.status(403).json({ error: 'يجب أن تكون مالك النظام أو أدمن المؤسسة لتحديث صلاحيات المستخدم.' });
         return;
       }
 

@@ -503,7 +503,7 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
             console.error(`${functionName} error: Invalid name provided.`);
             throw new functions.https.HttpsError("invalid-argument", "Name must be a valid string if provided.");
         }
-        const validRoles = ['owner', 'admin', 'individual_admin', 'engineer', 'supervisor', 'technician', 'assistant', 'user', 'independent'];
+        const validRoles = ['system_owner', 'system_admin', 'organization_owner', 'org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant', 'independent'];
         if (!validRoles.includes(role)) { // Validate role input
             console.error(`${functionName} error: Invalid role provided. Must be one of: ${validRoles.join(', ')}.`);
             throw new functions.https.HttpsError("invalid-argument", `A valid role must be provided. Valid roles are: ${validRoles.join(', ')}`);

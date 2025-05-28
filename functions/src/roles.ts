@@ -91,7 +91,7 @@ export const updateUserRole = createCallableFunction<UpdateUserRoleRequest>(asyn
             throw new functions.https.HttpsError("invalid-argument", "يجب توفير معرف المستخدم.");
         }
 
-        const validRoles = ['system_owner', 'system_admin', 'organization_owner', 'admin', 'engineer', 'supervisor', 'technician', 'assistant', 'independent'];
+        const validRoles = ['system_owner', 'system_admin', 'organization_owner', 'org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant', 'independent'];
         if (!role || typeof role !== "string" || !validRoles.includes(role)) {
             throw new functions.https.HttpsError(
                 "invalid-argument",
@@ -100,9 +100,9 @@ export const updateUserRole = createCallableFunction<UpdateUserRoleRequest>(asyn
         }
 
         // تحديث claims المستخدم
-        const claims: { admin?: boolean; role: string } = { role };
-        if (role === 'admin') {
-            claims.admin = true;
+        const claims: { org_admin?: boolean; role: string } = { role };
+        if (role === 'org_admin') {
+            claims.org_admin = true;
         }
 
         await admin.auth().setCustomUserClaims(uid, claims);
@@ -200,7 +200,7 @@ export const updateUserPermissions = createCallableFunction<UpdateUserPermission
 
             // الحصول على دور المستخدم من custom claims
             const userClaims = (await admin.auth().getUser(uid)).customClaims || {};
-            const userRole = userClaims.role || 'assistant';
+            const userRole = userClaims.role || 'org_assistant';
 
             await db.collection('users').doc(uid).set({
                 role: userRole,

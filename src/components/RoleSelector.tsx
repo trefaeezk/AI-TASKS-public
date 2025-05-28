@@ -28,11 +28,11 @@ const roleIcons: Record<UserRole, React.ReactNode> = {
 
   // أدوار المؤسسات
   organization_owner: <ShieldAlert className="h-4 w-4 ml-2 text-orange-600" />,
-  admin: <ShieldAlert className="h-4 w-4 ml-2" />,
-  supervisor: <Shield className="h-4 w-4 ml-2" />,
-  engineer: <ShieldCheck className="h-4 w-4 ml-2" />,
-  technician: <ShieldQuestion className="h-4 w-4 ml-2" />,
-  assistant: <Shield className="h-4 w-4 ml-2 opacity-70" />
+  org_admin: <ShieldAlert className="h-4 w-4 ml-2" />,
+  org_supervisor: <Shield className="h-4 w-4 ml-2" />,
+  org_engineer: <ShieldCheck className="h-4 w-4 ml-2" />,
+  org_technician: <ShieldQuestion className="h-4 w-4 ml-2" />,
+  org_assistant: <Shield className="h-4 w-4 ml-2 opacity-70" />
 };
 
 export function RoleSelector({ value, onValueChange, disabled = false, className }: RoleSelectorProps) {
