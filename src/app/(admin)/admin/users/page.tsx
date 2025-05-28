@@ -89,18 +89,55 @@ export default function UsersPage() {
           throw new Error('فشل في جلب قائمة المستخدمين: لم يتم استلام بيانات صحيحة');
         }
 
+        // جلب جميع المستخدمين من Firestore مرة واحدة لتحسين الأداء
+        const firestoreUsersSnapshot = await getDocs(collection(db, 'users'));
+        const firestoreUsersMap = new Map();
+        firestoreUsersSnapshot.docs.forEach(doc => {
+          const userData = doc.data();
+          if (userData.email) {
+            firestoreUsersMap.set(userData.email, userData);
+          }
+        });
+
         // تحويل البيانات إلى تنسيق ManagedUser
-        const allUsers = result.data.users.map((user: any) => ({
-          uid: user.uid,
-          email: user.email || '',
-          role: (user.customClaims?.role as UserRole) || 'user',
-          name: user.displayName || '',
-          disabled: user.disabled || false,
-          customPermissions: user.customClaims?.customPermissions || [],
-          isAdmin: user.customClaims?.admin === true || user.customClaims?.role === 'admin',
-          accountType: user.customClaims?.accountType || 'individual',
-          organizationId: user.customClaims?.organizationId
-        }));
+        const allUsers = result.data.users.map((user: any) => {
+          let userRole: UserRole = 'independent'; // الافتراضي
+
+          // أولاً: البحث في Firestore
+          const firestoreUser = firestoreUsersMap.get(user.email);
+          if (firestoreUser && firestoreUser.role) {
+            userRole = firestoreUser.role as UserRole;
+          } else {
+            // ثانياً: استخدم customClaims كبديل
+            if (user.customClaims?.role) {
+              userRole = user.customClaims.role as UserRole;
+            } else if (user.customClaims?.system_owner) {
+              userRole = 'system_owner';
+            } else if (user.customClaims?.system_admin) {
+              userRole = 'system_admin';
+            } else if (user.customClaims?.organization_owner) {
+              userRole = 'organization_owner';
+            } else if (user.customClaims?.admin) {
+              userRole = 'org_admin';
+            } else if (user.customClaims?.owner) {
+              userRole = 'system_owner';
+            } else if (user.customClaims?.individual_admin) {
+              userRole = 'system_admin';
+            }
+          }
+
+          return {
+            uid: user.uid,
+            email: user.email || '',
+            role: userRole,
+            name: user.displayName || firestoreUser?.name || '',
+            disabled: user.disabled || false,
+            customPermissions: user.customClaims?.customPermissions || [],
+            isAdmin: user.customClaims?.admin === true || user.customClaims?.role === 'admin',
+            accountType: user.customClaims?.accountType || 'individual',
+            organizationId: user.customClaims?.organizationId
+          };
+        });
 
         setUsers(allUsers);
       } else {
@@ -249,17 +286,54 @@ export default function UsersPage() {
               const result = await listFirebaseUsersFn({});
 
               if (result.data?.users) {
-                const allUsers = result.data.users.map((user: any) => ({
-                  uid: user.uid,
-                  email: user.email || '',
-                  role: (user.customClaims?.role as UserRole) || 'user',
-                  name: user.displayName || '',
-                  disabled: user.disabled || false,
-                  customPermissions: user.customClaims?.customPermissions || [],
-                  isAdmin: user.customClaims?.admin === true || user.customClaims?.role === 'admin',
-                  accountType: user.customClaims?.accountType || 'individual',
-                  organizationId: user.customClaims?.organizationId
-                }));
+                // جلب جميع المستخدمين من Firestore مرة واحدة لتحسين الأداء
+                const firestoreUsersSnapshot = await getDocs(collection(db, 'users'));
+                const firestoreUsersMap = new Map();
+                firestoreUsersSnapshot.docs.forEach(doc => {
+                  const userData = doc.data();
+                  if (userData.email) {
+                    firestoreUsersMap.set(userData.email, userData);
+                  }
+                });
+
+                const allUsers = result.data.users.map((user: any) => {
+                  let userRole: UserRole = 'independent'; // الافتراضي
+
+                  // أولاً: البحث في Firestore
+                  const firestoreUser = firestoreUsersMap.get(user.email);
+                  if (firestoreUser && firestoreUser.role) {
+                    userRole = firestoreUser.role as UserRole;
+                  } else {
+                    // ثانياً: استخدم customClaims كبديل
+                    if (user.customClaims?.role) {
+                      userRole = user.customClaims.role as UserRole;
+                    } else if (user.customClaims?.system_owner) {
+                      userRole = 'system_owner';
+                    } else if (user.customClaims?.system_admin) {
+                      userRole = 'system_admin';
+                    } else if (user.customClaims?.organization_owner) {
+                      userRole = 'organization_owner';
+                    } else if (user.customClaims?.admin) {
+                      userRole = 'org_admin';
+                    } else if (user.customClaims?.owner) {
+                      userRole = 'system_owner';
+                    } else if (user.customClaims?.individual_admin) {
+                      userRole = 'system_admin';
+                    }
+                  }
+
+                  return {
+                    uid: user.uid,
+                    email: user.email || '',
+                    role: userRole,
+                    name: user.displayName || firestoreUser?.name || '',
+                    disabled: user.disabled || false,
+                    customPermissions: user.customClaims?.customPermissions || [],
+                    isAdmin: user.customClaims?.admin === true || user.customClaims?.role === 'admin',
+                    accountType: user.customClaims?.accountType || 'individual',
+                    organizationId: user.customClaims?.organizationId
+                  };
+                });
                 setUsers(allUsers);
               }
             }
