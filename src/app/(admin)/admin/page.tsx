@@ -8,13 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  UserCog, 
-  Users, 
-  Database, 
-  FileText, 
-  Building, 
-  Settings, 
+import {
+  UserCog,
+  Users,
+  Database,
+  FileText,
+  Building,
+  Settings,
   Shield,
   BarChart3,
   Activity,
@@ -48,8 +48,8 @@ export default function AdminDashboard() {
   // التحقق من صلاحيات المستخدم
   const isSystemOwner = userClaims?.system_owner === true || userClaims?.owner === true;
   const isSystemAdmin = userClaims?.system_admin === true || userClaims?.admin === true;
-  const canViewUsers = hasPermission('users', 'view') || isSystemOwner || isSystemAdmin;
-  const canManageData = hasPermission('data', 'view') || isSystemOwner || isSystemAdmin;
+  const canViewUsers = hasPermission('users.view') || isSystemOwner || isSystemAdmin;
+  const canManageData = hasPermission('data.view') || isSystemOwner || isSystemAdmin;
 
   // جلب إحصائيات النظام
   useEffect(() => {
@@ -221,7 +221,7 @@ export default function AdminDashboard() {
             <div className="flex items-center gap-2">
               {getHealthIcon()}
               <span className="text-sm font-medium">
-                {stats.systemHealth === 'healthy' ? 'سليم' : 
+                {stats.systemHealth === 'healthy' ? 'سليم' :
                  stats.systemHealth === 'warning' ? 'تحذير' : 'خطأ'}
               </span>
             </div>

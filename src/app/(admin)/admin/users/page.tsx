@@ -24,7 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 const functionsInstance = getFunctions();
 
 export default function UsersPage() {
-  const { user, refreshUserData } = useAuth();
+  const { user, userClaims, refreshUserData } = useAuth();
   const { checkPermission, loading: permissionsLoading } = usePermissions();
   const { toast } = useToast();
   const [users, setUsers] = useState<ManagedUser[]>([]);
@@ -34,7 +34,7 @@ export default function UsersPage() {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
   // التحقق من صلاحيات المستخدم
-  const hasViewPermission = checkPermission('users', 'view');
+  const hasViewPermission = checkPermission('users.view');
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -45,10 +45,9 @@ export default function UsersPage() {
 
       setLoading(true);
 
-      // الحصول على معرف المؤسسة من custom claims
-      const userClaims = (user as any).customClaims;
+      // الحصول على معرف المؤسسة من userClaims
       const organizationId = userClaims?.organizationId;
-      const isOwner = userClaims?.owner === true;
+      const isOwner = userClaims?.owner === true || userClaims?.system_owner === true;
 
       // استخدام وظائف الباك إند للحصول على المستخدمين
       try {
@@ -224,9 +223,8 @@ export default function UsersPage() {
           setLoading(true);
           try {
             // نفس الكود الموجود في useEffect
-            const userClaims = (user as any).customClaims;
             const organizationId = userClaims?.organizationId;
-            const isOwner = userClaims?.owner === true;
+            const isOwner = userClaims?.owner === true || userClaims?.system_owner === true;
 
             if (organizationId) {
               const getOrganizationMembersFn = httpsCallable<{ orgId: string }, { members: any[] }>(functionsInstance, 'getOrganizationMembers');
@@ -362,9 +360,8 @@ export default function UsersPage() {
           setLoading(true);
           try {
             // نفس الكود الموجود في useEffect
-            const userClaims = (user as any).customClaims;
             const organizationId = userClaims?.organizationId;
-            const isOwner = userClaims?.owner === true;
+            const isOwner = userClaims?.owner === true || userClaims?.system_owner === true;
 
             if (organizationId) {
               const getOrganizationMembersFn = httpsCallable<{ orgId: string }, { members: any[] }>(functionsInstance, 'getOrganizationMembers');

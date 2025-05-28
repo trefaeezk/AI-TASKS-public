@@ -25,6 +25,147 @@ export * from './auth';
 export * from './email';
 
 /**
+ * نوع بيانات طلب إصلاح صلاحيات المستخدم
+ */
+interface FixUserPermissionsRequest {
+    uid: string;
+    targetRole: string;
+    accountType?: string;
+}
+
+/**
+ * إصلاح صلاحيات المستخدم وتعيين الأدوار الصحيحة
+ * يتطلب أن يكون المستدعي مالك النظام أو نفس المستخدم
+ */
+export const fixUserPermissions = createCallableFunction<FixUserPermissionsRequest>(async (request) => {
+    const functionName = 'fixUserPermissions';
+    console.log(`--- ${functionName} Cloud Function triggered ---`);
+    console.log(`${functionName} called with data:`, request.data);
+
+    try {
+        const { uid, targetRole, accountType = 'individual' } = request.data;
+
+        // التحقق من صحة البيانات
+        if (!uid || typeof uid !== "string") {
+            throw new functions.https.HttpsError("invalid-argument", "يجب توفير معرف مستخدم صالح.");
+        }
+
+        if (!targetRole || typeof targetRole !== "string") {
+            throw new functions.https.HttpsError("invalid-argument", "يجب توفير دور صالح.");
+        }
+
+        // التحقق من الصلاحيات - يمكن للمستخدم إصلاح صلاحياته الخاصة أو للمالك إصلاح أي صلاحيات
+        const isOwner = request.auth?.token?.owner === true || request.auth?.token?.system_owner === true;
+        const isSelfFix = request.auth?.uid === uid;
+
+        if (!isOwner && !isSelfFix) {
+            throw new functions.https.HttpsError(
+                "permission-denied",
+                "يمكن فقط لمالك النظام أو المستخدم نفسه إصلاح الصلاحيات."
+            );
+        }
+
+        console.log(`Fixing permissions for user ${uid} to role ${targetRole} by ${request.auth?.uid}`);
+
+        // الحصول على معلومات المستخدم الحالية
+        const userRecord = await admin.auth().getUser(uid);
+        console.log(`Current user claims:`, userRecord.customClaims);
+
+        // إنشاء claims جديدة صحيحة بناءً على بيانات Firestore
+        const newClaims: Record<string, any> = {
+            role: targetRole,
+            accountType: accountType
+        };
+
+        // تعيين الصلاحيات بناءً على الدور
+        if (targetRole === 'system_owner') {
+            newClaims.system_owner = true;
+            newClaims.owner = true; // للتوافق مع النظام القديم
+            newClaims.system_admin = true; // مالك النظام له صلاحيات أدمن أيضاً
+            newClaims.admin = true; // للتوافق مع النظام القديم
+        } else if (targetRole === 'system_admin') {
+            newClaims.system_admin = true;
+            newClaims.admin = true; // للتوافق مع النظام القديم
+            newClaims.system_owner = false;
+            newClaims.owner = false;
+        } else if (targetRole === 'organization_owner') {
+            newClaims.organization_owner = true;
+            newClaims.owner = true; // للتوافق مع النظام القديم
+            newClaims.system_owner = false;
+            newClaims.system_admin = false;
+            newClaims.admin = false;
+        } else if (targetRole === 'admin') {
+            newClaims.admin = true;
+            newClaims.system_owner = false;
+            newClaims.system_admin = false;
+            newClaims.organization_owner = false;
+            newClaims.owner = false;
+        } else {
+            // للأدوار الأخرى، تنظيف جميع الصلاحيات الإدارية
+            newClaims.system_owner = false;
+            newClaims.system_admin = false;
+            newClaims.organization_owner = false;
+            newClaims.admin = false;
+            newClaims.owner = false;
+        }
+
+        // الحفاظ على معلومات المؤسسة إذا كانت موجودة
+        const currentClaims = userRecord.customClaims || {};
+        if (currentClaims.organizationId) {
+            newClaims.organizationId = currentClaims.organizationId;
+        }
+        if (currentClaims.departmentId) {
+            newClaims.departmentId = currentClaims.departmentId;
+        }
+        if (currentClaims.name) {
+            newClaims.name = currentClaims.name;
+        }
+
+        // تطبيق الـ claims الجديدة
+        await admin.auth().setCustomUserClaims(uid, newClaims);
+        console.log(`Successfully updated claims for user ${uid}:`, newClaims);
+
+        // تحديث بيانات Firestore أيضاً
+        try {
+            const userDocRef = db.collection('users').doc(uid);
+            const userDoc = await userDocRef.get();
+
+            if (userDoc.exists) {
+                await userDocRef.update({
+                    role: targetRole,
+                    accountType: accountType,
+                    isSystemOwner: targetRole === 'system_owner',
+                    isSystemAdmin: targetRole === 'system_admin' || targetRole === 'system_owner',
+                    isOrganizationOwner: targetRole === 'organization_owner',
+                    isAdmin: targetRole === 'admin' || targetRole === 'system_admin' || targetRole === 'system_owner',
+                    isOwner: targetRole === 'owner' || targetRole === 'system_owner' || targetRole === 'organization_owner',
+                    isIndividualAdmin: targetRole === 'individual_admin',
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+                console.log(`Updated Firestore document for user ${uid}`);
+            }
+        } catch (firestoreError) {
+            console.warn(`Failed to update Firestore for user ${uid}:`, firestoreError);
+        }
+
+        return {
+            result: `تم إصلاح صلاحيات المستخدم ${uid} بنجاح إلى دور ${targetRole}`,
+            newClaims: newClaims
+        };
+
+    } catch (error: any) {
+        console.error(`Error in ${functionName}:`, error);
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
+        throw new functions.https.HttpsError(
+            "internal",
+            `فشل إصلاح الصلاحيات: ${error.message || 'خطأ داخلي غير معروف.'}`
+        );
+    }
+});
+
+/**
  * Checks if the calling user is an authenticated admin.
  * Throws HttpsError if not authorized.
  * @param {LegacyCallableContext} context - The function context.

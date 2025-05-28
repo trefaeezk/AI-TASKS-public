@@ -164,20 +164,27 @@ export function usePermissions() {
 
   const hasPermission = useCallback((permissionString: string): boolean => {
     if (authContextLoading || internalLoading || !user) {
-    //   console.log('[usePermissions] hasPermission: Loading or no user, returning false for', permissionString);
+      console.log('[usePermissions] hasPermission: Loading or no user, returning false for', permissionString);
       return false;
     }
+
+    // التحقق من الأدوار عالية المستوى أولاً
+    if (role === 'system_owner' || role === 'system_admin') {
+      console.log(`[usePermissions] hasPermission: User has high-level role '${role}', granting access to '${permissionString}'`);
+      return true;
+    }
+
     const currentAllPermissions = getAllPermissions();
     const [area, action] = permissionString.split('.') as [PermissionArea, PermissionAction];
     if (!area || !action) {
-    //   console.log('[usePermissions] hasPermission: Invalid permission string format', permissionString);
+      console.log('[usePermissions] hasPermission: Invalid permission string format', permissionString);
       return false;
     }
     const key = permissionToKey({ area, action });
     const result = currentAllPermissions.includes(key);
-    // console.log(`[usePermissions] hasPermission: Checking '${key}' in [${currentAllPermissions.join(', ')}] -> ${result}`);
+    console.log(`[usePermissions] hasPermission: Checking '${key}' in [${currentAllPermissions.join(', ')}] -> ${result} (role: ${role})`);
     return result;
-  }, [user, getAllPermissions, authContextLoading, internalLoading]);
+  }, [user, getAllPermissions, authContextLoading, internalLoading, role]);
 
   const checkRole = useCallback((requiredRole: UserRole): boolean => {
     if (authContextLoading || internalLoading || !user) return false;
