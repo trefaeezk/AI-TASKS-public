@@ -3,7 +3,7 @@
 // منع التوليد المسبق للصفحة
 export const dynamic = 'force-dynamic';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -36,8 +36,8 @@ export default function UsersPage() {
   // التحقق من صلاحيات المستخدم
   const hasViewPermission = checkPermission('users.view');
 
-  // نقل دالة fetchUsers خارج useEffect لتصبح متاحة
-  const fetchUsers = async () => {
+  // نقل دالة fetchUsers خارج useEffect لتصبح متاحة مع useCallback لتحسين الأداء
+  const fetchUsers = useCallback(async () => {
       if (!user || !hasViewPermission) {
         setLoading(false);
         return;
@@ -157,11 +157,11 @@ export default function UsersPage() {
         });
         setLoading(false);
       }
-    };
+    }, [user, hasViewPermission, userClaims, toast]);
 
   useEffect(() => {
     fetchUsers();
-  }, [user, hasViewPermission, toast]);
+  }, [fetchUsers]);
 
   // عرض حالة التحميل
   if (permissionsLoading) {
