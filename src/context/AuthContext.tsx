@@ -379,22 +379,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           // Routing logic based on final processed claims
           const currentPath = pathname || '/'; // Use pathname from usePathname with fallback
-          console.log("[AuthContext] Current path for routing:", currentPath);
+          console.log("[AuthContext] 🔍 ROUTING DEBUG - Current path:", currentPath);
+          console.log("[AuthContext] 🔍 ROUTING DEBUG - Account type:", finalProcessedClaims.accountType);
+          console.log("[AuthContext] 🔍 ROUTING DEBUG - Organization ID:", finalProcessedClaims.organizationId);
+          console.log("[AuthContext] 🔍 ROUTING DEBUG - Role:", finalProcessedClaims.role);
+
           if (finalProcessedClaims.accountType === 'organization' && finalProcessedClaims.organizationId) {
             if (!currentPath.startsWith('/org')) {
-              console.log("[AuthContext] Redirecting to /org for organization user.");
+              console.log("[AuthContext] ✅ Redirecting to /org for organization user.");
               router.replace('/org');
+            } else {
+              console.log("[AuthContext] ✅ Organization user already on /org path, no redirect needed.");
             }
           } else if (finalProcessedClaims.accountType === 'individual') {
-            if (currentPath.startsWith('/org')) {
-              console.log("[AuthContext] Redirecting to / for individual user from /org path.");
+            // التحقق من المسارات المخصصة للمؤسسات فقط (وليس /organizations)
+            if (currentPath.startsWith('/org/') || currentPath === '/org') {
+              console.log("[AuthContext] ✅ Redirecting to / for individual user from /org path.");
               router.replace('/');
+            } else {
+              console.log("[AuthContext] ✅ Individual user not on /org path, no redirect needed.");
             }
           } else {
             // This case should ideally not happen if determineAndSetAccountType ensures an accountType
-            console.warn("[AuthContext] Account type undetermined. Current path:", currentPath);
-            if (currentPath.startsWith('/org')) {
+            console.warn("[AuthContext] ⚠️ Account type undetermined. Current path:", currentPath);
+            console.warn("[AuthContext] ⚠️ Claims:", finalProcessedClaims);
+            if (currentPath.startsWith('/org/') || currentPath === '/org') {
+               console.log("[AuthContext] ❌ FALLBACK REDIRECT: Redirecting undetermined user from /org to /");
                router.replace('/'); // Fallback redirect if stuck on org path
+            } else {
+               console.log("[AuthContext] ⚠️ Undetermined user not on /org path, no redirect.");
             }
           }
         } catch (error) {
