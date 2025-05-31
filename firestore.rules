@@ -11,49 +11,64 @@ service cloud.firestore {
       return request.auth.token;
     }
 
-    // التحقق من مالك النظام
+    // التحقق من مالك النظام (النمط الموحد is*)
     function isSystemOwner() {
       return isAuthenticated() && (
-        getUserToken().system_owner == true ||
+        getUserToken().isSystemOwner == true ||
         getUserToken().role == 'system_owner'
       );
     }
 
-    // التحقق من أدمن النظام
+    // التحقق من أدمن النظام (النمط الموحد is*)
     function isSystemAdmin() {
       return isAuthenticated() && (
-        getUserToken().system_admin == true ||
+        getUserToken().isSystemAdmin == true ||
         getUserToken().role == 'system_admin'
       );
     }
 
-    // التحقق من مالك المؤسسة
+    // التحقق من مالك المؤسسة (النمط الموحد is*)
     function isOrgOwner() {
       return isAuthenticated() && (
-        getUserToken().org_owner == true ||
+        getUserToken().isOrgOwner == true ||
         getUserToken().role == 'org_owner'
       );
     }
 
-    // التحقق من أدوار المؤسسات
+    // التحقق من أدوار المؤسسات (النمط الموحد is*)
     function isOrgAdmin() {
-      return isAuthenticated() && getUserToken().role == 'org_admin';
+      return isAuthenticated() && (
+        getUserToken().isOrgAdmin == true ||
+        getUserToken().role == 'org_admin'
+      );
     }
 
     function isOrgSupervisor() {
-      return isAuthenticated() && getUserToken().role == 'org_supervisor';
+      return isAuthenticated() && (
+        getUserToken().isOrgSupervisor == true ||
+        getUserToken().role == 'org_supervisor'
+      );
     }
 
     function isOrgEngineer() {
-      return isAuthenticated() && getUserToken().role == 'org_engineer';
+      return isAuthenticated() && (
+        getUserToken().isOrgEngineer == true ||
+        getUserToken().role == 'org_engineer'
+      );
     }
 
     function isOrgTechnician() {
-      return isAuthenticated() && getUserToken().role == 'org_technician';
+      return isAuthenticated() && (
+        getUserToken().isOrgTechnician == true ||
+        getUserToken().role == 'org_technician'
+      );
     }
 
     function isOrgAssistant() {
-      return isAuthenticated() && getUserToken().role == 'org_assistant';
+      return isAuthenticated() && (
+        getUserToken().isOrgAssistant == true ||
+        getUserToken().role == 'org_assistant'
+      );
     }
 
     // التحقق من صلاحيات النظام العليا
@@ -68,63 +83,48 @@ service cloud.firestore {
              isOrgTechnician() || isOrgAssistant();
     }
 
-    // ===== الصلاحيات الجديدة =====
+    // ===== الصلاحيات الديناميكية (بدون تخزين) =====
 
     // التحقق من صلاحية إدارة النظام
     function canManageSystem() {
-      return isAuthenticated() && (
-        getUserToken().canManageSystem == true ||
-        isSystemOwner()
-      );
+      return isSystemOwner();
     }
 
     // التحقق من صلاحية إدارة المستخدمين
     function canManageUsers() {
-      return isAuthenticated() && (
-        getUserToken().canManageUsers == true ||
-        hasSystemAccess()
-      );
+      return hasSystemAccess();
     }
 
     // التحقق من صلاحية إدارة المؤسسات
     function canManageOrganization() {
-      return isAuthenticated() && (
-        getUserToken().canManageOrganization == true ||
-        hasSystemAccess() || isOrgOwner()
-      );
+      return hasSystemAccess() || isOrgOwner();
     }
 
     // التحقق من صلاحية إدارة المشاريع
     function canManageProjects() {
-      return isAuthenticated() && (
-        getUserToken().canManageProjects == true ||
-        hasSystemAccess() || isOrgOwner() || isOrgAdmin()
-      );
+      return hasSystemAccess() || isOrgOwner() || isOrgAdmin();
     }
 
     // التحقق من صلاحية عرض التقارير
     function canViewReports() {
-      return isAuthenticated() && (
-        getUserToken().canViewReports == true ||
-        hasSystemAccess() || isOrgOwner() ||
-        isOrgAdmin() || isOrgSupervisor() || isOrgEngineer()
-      );
+      return hasSystemAccess() || isOrgOwner() ||
+             isOrgAdmin() || isOrgSupervisor() || isOrgEngineer();
     }
 
     // التحقق من صلاحية إنشاء المهام
     function canCreateTasks() {
-      return isAuthenticated() && (
-        getUserToken().canCreateTasks == true ||
-        hasSystemAccess() || isOrgOwner() ||
-        isOrgAdmin() || isOrgSupervisor() || isOrgEngineer() || isOrgTechnician() ||
-        isIndependent() || // المستخدمون المستقلون يمكنهم إنشاء المهام
-        isIndividualAccount() // أصحاب الحسابات الفردية يمكنهم إنشاء المهام
-      );
+      return hasSystemAccess() || isOrgOwner() ||
+             isOrgAdmin() || isOrgSupervisor() || isOrgEngineer() || isOrgTechnician() ||
+             isIndependent() || // المستخدمون المستقلون يمكنهم إنشاء المهام
+             isIndividualAccount(); // أصحاب الحسابات الفردية يمكنهم إنشاء المهام
     }
 
-    // التحقق من المستخدم المستقل
+    // التحقق من المستخدم المستقل (النمط الموحد is*)
     function isIndependent() {
-      return isAuthenticated() && getUserToken().role == 'independent';
+      return isAuthenticated() && (
+        getUserToken().isIndependent == true ||
+        getUserToken().role == 'independent'
+      );
     }
 
     // التحقق من نوع الحساب الفردي
@@ -154,7 +154,7 @@ service cloud.firestore {
       allow write: if hasAdminAccess();
     }
 
-    // ===== قواعد المستخدمين =====
+    // ===== قواعد المستخدمين (النمط الموحد) =====
     match /users/{userId} {
       // قراءة البيانات الشخصية
       allow read: if isAuthenticated() && (
@@ -173,14 +173,14 @@ service cloud.firestore {
       );
     }
 
-    // ===== قواعد المهام =====
+    // ===== قواعد المهام (النمط الموحد) =====
     match /tasks/{taskId} {
       // قراءة المهام
       allow read: if isAuthenticated() && (
         hasCustomPermission('tasks:view') ||
         canCreateTasks() ||
         hasAdminAccess() ||
-        isIndependent() || // المستخدمون المستقلون يمكنهم قراءة المهام
+        isIndependent() ||
         resource.data.createdBy == request.auth.uid ||
         resource.data.assignedTo == request.auth.uid
       );
@@ -190,7 +190,7 @@ service cloud.firestore {
         hasCustomPermission('tasks:create') ||
         canCreateTasks() ||
         hasAdminAccess() ||
-        isIndependent() // المستخدمون المستقلون يمكنهم إنشاء المهام
+        isIndependent()
       );
 
       // تعديل المهام
@@ -198,7 +198,7 @@ service cloud.firestore {
         hasCustomPermission('tasks:edit') ||
         canCreateTasks() ||
         hasAdminAccess() ||
-        isIndependent() || // المستخدمون المستقلون يمكنهم تعديل المهام
+        isIndependent() ||
         resource.data.createdBy == request.auth.uid
       );
 
@@ -206,12 +206,12 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && (
         hasCustomPermission('tasks:delete') ||
         hasAdminAccess() ||
-        isIndependent() || // المستخدمون المستقلون يمكنهم حذف المهام
+        isIndependent() ||
         resource.data.createdBy == request.auth.uid
       );
     }
 
-    // ===== قواعد المؤسسات =====
+    // ===== قواعد المؤسسات (النمط الموحد) =====
     match /organizations/{orgId} {
       allow read: if isAuthenticated() && (
         canManageOrganization() ||
@@ -222,7 +222,7 @@ service cloud.firestore {
       allow write: if canManageOrganization() || hasSystemAccess() || isOrgOwner();
     }
 
-    // ===== إعدادات النظام =====
+    // ===== إعدادات النظام (النمط الموحد) =====
     match /system/{document=**} {
       allow read: if isAuthenticated() && (
         hasCustomPermission('settings:view') ||
@@ -231,7 +231,7 @@ service cloud.firestore {
       allow write: if canManageSystem() || hasSystemAccess();
     }
 
-    // ===== قواعد خاصة للحسابات الفردية =====
+    // ===== قواعد خاصة للحسابات الفردية (النمط الموحد) =====
     match /individualData/{userId} {
       // أصحاب الحسابات الفردية يمكنهم الوصول لبياناتهم الشخصية
       allow read, write: if isAuthenticated() && (
@@ -239,13 +239,48 @@ service cloud.firestore {
       );
     }
 
-    // ===== قواعد عامة للمجموعات الأخرى =====
+    // ===== قواعد طلبات المؤسسات (النمط الموحد) =====
+    match /organizationRequests/{requestId} {
+      allow read: if isAuthenticated() && (
+        hasSystemAccess() ||
+        resource.data.userId == request.auth.uid
+      );
+
+      allow create: if isAuthenticated() && isIndependent();
+
+      allow update: if hasSystemAccess();
+
+      allow delete: if hasSystemAccess();
+    }
+
+    // ===== قواعد دعوات المؤسسات (النمط الموحد) =====
+    match /organizationInvitations/{invitationId} {
+      allow read: if isAuthenticated() && (
+        hasSystemAccess() ||
+        isOrgOwner() ||
+        resource.data.invitedUserId == request.auth.uid
+      );
+
+      allow create: if isAuthenticated() && (
+        hasSystemAccess() || isOrgOwner()
+      );
+
+      allow update: if isAuthenticated() && (
+        hasSystemAccess() ||
+        isOrgOwner() ||
+        resource.data.invitedUserId == request.auth.uid
+      );
+
+      allow delete: if hasSystemAccess() || isOrgOwner();
+    }
+
+    // ===== قواعد عامة للمجموعات الأخرى (النمط الموحد) =====
     match /{document=**} {
       // قاعدة احتياطية - السماح للمستخدمين المسجلين بالقراءة والأدمن بالكتابة
       allow read: if isAuthenticated() && (
         hasAdminAccess() ||
-        isIndividualAccount() || // أصحاب الحسابات الفردية يمكنهم القراءة
-        isIndependent() // المستخدمون المستقلون يمكنهم القراءة
+        isIndividualAccount() ||
+        isIndependent()
       );
       allow write: if hasAdminAccess() || isIndividualAccount();
     }
