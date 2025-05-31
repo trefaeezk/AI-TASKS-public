@@ -411,10 +411,12 @@ export const createUserHttp = createHttpFunction<CreateUserRequest>(async (reque
         const userRecord = await admin.auth().createUser({ email, password, displayName: userName });
         console.log(`User ${email} created with UID ${userRecord.uid}.`);
 
-        // تعيين الخصائص حسب الدور والنوع
+        // تعيين الخصائص حسب الدور والنوع (الصلاحيات الجديدة)
         const customClaims: Record<string, any> = {
             role,
             accountType,
+            name: userName,
+            // Boolean flags للأدوار
             system_owner: role === 'system_owner',
             system_admin: role === 'system_admin',
             organization_owner: role === 'organization_owner',
@@ -423,12 +425,24 @@ export const createUserHttp = createHttpFunction<CreateUserRequest>(async (reque
             org_engineer: role === 'org_engineer',
             org_technician: role === 'org_technician',
             org_assistant: role === 'org_assistant',
-            independent: role === 'independent'
+            independent: role === 'independent',
+            // الصلاحيات الجديدة
+            canManageSystem: role === 'system_owner',
+            canManageUsers: ['system_owner', 'system_admin'].includes(role),
+            canManageOrganization: ['system_owner', 'system_admin', 'organization_owner'].includes(role),
+            canManageProjects: ['system_owner', 'system_admin', 'organization_owner', 'org_admin'].includes(role),
+            canViewReports: ['system_owner', 'system_admin', 'organization_owner', 'org_admin', 'org_supervisor', 'org_engineer'].includes(role),
+            canCreateTasks: !['org_assistant'].includes(role),
+            isOrgMember: ['org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'].includes(role),
+            disabled: false
         };
+
+        // لا صلاحيات افتراضية - المدير يخصصها حسب الحاجة
+        customClaims.customPermissions = [];
 
         await admin.auth().setCustomUserClaims(userRecord.uid, customClaims);
 
-        // Save user data in Firestore
+        // Save user data in Firestore (مع الصلاحيات الجديدة)
         const completeUserData = {
             uid: userRecord.uid,
             name: userName,
@@ -436,11 +450,16 @@ export const createUserHttp = createHttpFunction<CreateUserRequest>(async (reque
             displayName: userName,
             role: role,
             accountType: accountType,
+            organizationId: organizationId || null,
+            departmentId: departmentId || null,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             createdBy: request.auth?.uid,
             disabled: false,
-            customPermissions: [],
+            customPermissions: [], // فارغة - المدير يخصصها
+            // Boolean flags للأدوار
+            system_owner: role === 'system_owner',
+            system_admin: role === 'system_admin',
             isSystemOwner: role === 'system_owner',
             isSystemAdmin: role === 'system_admin',
             isOrganizationOwner: role === 'organization_owner',
@@ -449,7 +468,15 @@ export const createUserHttp = createHttpFunction<CreateUserRequest>(async (reque
             isOrgEngineer: role === 'org_engineer',
             isOrgTechnician: role === 'org_technician',
             isOrgAssistant: role === 'org_assistant',
-            isIndependent: role === 'independent'
+            isIndependent: role === 'independent',
+            isOrgMember: ['org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'].includes(role),
+            // الصلاحيات الجديدة
+            canManageSystem: role === 'system_owner',
+            canManageUsers: ['system_owner', 'system_admin'].includes(role),
+            canManageOrganization: ['system_owner', 'system_admin', 'organization_owner'].includes(role),
+            canManageProjects: ['system_owner', 'system_admin', 'organization_owner', 'org_admin'].includes(role),
+            canViewReports: ['system_owner', 'system_admin', 'organization_owner', 'org_admin', 'org_supervisor', 'org_engineer'].includes(role),
+            canCreateTasks: !['org_assistant'].includes(role)
         };
 
         await db.collection('users').doc(userRecord.uid).set(completeUserData);
@@ -532,7 +559,9 @@ export const listFirebaseUsers = createCallableFunction<ListFirebaseUsersRequest
                 name: user.displayName || (firestoreData?.name as string | undefined),
                 role: customClaims.role || firestoreData?.role || 'user',
                 customPermissions: firestoreData?.customPermissions,
-                isAdmin: !!customClaims.admin,
+                canManageSystem: !!customClaims.system_owner,
+                canManageUsers: !!(customClaims.system_owner || customClaims.system_admin),
+                canManageOrganization: !!(customClaims.system_owner || customClaims.system_admin || customClaims.organization_owner),
                 disabled: user.disabled,
                 createdAt: firestoreData?.createdAt,
                 lastLogin: user.metadata.lastSignInTime ? new Date(user.metadata.lastSignInTime).getTime() : null

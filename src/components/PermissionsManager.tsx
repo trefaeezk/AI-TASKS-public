@@ -56,20 +56,24 @@ export function PermissionsManager({
   // Get default permissions for the role
   const defaultPermissions = DEFAULT_ROLE_PERMISSIONS[role] || [];
 
-  // State for current permissions
+  // State for current permissions (المخصصة تبدأ فارغة، الافتراضي حسب الدور)
   const [permissions, setPermissions] = useState<PermissionKey[]>(
-    customPermissions.length > 0 ? customPermissions : [...defaultPermissions]
+    customPermissions && customPermissions.length > 0 ? customPermissions : [...defaultPermissions]
   );
 
   // State for tracking if permissions are customized
-  const [isCustomized, setIsCustomized] = useState(customPermissions.length > 0);
+  const [isCustomized, setIsCustomized] = useState(customPermissions && customPermissions.length > 0);
 
-  // Update permissions when role changes
+  // Update permissions when role or customPermissions change
   useEffect(() => {
-    if (!isCustomized) {
-      setPermissions(DEFAULT_ROLE_PERMISSIONS[role] || []);
+    if (customPermissions && customPermissions.length > 0) {
+      setPermissions(customPermissions);
+      setIsCustomized(true);
+    } else {
+      setPermissions([...defaultPermissions]);
+      setIsCustomized(false);
     }
-  }, [role, isCustomized]);
+  }, [role, customPermissions, defaultPermissions]);
 
   // Update permissions when customPermissions prop changes
   useEffect(() => {
@@ -102,7 +106,7 @@ export function PermissionsManager({
     }
   };
 
-  // Reset to default permissions
+  // Reset to default permissions (الافتراضي حسب الدور)
   const resetToDefault = () => {
     if (readOnly) return;
 
@@ -138,12 +142,12 @@ export function PermissionsManager({
         </div>
       </CardHeader>
       <CardContent>
-        {isCustomized && !readOnly && (
+        {permissions.length > 0 && !readOnly && (
           <Alert className="mb-4">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>تم تخصيص الصلاحيات</AlertTitle>
+            <AlertTitle>الصلاحيات المخصصة</AlertTitle>
             <AlertDescription className="flex justify-between items-center">
-              <span>تم تعديل الصلاحيات عن الإعدادات الافتراضية للدور.</span>
+              <span>تم تخصيص {permissions.length} صلاحية لهذا المستخدم.</span>
               <Button
                 variant="outline"
                 size="sm"
@@ -153,6 +157,16 @@ export function PermissionsManager({
                 <RefreshCw className="h-3 w-3" />
                 إعادة للافتراضي
               </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {permissions.length === 0 && (
+          <Alert className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>لا توجد صلاحيات مخصصة</AlertTitle>
+            <AlertDescription>
+              لم يتم تخصيص أي صلاحيات لهذا المستخدم. يمكن للمدير إضافة الصلاحيات المطلوبة.
             </AlertDescription>
           </Alert>
         )}
