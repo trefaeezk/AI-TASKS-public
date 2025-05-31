@@ -71,8 +71,7 @@ export function CreateMeetingForm({ onSuccess, organizationId, departmentId }: C
     const fetchDepartments = async () => {
       try {
         const departmentsQuery = query(
-          collection(db, 'departments'),
-          where('organizationId', '==', organizationId)
+          collection(db, 'organizations', organizationId, 'departments')
         );
         const snapshot = await getDocs(departmentsQuery);
         const departmentsList: Department[] = [];

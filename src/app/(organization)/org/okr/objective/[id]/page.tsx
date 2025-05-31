@@ -181,10 +181,9 @@ export default function ObjectiveDetailPage() {
           endDate: format(objectiveData.endDate.toDate(), 'yyyy-MM-dd'),
         });
 
-        // جلب الأقسام
+        // جلب الأقسام من المسار الموحد
         const departmentsQuery = query(
-          collection(db, 'departments'),
-          where('organizationId', '==', organizationId)
+          collection(db, 'organizations', organizationId, 'departments')
         );
 
         const departmentsSnapshot = await getDocs(departmentsQuery);

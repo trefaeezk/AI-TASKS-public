@@ -126,7 +126,7 @@ export const createTaskForKeyResult = createCallableFunction(async (request: Cal
     // الحصول على اسم القسم إذا كان موجودًا
     let departmentName = null;
     if (departmentId) {
-      const departmentDoc = await db.collection('departments').doc(departmentId).get();
+      const departmentDoc = await db.collection('organizations').doc(organizationId).collection('departments').doc(departmentId).get();
       if (departmentDoc.exists) {
         const departmentData = departmentDoc.data();
         if (departmentData) {

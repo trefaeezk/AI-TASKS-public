@@ -92,9 +92,10 @@ export const getOkrStats = createCallableFunction(async (request: CallableReques
       ...doc.data()
     }));
 
-    // الحصول على الأقسام
-    const departmentsSnapshot = await db.collection('departments')
-      .where('organizationId', '==', organizationId)
+    // الحصول على الأقسام من المسار الموحد
+    const departmentsSnapshot = await db.collection('organizations')
+      .doc(organizationId)
+      .collection('departments')
       .get();
 
     const departments = departmentsSnapshot.docs.reduce((acc, doc) => {

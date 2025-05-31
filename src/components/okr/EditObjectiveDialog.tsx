@@ -57,18 +57,18 @@ interface OrgMember {
 export function EditObjectiveDialog({ open, onOpenChange, onSubmit, objective }: EditObjectiveDialogProps) {
   const { user } = useAuth();
   const { organizationId } = useAccountType();
-  
+
   const [title, setTitle] = useState(objective.title);
   const [description, setDescription] = useState(objective.description || '');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>(objective.priority);
   const [status, setStatus] = useState<'active' | 'completed' | 'at_risk' | 'behind'>(objective.status);
   const [ownerId, setOwnerId] = useState(objective.ownerId);
   const [departmentId, setDepartmentId] = useState(objective.departmentId || '');
-  
+
   const [departments, setDepartments] = useState<Department[]>([]);
   const [members, setMembers] = useState<OrgMember[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // تحديث الحالة عند تغيير الهدف
   useEffect(() => {
     setTitle(objective.title);
@@ -78,39 +78,38 @@ export function EditObjectiveDialog({ open, onOpenChange, onSubmit, objective }:
     setOwnerId(objective.ownerId);
     setDepartmentId(objective.departmentId || '');
   }, [objective]);
-  
+
   // جلب الأقسام وأعضاء المؤسسة
   useEffect(() => {
     if (!open || !organizationId) return;
-    
+
     const fetchData = async () => {
       try {
         setLoading(true);
-        
-        // جلب الأقسام
+
+        // جلب الأقسام من المسار الموحد
         const departmentsQuery = query(
-          collection(db, 'departments'),
-          where('organizationId', '==', organizationId)
+          collection(db, 'organizations', organizationId, 'departments')
         );
-        
+
         const departmentsSnapshot = await getDocs(departmentsQuery);
         const departmentsList: Department[] = [];
-        
+
         departmentsSnapshot.forEach(doc => {
           departmentsList.push({
             id: doc.id,
             name: doc.data().name,
           });
         });
-        
+
         setDepartments(departmentsList);
-        
+
         // جلب أعضاء المؤسسة
         const getOrganizationMembers = httpsCallable<
           { orgId: string },
           { members: OrgMember[] }
         >(functions, 'getOrganizationMembers');
-        
+
         const result = await getOrganizationMembers({ orgId: organizationId });
         setMembers(result.data.members || []);
       } catch (error) {
@@ -119,29 +118,29 @@ export function EditObjectiveDialog({ open, onOpenChange, onSubmit, objective }:
         setLoading(false);
       }
     };
-    
+
     fetchData();
   }, [open, organizationId]);
-  
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!title) {
       alert('يرجى إدخال عنوان الهدف');
       return;
     }
-    
+
     if (!ownerId) {
       alert('يرجى اختيار مالك الهدف');
       return;
     }
-    
+
     const ownerMember = members.find(m => m.uid === ownerId);
     if (!ownerMember) {
       alert('مالك الهدف غير صالح');
       return;
     }
-    
+
     onSubmit({
       title,
       description: description || undefined,
@@ -152,7 +151,7 @@ export function EditObjectiveDialog({ open, onOpenChange, onSubmit, objective }:
       departmentId: departmentId || undefined,
     });
   };
-  
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
@@ -162,7 +161,7 @@ export function EditObjectiveDialog({ open, onOpenChange, onSubmit, objective }:
             قم بتعديل تفاصيل الهدف الاستراتيجي.
           </DialogDescription>
         </DialogHeader>
-        
+
         {loading ? (
           <div className="space-y-4 py-4">
             <Skeleton className="h-10 w-full" />
@@ -185,7 +184,7 @@ export function EditObjectiveDialog({ open, onOpenChange, onSubmit, objective }:
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="description">وصف الهدف (اختياري)</Label>
               <Textarea
@@ -196,7 +195,7 @@ export function EditObjectiveDialog({ open, onOpenChange, onSubmit, objective }:
                 rows={3}
               />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="priority">الأولوية</Label>
@@ -211,7 +210,7 @@ export function EditObjectiveDialog({ open, onOpenChange, onSubmit, objective }:
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="status">الحالة</Label>
                 <Select value={status} onValueChange={(value: 'active' | 'completed' | 'at_risk' | 'behind') => setStatus(value)}>
@@ -227,7 +226,7 @@ export function EditObjectiveDialog({ open, onOpenChange, onSubmit, objective }:
                 </Select>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="owner">مالك الهدف</Label>
@@ -244,7 +243,7 @@ export function EditObjectiveDialog({ open, onOpenChange, onSubmit, objective }:
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="department">القسم (اختياري)</Label>
                 <Select value={departmentId} onValueChange={setDepartmentId}>
@@ -260,7 +259,7 @@ export function EditObjectiveDialog({ open, onOpenChange, onSubmit, objective }:
                 </Select>
               </div>
             </div>
-            
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 إلغاء

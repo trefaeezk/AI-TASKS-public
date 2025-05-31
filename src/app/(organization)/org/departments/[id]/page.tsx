@@ -65,8 +65,8 @@ export default function DepartmentDetailsPage() {
 
     const fetchDepartmentData = async () => {
       try {
-        // جلب معلومات القسم
-        const departmentDoc = await getDoc(doc(db, 'departments', departmentId));
+        // جلب معلومات القسم من المسار الموحد
+        const departmentDoc = await getDoc(doc(db, 'organizations', organizationId, 'departments', departmentId));
 
         if (!departmentDoc.exists()) {
           toast({
@@ -80,16 +80,7 @@ export default function DepartmentDetailsPage() {
 
         const departmentData = departmentDoc.data() as Department;
 
-        // التحقق من أن القسم ينتمي للمؤسسة الحالية
-        if (departmentData.organizationId !== organizationId) {
-          toast({
-            title: 'خطأ',
-            description: 'ليس لديك صلاحية الوصول إلى هذا القسم',
-            variant: 'destructive',
-          });
-          router.push('/org/departments');
-          return;
-        }
+        // لا حاجة للتحقق من organizationId لأننا نجلب من مسار المؤسسة مباشرة
 
         setDepartment({
           id: departmentDoc.id,

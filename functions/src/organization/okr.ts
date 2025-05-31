@@ -68,21 +68,14 @@ export const createOkrPeriod = createCallableFunction(async (request: CallableRe
 
     // التحقق من وجود القسم إذا تم تحديده
     if (departmentId) {
-      const deptDoc = await db.collection('departments').doc(departmentId).get();
+      const deptDoc = await db.collection('organizations').doc(organizationId).collection('departments').doc(departmentId).get();
       if (!deptDoc.exists) {
         throw new functions.https.HttpsError(
           'not-found',
           'لم يتم العثور على القسم.'
         );
       }
-
-      const deptData = deptDoc.data();
-      if (deptData && deptData.organizationId !== organizationId) {
-        throw new functions.https.HttpsError(
-          'invalid-argument',
-          'القسم لا ينتمي إلى هذه المؤسسة.'
-        );
-      }
+      // لا حاجة للتحقق من organizationId لأننا نجلب من مسار المؤسسة مباشرة
     }
 
     // إنشاء فترة OKR جديدة
@@ -410,21 +403,14 @@ export const createObjective = createCallableFunction(async (request: CallableRe
 
     // التحقق من وجود القسم إذا تم تحديده
     if (departmentId) {
-      const deptDoc = await db.collection('departments').doc(departmentId).get();
+      const deptDoc = await db.collection('organizations').doc(organizationId).collection('departments').doc(departmentId).get();
       if (!deptDoc.exists) {
         throw new functions.https.HttpsError(
           'not-found',
           'لم يتم العثور على القسم.'
         );
       }
-
-      const deptData = deptDoc.data();
-      if (deptData && deptData.organizationId !== organizationId) {
-        throw new functions.https.HttpsError(
-          'invalid-argument',
-          'القسم لا ينتمي إلى هذه المؤسسة.'
-        );
-      }
+      // لا حاجة للتحقق من organizationId لأننا نجلب من مسار المؤسسة مباشرة
     }
 
     // إنشاء هدف استراتيجي جديد
