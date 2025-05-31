@@ -133,7 +133,7 @@ export default function OkrReportsPage() {
   const [activeTab, setActiveTab] = useState('overview');
 
   // التحقق من الصلاحيات
-  const canViewReports = role === 'owner' || role === 'admin' || hasPermission('reports.view');
+  const canViewReports = role === org_owner  || role === 'admin' || hasPermission('reports.view');
 
   // جلب فترات OKR والأقسام
   useEffect(() => {

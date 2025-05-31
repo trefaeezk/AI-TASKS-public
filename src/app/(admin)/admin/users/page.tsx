@@ -65,8 +65,8 @@ export default function UsersPage() {
       const organizationId = userClaims?.organizationId;
       const isSystemOwner = userClaims?.system_owner === true;
       const isSystemAdmin = userClaims?.system_admin === true;
-      const isIndividualAdmin = userClaims?.individual_admin === true;
-      const isOwner = isSystemOwner || isSystemAdmin || isIndividualAdmin;
+      const isOrgOwner = userClaims?.org_owner === true;
+      const isOwner = isSystemOwner || isSystemAdmin || isOrgOwner;
 
       // استخدام وظائف الباك إند للحصول على المستخدمين
       try {
@@ -92,7 +92,7 @@ export default function UsersPage() {
           disabled: false,
           customPermissions: [],
           isAdmin: member.role === 'system_admin' || member.role === 'system_owner' ||
-                   member.role === 'org_owner' || member.role === 'individual_admin',
+                   member.role === 'org_owner' || member.role === 'org_admin',
           accountType: 'organization',
           organizationId
         }));
@@ -137,8 +137,8 @@ export default function UsersPage() {
               userRole = 'system_admin';
             } else if (user.customClaims?.org_owner) {
               userRole = 'org_owner';
-            } else if (user.customClaims?.individual_admin) {
-              userRole = 'individual_admin';
+            } else if (user.customClaims?.org_admin) {
+              userRole = 'org_admin';
             }
           }
 
@@ -150,7 +150,7 @@ export default function UsersPage() {
             disabled: user.disabled || false,
             customPermissions: user.customClaims?.customPermissions || [],
             isAdmin: user.customClaims?.system_admin === true || user.customClaims?.system_owner === true ||
-                     user.customClaims?.org_owner === true || user.customClaims?.individual_admin === true,
+                     user.customClaims?.org_owner === true || user.customClaims?.org_admin === true,
             accountType: user.customClaims?.accountType || 'individual',
             organizationId: user.customClaims?.organizationId
           };

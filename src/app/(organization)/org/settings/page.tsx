@@ -65,7 +65,7 @@ export default function OrganizationSettingsPage() {
   const [activeTab, setActiveTab] = useState('general');
 
   // Check permissions
-  const canEdit = role === 'owner' || role === 'admin' || hasPermission('organization.edit');
+  const canEdit = role === org_owner  || role === 'admin' || hasPermission('organization.edit');
 
   // Fetch organization settings
   useEffect(() => {

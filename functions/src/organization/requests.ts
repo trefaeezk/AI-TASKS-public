@@ -199,11 +199,10 @@ export const approveOrganizationRequest = createCallableFunction<ApproveOrganiza
         const requesterRecord = await admin.auth().getUser(requestData.userId);
         const requesterClaims = requesterRecord.customClaims || {};
 
-        // تعيين المستخدم كمالك في المؤسسة مع تحديد نوع الحساب ومعرف المؤسسة
+        // تعيين المستخدم كمالك في المؤسسة (مبسط)
         const newClaims = {
             ...requesterClaims,
             role: 'org_owner',
-            org_owner: true, // النظام الجديد
             accountType: 'organization',
             organizationId
         };

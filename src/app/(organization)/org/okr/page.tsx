@@ -76,11 +76,11 @@ export default function OkrPage() {
   });
 
   const organizationId = userClaims?.organizationId;
-  // استخدام أسماء الحقول الصحيحة من قاعدة البيانات
-  const isOwner = userClaims?.org_owner === true || userClaims?.isOwner === true;
-  const isAdmin = userClaims?.admin === true || userClaims?.isAdmin === true;
-  const isEngineer = userClaims?.engineer === true;
-  const isSupervisor = userClaims?.supervisor === true;
+  // استخدام النظام الجديد الموحد
+  const isOwner = userClaims?.org_owner === true || userClaims?.isOrgOwner === true;
+  const isAdmin = userClaims?.org_admin === true || userClaims?.isOrgAdmin === true;
+  const isEngineer = userClaims?.org_engineer === true || userClaims?.isOrgEngineer === true;
+  const isSupervisor = userClaims?.org_supervisor === true || userClaims?.isOrgSupervisor === true;
   const canManageOkrs = isOwner || isAdmin || isEngineer || isSupervisor;
 
   // تحميل الأهداف والأقسام

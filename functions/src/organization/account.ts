@@ -151,14 +151,18 @@ export const updateAccountType = createCallableFunction<UpdateAccountTypeRequest
       }
 
       const memberData = memberDoc.data();
-      const role = memberData?.role || 'user';
+      const role = memberData?.role || 'org_assistant';
 
       newClaims = {
         ...newClaims,
         organizationId,
         role,
-        admin: role === 'admin' || role === 'owner',
-        owner: role === 'owner'
+        org_owner: role === 'org_owner',
+        org_admin: role === 'org_admin',
+        org_supervisor: role === 'org_supervisor',
+        org_engineer: role === 'org_engineer',
+        org_technician: role === 'org_technician',
+        org_assistant: role === 'org_assistant'
       };
     } else {
       // إذا كان نوع الحساب فردي، نزيل معلومات المؤسسة

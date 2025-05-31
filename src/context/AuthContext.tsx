@@ -239,7 +239,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             // تطبيق نفس منطق التوافق مع النظام القديم
             userRole = userData.role || 'assistant';
-            if (userData.role === 'owner' && !isOwner) {
+            if (userData.role === org_owner  && !isOwner) {
               userRole = 'admin';
             } else if (userData.role === 'individual_admin') {
               userRole = 'admin';

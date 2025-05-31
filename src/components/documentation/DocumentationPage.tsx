@@ -58,7 +58,7 @@ const DocumentationPage: React.FC<DocumentationPageProps> = ({
         description: 'شرح عام لصفحة التشخيص وكيفية استخدامها',
         category: 'debug',
         path: 'debug/README.md',
-        requiredPermission: 'owner',
+        requiredPermission: org_owner ,
       },
       {
         id: 'debug-access-control',
@@ -66,7 +66,7 @@ const DocumentationPage: React.FC<DocumentationPageProps> = ({
         description: 'شرح نظام الصلاحيات للوصول إلى صفحة التشخيص',
         category: 'debug',
         path: 'debug/access-control.md',
-        requiredPermission: 'owner',
+        requiredPermission: org_owner ,
       },
       {
         id: 'debug-email-system',
@@ -74,7 +74,7 @@ const DocumentationPage: React.FC<DocumentationPageProps> = ({
         description: 'شرح نظام البريد الإلكتروني المستخدم في صفحة التشخيص',
         category: 'debug',
         path: 'debug/email-system.md',
-        requiredPermission: 'owner',
+        requiredPermission: org_owner ,
       },
       {
         id: 'general-overview',
@@ -131,7 +131,7 @@ const DocumentationPage: React.FC<DocumentationPageProps> = ({
     console.log('Checking access for document:', doc.id, 'with required permission:', doc.requiredPermission);
     console.log('User claims:', userClaims);
 
-    if (doc.requiredPermission === 'owner') {
+    if (doc.requiredPermission === org_owner ) {
       const hasAccess = userClaims?.system_owner === true;
       console.log('Owner permission check:', hasAccess);
       return hasAccess;

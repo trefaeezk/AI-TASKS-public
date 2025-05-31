@@ -345,7 +345,7 @@ export default function DepartmentDetailsPage() {
                       <div>
                         <h3 className="font-medium">{member.displayName || member.email}</h3>
                         <p className="text-sm text-muted-foreground">
-                          {member.role === 'owner' ? 'مالك' :
+                          {member.role === org_owner  ? 'مالك' :
                            member.role === 'admin' ? 'مسؤول' :
                            member.role === 'engineer' ? 'مهندس' :
                            member.role === 'supervisor' ? 'مشرف' :

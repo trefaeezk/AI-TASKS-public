@@ -286,3 +286,17 @@ export const getUserPermissions = async (userId: string): Promise<PermissionKey[
     return [];
   }
 };
+
+/**
+ * حساب الصلاحيات الأساسية ديناميكياً من الدور (بدون تخزين)
+ */
+export function calculateDynamicPermissions(role: string) {
+    return {
+        canManageSystem: role === 'system_owner',
+        canManageUsers: ['system_owner', 'system_admin'].includes(role),
+        canManageOrganization: ['system_owner', 'system_admin', 'org_owner'].includes(role),
+        canManageProjects: ['system_owner', 'system_admin', 'org_owner', 'org_admin'].includes(role),
+        canViewReports: ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer'].includes(role),
+        canCreateTasks: !['org_assistant'].includes(role)
+    };
+}

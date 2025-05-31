@@ -439,7 +439,7 @@ export default function MembersPage() {
                         setSelectedMember(member);
                         setIsDeleteDialogOpen(true);
                       }}
-                      disabled={member.role === 'owner' && !isOwner}
+                      disabled={member.role === org_owner  && !isOwner}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -723,7 +723,7 @@ export default function MembersPage() {
               <Select
                 value={formData.role}
                 onValueChange={(value) => setFormData({ ...formData, role: value })}
-                disabled={selectedMember?.role === 'owner' && !isOwner}
+                disabled={selectedMember?.role === org_owner  && !isOwner}
               >
                 <SelectTrigger>
                   <SelectValue />

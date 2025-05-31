@@ -371,7 +371,7 @@ export const createUserHttp = createHttpFunction<CreateUserRequest>(async (reque
         }
 
         // إذا كان نوع الحساب فردي، نتأكد من أن الدور هو 'independent'
-        if (accountType === 'individual' && role !== 'independent' && role !== 'system_owner' && role !== 'system_admin' && role !== 'individual_admin') {
+        if (accountType === 'individual' && role !== 'independent' && role !== 'system_owner' && role !== 'system_admin') {
             console.log(`${functionName}: Changing role from '${role}' to 'independent' for individual account type`);
             role = 'independent';
             request.data.role = 'independent';
@@ -436,12 +436,14 @@ export const createUserHttp = createHttpFunction<CreateUserRequest>(async (reque
 
         await admin.auth().setCustomUserClaims(userRecord.uid, customClaims);
 
-        // Save user data in Firestore (مع الصلاحيات الجديدة)
+        // system_owner و system_admin يمكن أن يكونوا individual أو organization
+        // لا نغير accountType المحدد من المستخدم
+
+        // Save user data in Firestore (نظيف بدون تكرار)
         const completeUserData = {
             uid: userRecord.uid,
             name: userName,
             email: email,
-            displayName: userName,
             role: role,
             accountType: accountType,
             organizationId: organizationId || null,
@@ -451,9 +453,7 @@ export const createUserHttp = createHttpFunction<CreateUserRequest>(async (reque
             createdBy: request.auth?.uid,
             disabled: false,
             customPermissions: [], // فارغة - المدير يخصصها
-            // Boolean flags للأدوار
-            system_owner: role === 'system_owner',
-            system_admin: role === 'system_admin',
+            // الأدوار المنطقية فقط (بدون تكرار الصلاحيات)
             isSystemOwner: role === 'system_owner',
             isSystemAdmin: role === 'system_admin',
             isOrgOwner: role === 'org_owner',
@@ -463,14 +463,8 @@ export const createUserHttp = createHttpFunction<CreateUserRequest>(async (reque
             isOrgTechnician: role === 'org_technician',
             isOrgAssistant: role === 'org_assistant',
             isIndependent: role === 'independent',
-            isOrgMember: ['org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'].includes(role),
-            // الصلاحيات الجديدة
-            canManageSystem: role === 'system_owner',
-            canManageUsers: ['system_owner', 'system_admin'].includes(role),
-            canManageOrganization: ['system_owner', 'system_admin', 'org_owner'].includes(role),
-            canManageProjects: ['system_owner', 'system_admin', 'org_owner', 'org_admin'].includes(role),
-            canViewReports: ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer'].includes(role),
-            canCreateTasks: !['org_assistant'].includes(role)
+            isOrgMember: ['org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'].includes(role)
+            // تم حذف can* permissions - يتم حسابها ديناميكياً من الدور
         };
 
         await db.collection('users').doc(userRecord.uid).set(completeUserData);
