@@ -151,10 +151,20 @@ export const updateUserRole = createCallableFunction<UpdateUserRoleRequest>(asyn
         const userRecord = await admin.auth().getUser(uid);
         const currentClaims = userRecord.customClaims || {};
 
-        // تحديث Custom Claims مع الحفاظ على البيانات الأخرى
+        // تحديث Custom Claims مع الأدوار المنطقية الجديدة
         const newClaims = {
             ...currentClaims,
-            role: role
+            role: role,
+            // تحديث الأدوار المنطقية حسب الدور الجديد
+            system_owner: role === 'system_owner',
+            system_admin: role === 'system_admin',
+            org_owner: role === 'org_owner',
+            org_admin: role === 'org_admin',
+            org_supervisor: role === 'org_supervisor',
+            org_engineer: role === 'org_engineer',
+            org_technician: role === 'org_technician',
+            org_assistant: role === 'org_assistant',
+            independent: role === 'independent'
         };
 
         await admin.auth().setCustomUserClaims(uid, newClaims);
@@ -163,9 +173,31 @@ export const updateUserRole = createCallableFunction<UpdateUserRoleRequest>(asyn
         const userDocRef = db.collection('users').doc(uid);
         const userDoc = await userDocRef.get();
 
+        // حساب الأدوار المنطقية والصلاحيات الجديدة
+        const roleFlags = {
+            isSystemOwner: role === 'system_owner',
+            isSystemAdmin: role === 'system_admin',
+            isOrgOwner: role === 'org_owner',
+            isOrgAdmin: role === 'org_admin',
+            isOrgSupervisor: role === 'org_supervisor',
+            isOrgEngineer: role === 'org_engineer',
+            isOrgTechnician: role === 'org_technician',
+            isOrgAssistant: role === 'org_assistant',
+            isIndependent: role === 'independent',
+            isOrgMember: ['org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'].includes(role)
+        };
+
         if (userDoc.exists) {
             await userDocRef.update({
                 role,
+                ...roleFlags,
+                // حذف الصلاحيات المخزنة - ستحسب ديناميكياً
+                canManageSystem: admin.firestore.FieldValue.delete(),
+                canManageUsers: admin.firestore.FieldValue.delete(),
+                canManageOrganization: admin.firestore.FieldValue.delete(),
+                canManageProjects: admin.firestore.FieldValue.delete(),
+                canViewReports: admin.firestore.FieldValue.delete(),
+                canCreateTasks: admin.firestore.FieldValue.delete(),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp()
             });
         } else {
@@ -175,6 +207,9 @@ export const updateUserRole = createCallableFunction<UpdateUserRoleRequest>(asyn
                 uid,
                 email: userRecord.email,
                 name: userRecord.displayName || '',
+                ...roleFlags,
+                customPermissions: [],
+                disabled: false,
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp()
             });
