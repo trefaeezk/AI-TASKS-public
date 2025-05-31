@@ -43,9 +43,9 @@ export default function OrganizationRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  // التحقق من أن المستخدم مالك النظام أو مدير النظام (النظام الجديد فقط)
-  const isSystemOwner = userClaims?.system_owner === true;
-  const isSystemAdmin = userClaims?.system_admin === true;
+  // النمط الموحد is* فقط (بدون توافق مع القديم)
+  const isSystemOwner = userClaims?.isSystemOwner === true;
+  const isSystemAdmin = userClaims?.isSystemAdmin === true;
   const isOwner = isSystemOwner || isSystemAdmin;
 
   // طباعة معلومات المستخدم للتصحيح

@@ -11,64 +11,40 @@ service cloud.firestore {
       return request.auth.token;
     }
 
-    // التحقق من مالك النظام (النمط الموحد is*)
+    // التحقق من مالك النظام (النمط الموحد is* فقط)
     function isSystemOwner() {
-      return isAuthenticated() && (
-        getUserToken().isSystemOwner == true ||
-        getUserToken().role == 'system_owner'
-      );
+      return isAuthenticated() && getUserToken().isSystemOwner == true;
     }
 
-    // التحقق من أدمن النظام (النمط الموحد is*)
+    // التحقق من أدمن النظام (النمط الموحد is* فقط)
     function isSystemAdmin() {
-      return isAuthenticated() && (
-        getUserToken().isSystemAdmin == true ||
-        getUserToken().role == 'system_admin'
-      );
+      return isAuthenticated() && getUserToken().isSystemAdmin == true;
     }
 
-    // التحقق من مالك المؤسسة (النمط الموحد is*)
+    // التحقق من مالك المؤسسة (النمط الموحد is* فقط)
     function isOrgOwner() {
-      return isAuthenticated() && (
-        getUserToken().isOrgOwner == true ||
-        getUserToken().role == 'org_owner'
-      );
+      return isAuthenticated() && getUserToken().isOrgOwner == true;
     }
 
-    // التحقق من أدوار المؤسسات (النمط الموحد is*)
+    // التحقق من أدوار المؤسسات (النمط الموحد is* فقط)
     function isOrgAdmin() {
-      return isAuthenticated() && (
-        getUserToken().isOrgAdmin == true ||
-        getUserToken().role == 'org_admin'
-      );
+      return isAuthenticated() && getUserToken().isOrgAdmin == true;
     }
 
     function isOrgSupervisor() {
-      return isAuthenticated() && (
-        getUserToken().isOrgSupervisor == true ||
-        getUserToken().role == 'org_supervisor'
-      );
+      return isAuthenticated() && getUserToken().isOrgSupervisor == true;
     }
 
     function isOrgEngineer() {
-      return isAuthenticated() && (
-        getUserToken().isOrgEngineer == true ||
-        getUserToken().role == 'org_engineer'
-      );
+      return isAuthenticated() && getUserToken().isOrgEngineer == true;
     }
 
     function isOrgTechnician() {
-      return isAuthenticated() && (
-        getUserToken().isOrgTechnician == true ||
-        getUserToken().role == 'org_technician'
-      );
+      return isAuthenticated() && getUserToken().isOrgTechnician == true;
     }
 
     function isOrgAssistant() {
-      return isAuthenticated() && (
-        getUserToken().isOrgAssistant == true ||
-        getUserToken().role == 'org_assistant'
-      );
+      return isAuthenticated() && getUserToken().isOrgAssistant == true;
     }
 
     // التحقق من صلاحيات النظام العليا
@@ -119,12 +95,9 @@ service cloud.firestore {
              isIndividualAccount(); // أصحاب الحسابات الفردية يمكنهم إنشاء المهام
     }
 
-    // التحقق من المستخدم المستقل (النمط الموحد is*)
+    // التحقق من المستخدم المستقل (النمط الموحد is* فقط)
     function isIndependent() {
-      return isAuthenticated() && (
-        getUserToken().isIndependent == true ||
-        getUserToken().role == 'independent'
-      );
+      return isAuthenticated() && getUserToken().isIndependent == true;
     }
 
     // التحقق من نوع الحساب الفردي

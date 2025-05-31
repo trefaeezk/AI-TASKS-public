@@ -89,15 +89,15 @@ export const ensureAdminHttp = async (req: functions.https.Request): Promise<str
     // التحقق من الأدوار الموحدة حسب الهيكلة المتفق عليها
     const userRole = decodedToken.role;
 
-    // النمط الموحد is* فقط (بدون تكرار)
-    const isSystemOwner = userRole === 'system_owner' || decodedToken.isSystemOwner === true;
-    const isSystemAdmin = userRole === 'system_admin' || decodedToken.isSystemAdmin === true;
-    const isOrgOwner = userRole === 'org_owner' || decodedToken.isOrgOwner === true;
-    const isOrgAdmin = userRole === 'org_admin' || decodedToken.isOrgAdmin === true;
-    const isOrgSupervisor = userRole === 'org_supervisor' || decodedToken.isOrgSupervisor === true;
-    const isOrgEngineer = userRole === 'org_engineer' || decodedToken.isOrgEngineer === true;
-    const isOrgTechnician = userRole === 'org_technician' || decodedToken.isOrgTechnician === true;
-    const isOrgAssistant = userRole === 'org_assistant' || decodedToken.isOrgAssistant === true;
+    // النمط الموحد is* فقط (بدون توافق مع القديم)
+    const isSystemOwner = decodedToken.isSystemOwner === true;
+    const isSystemAdmin = decodedToken.isSystemAdmin === true;
+    const isOrgOwner = decodedToken.isOrgOwner === true;
+    const isOrgAdmin = decodedToken.isOrgAdmin === true;
+    const isOrgSupervisor = decodedToken.isOrgSupervisor === true;
+    const isOrgEngineer = decodedToken.isOrgEngineer === true;
+    const isOrgTechnician = decodedToken.isOrgTechnician === true;
+    const isOrgAssistant = decodedToken.isOrgAssistant === true;
 
     // التحقق من وجود أي دور إداري
     const hasAdminRole = isSystemOwner || isSystemAdmin || isOrgOwner ||

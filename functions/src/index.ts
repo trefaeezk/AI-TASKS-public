@@ -538,9 +538,9 @@ export const listFirebaseUsers = createCallableFunction<ListFirebaseUsersRequest
                 name: user.displayName || (firestoreData?.name as string | undefined),
                 role: customClaims.role || firestoreData?.role || 'independent',
                 customPermissions: firestoreData?.customPermissions,
-                canManageSystem: !!customClaims.system_owner,
-                canManageUsers: !!(customClaims.system_owner || customClaims.system_admin),
-                canManageOrganization: !!(customClaims.system_owner || customClaims.system_admin || customClaims.org_owner),
+                canManageSystem: !!customClaims.isSystemOwner,
+                canManageUsers: !!(customClaims.isSystemOwner || customClaims.isSystemAdmin),
+                canManageOrganization: !!(customClaims.isSystemOwner || customClaims.isSystemAdmin || customClaims.isOrgOwner),
                 disabled: user.disabled,
                 createdAt: firestoreData?.createdAt,
                 lastLogin: user.metadata.lastSignInTime ? new Date(user.metadata.lastSignInTime).getTime() : null

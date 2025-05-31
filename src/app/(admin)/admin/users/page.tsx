@@ -149,8 +149,8 @@ export default function UsersPage() {
             name: user.displayName || firestoreUser?.name || '',
             disabled: user.disabled || false,
             customPermissions: user.customClaims?.customPermissions || [],
-            isAdmin: user.customClaims?.system_admin === true || user.customClaims?.system_owner === true ||
-                     user.customClaims?.org_owner === true || user.customClaims?.org_admin === true,
+            isAdmin: user.customClaims?.isSystemAdmin === true || user.customClaims?.isSystemOwner === true ||
+                     user.customClaims?.isOrgOwner === true || user.customClaims?.isOrgAdmin === true,
             accountType: user.customClaims?.accountType || 'individual',
             organizationId: user.customClaims?.organizationId
           };

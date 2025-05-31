@@ -102,7 +102,7 @@ export default function AdminDashboardPage() {
             accountType: u.accountType || u.customClaims?.accountType || 'individual',
             organizationId: u.organizationId || u.customClaims?.organizationId,
             departmentId: u.departmentId || u.customClaims?.departmentId,
-            isAdmin: !!(u.customClaims?.system_owner || u.customClaims?.system_admin || u.customClaims?.org_owner),
+            isAdmin: !!(u.customClaims?.isSystemOwner || u.customClaims?.isSystemAdmin || u.customClaims?.isOrgOwner),
             disabled: u.disabled ?? false,
             customPermissions: u.customPermissions || [], // Add customPermissions property
             createdAt: u.createdAt, // Add createdAt property
