@@ -4,15 +4,17 @@
 export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useSecureUserManagement } from '@/hooks/useSecureUserManagement';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, Users, UserPlus } from 'lucide-react';
+import { AlertCircle, Users, UserPlus, Settings } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { collection, getDocs, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { db, functions, auth } from '@/lib/firebase';
+import { httpsCallable, connectFunctionsEmulator } from 'firebase/functions';
 import { UserRole } from '@/types/roles';
 import { CreateUserDialog } from '@/components/admin/CreateUserDialog';
 import { UserDetailsDialog } from '@/components/admin/UserDetailsDialog';
@@ -20,12 +22,10 @@ import { Translate } from '@/components/Translate';
 import { ManagedUser } from '@/types/user';
 import { useToast } from '@/hooks/use-toast';
 
-// تهيئة Firebase Functions
-const functionsInstance = getFunctions();
-
 export default function UsersPage() {
   const { user, userClaims, refreshUserData } = useAuth();
   const { checkPermission, loading: permissionsLoading } = usePermissions();
+  const { createUser: secureCreateUser, updateUserRole: secureUpdateUserRole, updateUserPermissions: secureUpdateUserPermissions, toggleUserDisabled: secureToggleUserDisabled, isLoading: userManagementLoading } = useSecureUserManagement();
   const { toast } = useToast();
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,8 +36,8 @@ export default function UsersPage() {
   // التحقق من صلاحيات المستخدم
   const hasViewPermission = checkPermission('users.view');
 
-  useEffect(() => {
-    const fetchUsers = async () => {
+  // نقل دالة fetchUsers خارج useEffect لتصبح متاحة
+  const fetchUsers = async () => {
       if (!user || !hasViewPermission) {
         setLoading(false);
         return;
@@ -47,7 +47,10 @@ export default function UsersPage() {
 
       // الحصول على معرف المؤسسة من userClaims
       const organizationId = userClaims?.organizationId;
-      const isOwner = userClaims?.owner === true || userClaims?.system_owner === true;
+      const isSystemOwner = userClaims?.system_owner === true;
+      const isSystemAdmin = userClaims?.system_admin === true;
+      const isIndividualAdmin = userClaims?.individual_admin === true;
+      const isOwner = isSystemOwner || isSystemAdmin || isIndividualAdmin;
 
       // استخدام وظائف الباك إند للحصول على المستخدمين
       try {
@@ -57,7 +60,7 @@ export default function UsersPage() {
         console.log(`Fetching users for organization: ${organizationId}`);
 
         // استخدام وظيفة getOrganizationMembers للحصول على أعضاء المؤسسة
-        const getOrganizationMembersFn = httpsCallable<{ orgId: string }, { members: any[] }>(functionsInstance, 'getOrganizationMembers');
+        const getOrganizationMembersFn = httpsCallable<{ orgId: string }, { members: any[] }>(functions, 'getOrganizationMembers');
         const result = await getOrganizationMembersFn({ orgId: organizationId });
 
         if (!result.data || !result.data.members) {
@@ -72,7 +75,8 @@ export default function UsersPage() {
           name: member.name || '',
           disabled: false,
           customPermissions: [],
-          isAdmin: member.role === 'admin' || member.role === 'owner',
+          isAdmin: member.role === 'system_admin' || member.role === 'system_owner' ||
+                   member.role === 'organization_owner' || member.role === 'individual_admin',
           accountType: 'organization',
           organizationId
         }));
@@ -82,7 +86,7 @@ export default function UsersPage() {
         console.log('Fetching all users (owner view)');
 
         // استخدام وظيفة listFirebaseUsers للحصول على جميع المستخدمين
-        const listFirebaseUsersFn = httpsCallable<{}, { users: any[] }>(functionsInstance, 'listFirebaseUsers');
+        const listFirebaseUsersFn = httpsCallable<{}, { users: any[] }>(functions, 'listFirebaseUsers');
         const result = await listFirebaseUsersFn({});
 
         if (!result.data || !result.data.users) {
@@ -117,12 +121,8 @@ export default function UsersPage() {
               userRole = 'system_admin';
             } else if (user.customClaims?.organization_owner) {
               userRole = 'organization_owner';
-            } else if (user.customClaims?.admin) {
-              userRole = 'org_admin';
-            } else if (user.customClaims?.owner) {
-              userRole = 'system_owner';
             } else if (user.customClaims?.individual_admin) {
-              userRole = 'system_admin';
+              userRole = 'individual_admin';
             }
           }
 
@@ -133,7 +133,8 @@ export default function UsersPage() {
             name: user.displayName || firestoreUser?.name || '',
             disabled: user.disabled || false,
             customPermissions: user.customClaims?.customPermissions || [],
-            isAdmin: user.customClaims?.admin === true || user.customClaims?.role === 'admin',
+            isAdmin: user.customClaims?.system_admin === true || user.customClaims?.system_owner === true ||
+                     user.customClaims?.organization_owner === true || user.customClaims?.individual_admin === true,
             accountType: user.customClaims?.accountType || 'individual',
             organizationId: user.customClaims?.organizationId
           };
@@ -158,10 +159,8 @@ export default function UsersPage() {
       }
     };
 
+  useEffect(() => {
     fetchUsers();
-
-    // لا نحتاج إلى مستمع للتغييرات بعد الآن، لأننا نستخدم وظائف Callable
-    return () => {};
   }, [user, hasViewPermission, toast]);
 
   // عرض حالة التحميل
@@ -229,261 +228,54 @@ export default function UsersPage() {
   };
 
   const handleCreateUser = async (userData: any) => {
-    if (!user) {
-      toast({
-        title: 'خطأ',
-        description: 'يجب تسجيل الدخول لإنشاء مستخدم جديد.',
-        variant: 'destructive',
-      });
-      return;
+    const result = await secureCreateUser(userData);
+
+    if (result.success) {
+      // إعادة تحميل قائمة المستخدمين
+      await fetchUsers();
+      setShowCreateDialog(false);
     }
 
-    try {
-      // استخدام وظيفة createUser
-      const createUserFn = httpsCallable<any, { uid?: string; error?: string }>(functionsInstance, 'createUser');
-      const result = await createUserFn(userData);
-
-      // التحقق من نجاح العملية
-      if (result.data?.error) {
-        throw new Error(result.data.error);
-      }
-
-      toast({
-        title: 'تم إنشاء المستخدم بنجاح',
-        description: `تم إنشاء المستخدم ${userData.email} بنجاح.`,
-      });
-
-      // تحديث قائمة المستخدمين
-      const fetchUsers = async () => {
-        // استدعاء وظيفة fetchUsers لتحديث القائمة
-        if (user && hasViewPermission) {
-          setLoading(true);
-          try {
-            // نفس الكود الموجود في useEffect
-            const organizationId = userClaims?.organizationId;
-            const isOwner = userClaims?.owner === true || userClaims?.system_owner === true;
-
-            if (organizationId) {
-              const getOrganizationMembersFn = httpsCallable<{ orgId: string }, { members: any[] }>(functionsInstance, 'getOrganizationMembers');
-              const result = await getOrganizationMembersFn({ orgId: organizationId });
-
-              if (result.data?.members) {
-                const orgUsers = result.data.members.map((member: any) => ({
-                  uid: member.uid,
-                  email: member.email || '',
-                  role: member.role || 'user',
-                  name: member.name || '',
-                  disabled: false,
-                  customPermissions: [],
-                  isAdmin: member.role === 'admin' || member.role === 'owner',
-                  accountType: 'organization',
-                  organizationId
-                }));
-                setUsers(orgUsers);
-              }
-            } else if (isOwner) {
-              const listFirebaseUsersFn = httpsCallable<{}, { users: any[] }>(functionsInstance, 'listFirebaseUsers');
-              const result = await listFirebaseUsersFn({});
-
-              if (result.data?.users) {
-                // جلب جميع المستخدمين من Firestore مرة واحدة لتحسين الأداء
-                const firestoreUsersSnapshot = await getDocs(collection(db, 'users'));
-                const firestoreUsersMap = new Map();
-                firestoreUsersSnapshot.docs.forEach(doc => {
-                  const userData = doc.data();
-                  if (userData.email) {
-                    firestoreUsersMap.set(userData.email, userData);
-                  }
-                });
-
-                const allUsers = result.data.users.map((user: any) => {
-                  let userRole: UserRole = 'independent'; // الافتراضي
-
-                  // أولاً: البحث في Firestore
-                  const firestoreUser = firestoreUsersMap.get(user.email);
-                  if (firestoreUser && firestoreUser.role) {
-                    userRole = firestoreUser.role as UserRole;
-                  } else {
-                    // ثانياً: استخدم customClaims كبديل
-                    if (user.customClaims?.role) {
-                      userRole = user.customClaims.role as UserRole;
-                    } else if (user.customClaims?.system_owner) {
-                      userRole = 'system_owner';
-                    } else if (user.customClaims?.system_admin) {
-                      userRole = 'system_admin';
-                    } else if (user.customClaims?.organization_owner) {
-                      userRole = 'organization_owner';
-                    } else if (user.customClaims?.admin) {
-                      userRole = 'org_admin';
-                    } else if (user.customClaims?.owner) {
-                      userRole = 'system_owner';
-                    } else if (user.customClaims?.individual_admin) {
-                      userRole = 'system_admin';
-                    }
-                  }
-
-                  return {
-                    uid: user.uid,
-                    email: user.email || '',
-                    role: userRole,
-                    name: user.displayName || firestoreUser?.name || '',
-                    disabled: user.disabled || false,
-                    customPermissions: user.customClaims?.customPermissions || [],
-                    isAdmin: user.customClaims?.admin === true || user.customClaims?.role === 'admin',
-                    accountType: user.customClaims?.accountType || 'individual',
-                    organizationId: user.customClaims?.organizationId
-                  };
-                });
-                setUsers(allUsers);
-              }
-            }
-          } catch (error) {
-            console.error('Error refreshing users:', error);
-          } finally {
-            setLoading(false);
-          }
-        }
-      };
-
-      // تحديث القائمة
-      fetchUsers();
-    } catch (error: any) {
-      console.error('Error creating user:', error);
-      toast({
-        title: 'فشل إنشاء المستخدم',
-        description: error.message || 'حدث خطأ أثناء إنشاء المستخدم.',
-        variant: 'destructive',
-      });
-    }
+    // الأخطاء يتم التعامل معها في Hook
   };
 
   const handleUpdateUser = async (userId: string, userData: any) => {
-    if (!user) {
-      toast({
-        title: 'خطأ',
-        description: 'يجب تسجيل الدخول لتحديث بيانات المستخدم.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // إذا كان المستخدم الحالي هو نفسه الذي يتم تحديث دوره، نحتاج لإعادة تحميل معلوماته
-    const isCurrentUser = userId === user.uid;
+    const isCurrentUser = userId === user?.uid;
+    let result;
 
     try {
-      // تحديد الوظيفة المناسبة بناءً على نوع التحديث
-      let functionName = '';
-      let requestData = {};
-      let isRoleUpdate = false;
-
+      // تحديد نوع التحديث واستدعاء الدالة المناسبة
       if ('role' in userData) {
-        functionName = 'updateUserRole';
-        requestData = {
-          uid: userId,
-          role: userData.role
-        };
-        isRoleUpdate = true;
-      } else if ('customPermissions' in userData) {
-        functionName = 'updateUserPermissions';
-        requestData = {
-          uid: userId,
-          permissions: userData.customPermissions
-        };
-      } else if ('disabled' in userData) {
-        functionName = 'setUserDisabledStatus';
-        requestData = {
-          uid: userId,
-          disabled: userData.disabled
-        };
-      } else {
-        throw new Error('نوع التحديث غير معروف');
-      }
+        result = await secureUpdateUserRole(userId, userData.role);
 
-      // استدعاء الوظيفة المناسبة
-      const updateFn = httpsCallable<any, { result?: string; error?: string }>(functionsInstance, functionName);
-      const result = await updateFn(requestData);
-
-      // التحقق من نجاح العملية
-      if (result.data?.error) {
-        throw new Error(result.data.error);
-      }
-
-      toast({
-        title: 'تم تحديث بيانات المستخدم بنجاح',
-        description: 'تم تحديث بيانات المستخدم بنجاح.',
-      });
-
-      // إذا كان تحديث للدور وكان المستخدم الحالي هو نفسه الذي تم تحديث دوره، نقوم بإعادة تحميل معلوماته
-      if (isRoleUpdate && isCurrentUser) {
-        console.log("[UsersPage] Current user role updated, refreshing user data");
-        await refreshUserData();
-      }
-
-      // تحديث المستخدم المحدد إذا كان هو نفسه الذي تم تحديثه
-      if (selectedUser && selectedUser.uid === userId) {
-        setSelectedUser({
-          ...selectedUser,
-          ...userData
-        });
-      }
-
-      // تحديث قائمة المستخدمين
-      const fetchUsers = async () => {
-        // استدعاء وظيفة fetchUsers لتحديث القائمة
-        if (user && hasViewPermission) {
-          setLoading(true);
-          try {
-            // نفس الكود الموجود في useEffect
-            const organizationId = userClaims?.organizationId;
-            const isOwner = userClaims?.owner === true || userClaims?.system_owner === true;
-
-            if (organizationId) {
-              const getOrganizationMembersFn = httpsCallable<{ orgId: string }, { members: any[] }>(functionsInstance, 'getOrganizationMembers');
-              const result = await getOrganizationMembersFn({ orgId: organizationId });
-
-              if (result.data?.members) {
-                const orgUsers = result.data.members.map((member: any) => ({
-                  uid: member.uid,
-                  email: member.email || '',
-                  role: member.role || 'user',
-                  name: member.name || '',
-                  disabled: false,
-                  customPermissions: [],
-                  isAdmin: member.role === 'admin' || member.role === 'owner',
-                  accountType: 'organization',
-                  organizationId
-                }));
-                setUsers(orgUsers);
-              }
-            } else if (isOwner) {
-              const listFirebaseUsersFn = httpsCallable<{}, { users: any[] }>(functionsInstance, 'listFirebaseUsers');
-              const result = await listFirebaseUsersFn({});
-
-              if (result.data?.users) {
-                const allUsers = result.data.users.map((user: any) => ({
-                  uid: user.uid,
-                  email: user.email || '',
-                  role: (user.customClaims?.role as UserRole) || 'user',
-                  name: user.displayName || '',
-                  disabled: user.disabled || false,
-                  customPermissions: user.customClaims?.customPermissions || [],
-                  isAdmin: user.customClaims?.admin === true || user.customClaims?.role === 'admin',
-                  accountType: user.customClaims?.accountType || 'individual',
-                  organizationId: user.customClaims?.organizationId
-                }));
-                setUsers(allUsers);
-              }
-            }
-          } catch (error) {
-            console.error('Error refreshing users:', error);
-          } finally {
-            setLoading(false);
-          }
+        // إذا كان تحديث للدور وكان المستخدم الحالي هو نفسه الذي تم تحديث دوره
+        if (result.success && isCurrentUser) {
+          console.log("[UsersPage] Current user role updated, refreshing user data");
+          await refreshUserData();
         }
-      };
+      } else if ('customPermissions' in userData) {
+        result = await secureUpdateUserPermissions(userId, userData.customPermissions);
+      } else if ('disabled' in userData) {
+        result = await secureToggleUserDisabled(userId, userData.disabled);
+      } else {
+        toast({
+          title: 'خطأ في البيانات',
+          description: 'نوع التحديث غير مدعوم.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-      // تحديث القائمة
-      fetchUsers();
+      if (result.success) {
+        // تحديث المستخدم المحدد إذا كان هو نفسه الذي تم تحديثه
+        if (selectedUser && selectedUser.uid === userId) {
+          setSelectedUser({ ...selectedUser, ...userData });
+        }
+
+        // إعادة تحميل قائمة المستخدمين
+        await fetchUsers();
+      }
+
     } catch (error: any) {
       console.error('Error updating user:', error);
       toast({
@@ -501,10 +293,18 @@ export default function UsersPage() {
           <Users className="ml-2 h-6 w-6" />
           إدارة المستخدمين
         </h1>
-        <Button onClick={() => setShowCreateDialog(true)} className="flex items-center">
-          <UserPlus className="ml-2 h-4 w-4" />
-          إضافة مستخدم
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/diagnostics">
+              <Settings className="ml-2 h-4 w-4" />
+              تشخيص المشاكل
+            </Link>
+          </Button>
+          <Button onClick={() => setShowCreateDialog(true)} className="flex items-center">
+            <UserPlus className="ml-2 h-4 w-4" />
+            إضافة مستخدم
+          </Button>
+        </div>
       </div>
 
       {users.length === 0 ? (
@@ -534,7 +334,7 @@ export default function UsersPage() {
         isOpen={showCreateDialog}
         onOpenChange={setShowCreateDialog}
         onSubmit={handleCreateUser}
-        loading={false}
+        loading={userManagementLoading}
       />
 
       {/* مربع حوار تفاصيل المستخدم */}
@@ -552,7 +352,7 @@ export default function UsersPage() {
           onToggleDisabled={async (userId, disabled) => {
             await handleUpdateUser(userId, { disabled });
           }}
-          loading={false}
+          loading={userManagementLoading}
         />
       )}
     </div>

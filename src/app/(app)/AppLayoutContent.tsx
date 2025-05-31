@@ -379,7 +379,7 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                   icon={Shield}
                   label={t('sidebar.adminPanel')}
                   tooltip={t('sidebar.adminPanelTooltip')}
-                  requiredRole="admin"
+                  requiredRole="system_admin"
                 />
                 <PermissionSidebarItem
                   href="/admin/users"
@@ -388,7 +388,7 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                   tooltip={t('sidebar.usersTooltip')}
                   requiredPermission={{ area: 'users', action: 'view' }}
                 />
-                {(role === 'admin' || role === 'system_owner' || role === 'system_admin' || role === 'organization_owner') && (
+                {(role === 'system_owner' || role === 'system_admin' || role === 'organization_owner' || role === 'org_admin') && (
                   <PermissionSidebarItem
                     href="/admin/data-management"
                     icon={Database}

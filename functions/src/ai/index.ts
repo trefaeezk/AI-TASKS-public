@@ -5,10 +5,6 @@
  */
 
 import * as functions from 'firebase-functions';
-import cors from 'cors';
-
-// تكوين CORS
-export const corsHandler = cors({ origin: true });
 
 // تصدير وظائف الذكاء الاصطناعي
 export * from './tasks/suggest-milestones';

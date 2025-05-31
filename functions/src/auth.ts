@@ -10,8 +10,7 @@ import { isOrganizationMember } from './shared/utils';
 import { createCallableFunction } from './shared/function-utils';
 import { addTokenRefreshTimestamp } from './auth/tokenRefresh';
 
-// تكوين CORS (يستخدم في وظائف HTTP)
-// const corsHandler = cors({ origin: true });
+// تم حذف CORS - لم يعد مطلوب
 
 /**
  * نوع بيانات طلب التحقق من نوع الحساب
@@ -234,17 +233,15 @@ export const updateAccountType = createCallableFunction<UpdateAccountTypeRequest
                 try {
                     const orgDoc = await db.collection('organizations').doc(effectiveOrgId).get();
                     if (orgDoc.exists && orgDoc.data()?.createdBy === uid) {
-                        console.log(`User ${uid} is the creator of organization ${effectiveOrgId}, setting as owner`);
-                        newClaims.role = 'owner';
-                        newClaims.owner = true;
-                        newClaims.admin = true;
+                        console.log(`User ${uid} is the creator of organization ${effectiveOrgId}, setting as organization owner`);
+                        newClaims.role = 'organization_owner';
+                        newClaims.organization_owner = true;
 
                         // تحديث وثيقة المستخدم في مجموعة users
                         const userDocRef = db.collection('users').doc(uid);
                         await userDocRef.set({
-                            role: 'owner',
-                            isOwner: true,
-                            isAdmin: true,
+                            role: 'organization_owner',
+                            isOrganizationOwner: true,
                             accountType: 'organization',
                             organizationId: effectiveOrgId,
                             organizationName: orgDoc.data()?.name || '',

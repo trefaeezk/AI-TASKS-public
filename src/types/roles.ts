@@ -215,6 +215,13 @@ export const ROLE_HIERARCHY: UserRole[] = [
 export const isRoleAtLeast = (userRole: UserRole, requiredRole: UserRole): boolean => {
   const userRoleIndex = ROLE_HIERARCHY.indexOf(userRole);
   const requiredRoleIndex = ROLE_HIERARCHY.indexOf(requiredRole);
+
+  // إذا لم يتم العثور على أحد الأدوار، إرجاع false
+  if (userRoleIndex === -1 || requiredRoleIndex === -1) {
+    return false;
+  }
+
+  // المؤشر الأقل يعني دور أعلى (system_owner = 0, independent = 10)
   return userRoleIndex <= requiredRoleIndex;
 };
 

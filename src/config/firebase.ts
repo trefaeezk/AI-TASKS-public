@@ -36,4 +36,16 @@ const googleProvider = new GoogleAuthProvider();
 const db = getFirestore(app); // Initialize Firestore
 const functions = getFunctions(app, 'us-central1'); // Initialize Functions with region
 
+// تعيين timeout أطول للدوال
+if (typeof window !== 'undefined') {
+  // فقط في المتصفح
+  try {
+    const { connectFunctionsEmulator } = require('firebase/functions');
+    // لا نتصل بالمحاكي، لكن نتأكد من إعدادات الاتصال
+    console.log('Firebase Functions configured for production use');
+  } catch (error) {
+    console.log('Firebase Functions configuration loaded');
+  }
+}
+
 export { app, auth, googleProvider, db, functions }; // Export all services

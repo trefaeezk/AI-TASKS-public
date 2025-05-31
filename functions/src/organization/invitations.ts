@@ -6,7 +6,7 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { db, ensureAuthenticated } from '../shared/utils';
 import { canInviteToOrganization, ensureCanInviteToOrganization } from '../shared/organization-utils';
-import { v1Functions } from '../shared/v1-compatibility';
+// تم حذف v1-compatibility - لم يعد مطلوب
 import { createCallableFunction } from '../shared/function-utils';
 import { CallableRequest } from '../shared/types';
 

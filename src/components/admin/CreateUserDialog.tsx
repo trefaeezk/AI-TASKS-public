@@ -54,7 +54,7 @@ export function CreateUserDialog({ isOpen, onOpenChange, onSubmit, loading }: Cr
       email: '',
       password: '',
       name: '',
-      role: 'independent' as UserRole,
+      role: 'org_assistant' as UserRole, // الافتراضي حسب الهيكلة الموحدة
       accountType: 'individual' as SystemType,
       organizationId: '',
       departmentId: '',

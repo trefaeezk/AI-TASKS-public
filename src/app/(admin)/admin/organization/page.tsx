@@ -32,11 +32,12 @@ export default function OrganizationPage() {
   const [organizationData, setOrganizationData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('members');
 
-  // التحقق من صلاحيات المستخدم
+  // التحقق من صلاحيات المستخدم (النظام الجديد فقط)
   const hasViewPermission = hasPermission('organization.view');
   const hasManagePermission = hasPermission('organization.manage');
-  const isOwner = userClaims?.owner === true;
-  const isAdmin = userClaims?.admin === true;
+  const isSystemOwner = userClaims?.system_owner === true;
+  const isSystemAdmin = userClaims?.system_admin === true;
+  const isOrganizationOwner = userClaims?.organization_owner === true;
   const organizationId = userClaims?.organizationId;
 
   useEffect(() => {

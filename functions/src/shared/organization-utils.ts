@@ -90,8 +90,8 @@ export const hasOrganizationRole = async (
         const memberData = memberDoc.data();
         const userRole = memberData?.role;
 
-        // ترتيب الأدوار من الأعلى إلى الأدنى
-        const roleHierarchy = ['admin', 'engineer', 'supervisor', 'technician', 'assistant', 'user'];
+        // ترتيب الأدوار من الأعلى إلى الأدنى (النظام الموحد)
+        const roleHierarchy = ['organization_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
 
         // التحقق من أن دور المستخدم أعلى من أو يساوي الدور المطلوب
         const userRoleIndex = roleHierarchy.indexOf(userRole);

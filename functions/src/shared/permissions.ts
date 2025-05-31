@@ -162,7 +162,7 @@ export const hasPermission = async (
     // الحصول على معلومات المستخدم من Firebase Auth
     const userRecord = await admin.auth().getUser(userId);
     const customClaims = userRecord.customClaims || {};
-    const userRole = customClaims.role as UserRole || 'org_assistant';
+    const userRole = customClaims.role as UserRole || 'independent';
 
     // الحصول على الصلاحيات الافتراضية للدور
     const defaultPermissions = DEFAULT_ROLE_PERMISSIONS[userRole] || [];
@@ -233,7 +233,7 @@ export const getUserPermissions = async (userId: string): Promise<PermissionKey[
     // الحصول على معلومات المستخدم من Firebase Auth
     const userRecord = await admin.auth().getUser(userId);
     const customClaims = userRecord.customClaims || {};
-    const userRole = customClaims.role as UserRole || 'org_assistant';
+    const userRole = customClaims.role as UserRole || 'independent';
 
     // الحصول على الصلاحيات الافتراضية للدور
     const defaultPermissions = DEFAULT_ROLE_PERMISSIONS[userRole] || [];

@@ -9,11 +9,9 @@
  */
 
 import * as functions from "firebase-functions";
-// import { onRequest } from "firebase-functions/v2/https"; // No se usa después de eliminar las funciones HTTP duplicadas
 import * as admin from "firebase-admin";
-// import cors from "cors"; // No se usa después de eliminar las funciones HTTP
 import { db } from './shared/utils';
-import { createCallableFunction, LegacyCallableContext } from './shared/function-utils';
+import { createCallableFunction, createHttpFunction, LegacyCallableContext } from './shared/function-utils';
 
 // تصدير وظائف الذكاء الاصطناعي
 export * from './ai';
@@ -24,146 +22,7 @@ export * from './auth';
 // تصدير وظائف البريد الإلكتروني والتشخيص
 export * from './email';
 
-/**
- * نوع بيانات طلب إصلاح صلاحيات المستخدم
- */
-interface FixUserPermissionsRequest {
-    uid: string;
-    targetRole: string;
-    accountType?: string;
-}
-
-/**
- * إصلاح صلاحيات المستخدم وتعيين الأدوار الصحيحة
- * يتطلب أن يكون المستدعي مالك النظام أو نفس المستخدم
- */
-export const fixUserPermissions = createCallableFunction<FixUserPermissionsRequest>(async (request) => {
-    const functionName = 'fixUserPermissions';
-    console.log(`--- ${functionName} Cloud Function triggered ---`);
-    console.log(`${functionName} called with data:`, request.data);
-
-    try {
-        const { uid, targetRole, accountType = 'individual' } = request.data;
-
-        // التحقق من صحة البيانات
-        if (!uid || typeof uid !== "string") {
-            throw new functions.https.HttpsError("invalid-argument", "يجب توفير معرف مستخدم صالح.");
-        }
-
-        if (!targetRole || typeof targetRole !== "string") {
-            throw new functions.https.HttpsError("invalid-argument", "يجب توفير دور صالح.");
-        }
-
-        // التحقق من الصلاحيات - يمكن للمستخدم إصلاح صلاحياته الخاصة أو للمالك إصلاح أي صلاحيات
-        const isOwner = request.auth?.token?.owner === true || request.auth?.token?.system_owner === true;
-        const isSelfFix = request.auth?.uid === uid;
-
-        if (!isOwner && !isSelfFix) {
-            throw new functions.https.HttpsError(
-                "permission-denied",
-                "يمكن فقط لمالك النظام أو المستخدم نفسه إصلاح الصلاحيات."
-            );
-        }
-
-        console.log(`Fixing permissions for user ${uid} to role ${targetRole} by ${request.auth?.uid}`);
-
-        // الحصول على معلومات المستخدم الحالية
-        const userRecord = await admin.auth().getUser(uid);
-        console.log(`Current user claims:`, userRecord.customClaims);
-
-        // إنشاء claims جديدة صحيحة بناءً على بيانات Firestore
-        const newClaims: Record<string, any> = {
-            role: targetRole,
-            accountType: accountType
-        };
-
-        // تعيين الصلاحيات بناءً على الدور
-        if (targetRole === 'system_owner') {
-            newClaims.system_owner = true;
-            newClaims.owner = true; // للتوافق مع النظام القديم
-            newClaims.system_admin = true; // مالك النظام له صلاحيات أدمن أيضاً
-            newClaims.admin = true; // للتوافق مع النظام القديم
-        } else if (targetRole === 'system_admin') {
-            newClaims.system_admin = true;
-            newClaims.admin = true; // للتوافق مع النظام القديم
-            newClaims.system_owner = false;
-            newClaims.owner = false;
-        } else if (targetRole === 'organization_owner') {
-            newClaims.organization_owner = true;
-            newClaims.owner = true; // للتوافق مع النظام القديم
-            newClaims.system_owner = false;
-            newClaims.system_admin = false;
-            newClaims.admin = false;
-        } else if (targetRole === 'admin') {
-            newClaims.admin = true;
-            newClaims.system_owner = false;
-            newClaims.system_admin = false;
-            newClaims.organization_owner = false;
-            newClaims.owner = false;
-        } else {
-            // للأدوار الأخرى، تنظيف جميع الصلاحيات الإدارية
-            newClaims.system_owner = false;
-            newClaims.system_admin = false;
-            newClaims.organization_owner = false;
-            newClaims.admin = false;
-            newClaims.owner = false;
-        }
-
-        // الحفاظ على معلومات المؤسسة إذا كانت موجودة
-        const currentClaims = userRecord.customClaims || {};
-        if (currentClaims.organizationId) {
-            newClaims.organizationId = currentClaims.organizationId;
-        }
-        if (currentClaims.departmentId) {
-            newClaims.departmentId = currentClaims.departmentId;
-        }
-        if (currentClaims.name) {
-            newClaims.name = currentClaims.name;
-        }
-
-        // تطبيق الـ claims الجديدة
-        await admin.auth().setCustomUserClaims(uid, newClaims);
-        console.log(`Successfully updated claims for user ${uid}:`, newClaims);
-
-        // تحديث بيانات Firestore أيضاً
-        try {
-            const userDocRef = db.collection('users').doc(uid);
-            const userDoc = await userDocRef.get();
-
-            if (userDoc.exists) {
-                await userDocRef.update({
-                    role: targetRole,
-                    accountType: accountType,
-                    isSystemOwner: targetRole === 'system_owner',
-                    isSystemAdmin: targetRole === 'system_admin' || targetRole === 'system_owner',
-                    isOrganizationOwner: targetRole === 'organization_owner',
-                    isAdmin: targetRole === 'admin' || targetRole === 'system_admin' || targetRole === 'system_owner',
-                    isOwner: targetRole === 'owner' || targetRole === 'system_owner' || targetRole === 'organization_owner',
-                    isIndividualAdmin: targetRole === 'individual_admin',
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
-                });
-                console.log(`Updated Firestore document for user ${uid}`);
-            }
-        } catch (firestoreError) {
-            console.warn(`Failed to update Firestore for user ${uid}:`, firestoreError);
-        }
-
-        return {
-            result: `تم إصلاح صلاحيات المستخدم ${uid} بنجاح إلى دور ${targetRole}`,
-            newClaims: newClaims
-        };
-
-    } catch (error: any) {
-        console.error(`Error in ${functionName}:`, error);
-        if (error instanceof functions.https.HttpsError) {
-            throw error;
-        }
-        throw new functions.https.HttpsError(
-            "internal",
-            `فشل إصلاح الصلاحيات: ${error.message || 'خطأ داخلي غير معروف.'}`
-        );
-    }
-});
+// تم حذف دالة fixUserPermissions - لم تعد مطلوبة
 
 /**
  * Checks if the calling user is an authenticated admin.
@@ -173,282 +32,69 @@ export const fixUserPermissions = createCallableFunction<FixUserPermissionsReque
 const ensureAdmin = (context: LegacyCallableContext) => {
     // 1. Check if the user is authenticated
     if (!context.auth) {
-        console.error("Authorization Error: Request must be made by an authenticated user.");
+        console.error("❌ Authorization Error: Request must be made by an authenticated user.");
         throw new functions.https.HttpsError(
             "unauthenticated",
             "The function must be called while authenticated."
         );
     }
-    // 2. Check if the calling user has the 'admin' custom claim set to true
-    if (context.auth.token.admin !== true) {
-        console.error(`Authorization Error: User ${context.auth.uid} is not an admin (admin claim not true). Claims:`, context.auth.token);
+
+    console.log(`🔍 Checking admin permissions for user ${context.auth.uid}`);
+    console.log(`🔍 User token:`, JSON.stringify(context.auth.token, null, 2));
+
+    // 2. التحقق الشامل من جميع أنواع الصلاحيات الإدارية
+    const token = context.auth.token || {};
+
+    // الصلاحيات الجديدة
+    const isSystemOwner = token.system_owner === true;
+    const isSystemAdmin = token.system_admin === true;
+    const isOrganizationOwner = token.organization_owner === true;
+    const isIndividualAdmin = token.individual_admin === true;
+
+    // الصلاحيات القديمة للتوافق
+    const isLegacyAdmin = token.admin === true;
+    const isOwner = token.owner === true;
+
+    // التحقق من الدور النصي
+    const role = token.role;
+    const adminRoles = ['system_owner', 'system_admin', 'organization_owner', 'org_admin', 'individual_admin'];
+    const isAdminByRole = role && adminRoles.includes(role);
+
+    console.log(`🔍 Admin check results:`);
+    console.log(`  - isSystemOwner: ${isSystemOwner}`);
+    console.log(`  - isSystemAdmin: ${isSystemAdmin}`);
+    console.log(`  - isOrganizationOwner: ${isOrganizationOwner}`);
+    console.log(`  - isIndividualAdmin: ${isIndividualAdmin}`);
+    console.log(`  - isLegacyAdmin: ${isLegacyAdmin}`);
+    console.log(`  - isOwner: ${isOwner}`);
+    console.log(`  - role: ${role}`);
+    console.log(`  - isAdminByRole: ${isAdminByRole}`);
+
+    // التحقق من وجود أي صلاحية إدارية
+    const hasAdminPermission = isSystemOwner || isSystemAdmin || isOrganizationOwner ||
+                              isIndividualAdmin || isLegacyAdmin || isOwner || isAdminByRole;
+
+    if (!hasAdminPermission) {
+        console.error(`❌ Authorization Error: User ${context.auth.uid} is not an admin.`);
+        console.error(`❌ Available claims:`, Object.keys(token));
+        console.error(`❌ Token values:`, token);
         throw new functions.https.HttpsError(
             "permission-denied",
-            "Must be an administrative user with the 'admin' claim set to true to perform this action."
+            `ليس لديك صلاحيات إدارية. الأدوار المطلوبة: system_owner, system_admin, organization_owner, org_admin, أو individual_admin. دورك الحالي: ${role || 'غير محدد'}`
         );
     }
-    console.log(`Authorization Success: User ${context.auth.uid} is an admin.`);
+
+    console.log(`✅ Authorization Success: User ${context.auth.uid} is an admin with role: ${role}`);
 };
 
-/**
- * نوع بيانات طلب تعيين دور المسؤول
- */
-interface SetAdminRoleRequest {
-    uid: string;
-    isAdmin: boolean;
-}
+// تم حذف setOwnerRole و setAdminRole - لم تعد مطلوبة
 
-/**
- * نوع بيانات طلب تعيين دور المالك
- */
-interface SetOwnerRoleRequest {
-    uid: string;
-    isOwner: boolean;
-}
-
-/**
- * Sets a custom claim on a user account to designate them as an admin.
- * Requires the caller to be an admin.
- *
- * @param {SetAdminRoleRequest} data The data passed to the function.
- * @returns {Promise<{result?: string, error?: string}>} Result or error message.
- */
-// Callable function version (updated for v6)
-/**
- * دالة مساعدة للتحقق من أن المستخدم مالك
- */
-const ensureOwner = (context: LegacyCallableContext) => {
-    if (!context.auth) {
-        console.error('Authorization Failed: No auth context provided.');
-        throw new functions.https.HttpsError(
-            'unauthenticated',
-            'يجب تسجيل الدخول للوصول إلى هذه الوظيفة.'
-        );
-    }
-
-    // التحقق من وجود خاصية owner
-    if (!context.auth.token.owner) {
-        console.error(`Authorization Failed: User ${context.auth.uid} is not an owner.`);
-        throw new functions.https.HttpsError(
-            'permission-denied',
-            'يجب أن تكون مالكًا للوصول إلى هذه الوظيفة.'
-        );
-    }
-    console.log(`Authorization Success: User ${context.auth.uid} is an owner.`);
-};
-
-/**
- * تعيين دور المالك لمستخدم
- * يتطلب أن يكون المستدعي مالكًا
- */
-export const setOwnerRole = createCallableFunction<SetOwnerRoleRequest>(async (request) => {
-    const functionName = 'setOwnerRole';
-    console.log(`--- ${functionName} Cloud Function triggered ---`);
-    console.log(`${functionName} called with data:`, request.data);
-
-    try {
-        // تحويل request إلى LegacyCallableContext
-        const context: LegacyCallableContext = {
-            auth: request.auth ? {
-                uid: request.auth.uid,
-                token: request.auth.token
-            } : undefined,
-            rawRequest: request.rawRequest
-        };
-        ensureOwner(context); // التحقق من أن المستدعي مالك
-
-        const { uid, isOwner } = request.data;
-        if (!uid || typeof uid !== "string") {
-            console.error(`${functionName} error: Invalid UID provided.`);
-            throw new functions.https.HttpsError("invalid-argument", "يجب توفير معرف مستخدم صالح.");
-        }
-        if (typeof isOwner !== 'boolean') {
-            console.error(`${functionName} error: Invalid isOwner status provided.`);
-            throw new functions.https.HttpsError("invalid-argument", "يجب توفير حالة مالك صالحة (صحيح/خطأ).");
-        }
-
-        console.log(`Attempting to set owner=${isOwner} for user ${uid} by owner ${request.auth?.uid}`);
-
-        // الحصول على معلومات المستخدم الحالية
-        const userRecord = await admin.auth().getUser(uid);
-        const currentClaims = userRecord.customClaims || {};
-
-        // تعيين خاصية owner مع الحفاظ على الخصائص الأخرى
-        const newClaims: Record<string, any> = {
-            ...currentClaims
-        };
-
-        if (isOwner) {
-            newClaims.owner = true;
-            newClaims.admin = true; // إذا كان المستخدم مالكًا، نجعله مسؤولًا أيضًا
-        } else {
-            // إزالة خاصية owner إذا كانت موجودة
-            if ('owner' in newClaims) {
-                delete newClaims.owner;
-            }
-        }
-
-        await admin.auth().setCustomUserClaims(uid, newClaims);
-
-        console.log(`Successfully set owner=${isOwner} for user ${uid}.`);
-        return { result: `تم تعيين دور المالك=${isOwner} للمستخدم ${uid} بنجاح.` };
-    } catch (error: any) {
-        console.error(`Error in ${functionName} for user ${request.data.uid}:`, error);
-        if (error instanceof functions.https.HttpsError) {
-            throw error; // Re-throw HttpsErrors directly
-        }
-        // Log the specific internal error before throwing a generic one
-        console.error(`Detailed error in ${functionName}:`, error.message, error.stack);
-        throw new functions.https.HttpsError(
-            "internal",
-            `فشل تعيين دور المالك: ${error.message || 'خطأ داخلي غير معروف.'}`
-        );
-    }
-});
-
-export const setAdminRole = createCallableFunction<SetAdminRoleRequest>(async (request) => {
-    const functionName = 'setAdminRole';
-    console.log(`--- ${functionName} Cloud Function triggered ---`);
-    console.log(`${functionName} called with data:`, request.data);
-
-    try {
-        // تحويل request إلى LegacyCallableContext
-        const context: LegacyCallableContext = {
-            auth: request.auth ? {
-                uid: request.auth.uid,
-                token: request.auth.token
-            } : undefined,
-            rawRequest: request.rawRequest
-        };
-
-        // التحقق من أن المستدعي مالك أو مسؤول
-        // فقط المالك يمكنه تعيين مسؤولين جدد
-        if (context.auth?.token.owner) {
-            console.log(`Authorization Success: User ${context.auth.uid} is an owner.`);
-        } else {
-            ensureAdmin(context); // Verify caller is admin
-
-            // التحقق من أن المسؤول لا يحاول تعيين مستخدم آخر كمسؤول
-            if (request.data.isAdmin) {
-                console.error(`Authorization Failed: User ${context.auth?.uid} is not an owner and cannot set admin roles.`);
-                throw new functions.https.HttpsError(
-                    'permission-denied',
-                    'فقط المالك يمكنه تعيين مسؤولين جدد.'
-                );
-            }
-        }
-
-        const { uid, isAdmin } = request.data;
-        if (!uid || typeof uid !== "string") {
-            console.error(`${functionName} error: Invalid UID provided.`);
-            throw new functions.https.HttpsError("invalid-argument", "A valid user ID (UID) must be provided.");
-        }
-        if (typeof isAdmin !== 'boolean') {
-            console.error(`${functionName} error: Invalid isAdmin status provided.`);
-            throw new functions.https.HttpsError("invalid-argument", "A valid admin status (boolean) must be provided.");
-        }
-
-        console.log(`Attempting to set admin=${isAdmin} for user ${uid} by admin ${request.auth?.uid}`);
-
-        // الحصول على معلومات المستخدم الحالية
-        const userRecord = await admin.auth().getUser(uid);
-        const currentClaims = userRecord.customClaims || {};
-
-        // تعيين خاصية admin مع الحفاظ على الخصائص الأخرى
-        const newClaims: Record<string, any> = {
-            ...currentClaims
-        };
-
-        if (isAdmin) {
-            newClaims.admin = true;
-        } else {
-            // إزالة خاصية admin إذا كانت موجودة
-            if ('admin' in newClaims) {
-                delete newClaims.admin;
-            }
-        }
-
-        await admin.auth().setCustomUserClaims(uid, newClaims);
-
-        console.log(`Successfully set admin=${isAdmin} for user ${uid}.`);
-        return { result: `Successfully set admin=${isAdmin} for user ${uid}.` };
-
-    } catch (error: any) {
-        console.error(`Error in ${functionName} for user ${request.data.uid}:`, error);
-        if (error instanceof functions.https.HttpsError) {
-            throw error; // Re-throw HttpsErrors directly
-        }
-        // Log the specific internal error before throwing a generic one
-        console.error(`Detailed error in ${functionName}:`, error.message, error.stack);
-        throw new functions.https.HttpsError(
-            "internal",
-            `Failed to set admin role: ${error.message || 'Unknown internal server error.'}`
-        );
-    }
-});
+// تم حذف setAdminRole - لن نحتاجها مع النظام الجديد
 
 // HTTP version with CORS support - تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
 // export const setAdminRoleHttp = createHttpFunction(...);
 
-/**
- * نوع بيانات طلب تعيين حالة تعطيل المستخدم
- */
-interface SetUserDisabledStatusRequest {
-    uid: string;
-    disabled: boolean;
-}
-
-/**
- * Sets the disabled status of a user account.
- * Requires the caller to be an admin.
- *
- * @param {SetUserDisabledStatusRequest} data The data passed to the function.
- * @returns {Promise<{result?: string, error?: string}>} Result or error message.
- */
-// Callable function version (updated for v6)
-export const setUserDisabledStatus = createCallableFunction<SetUserDisabledStatusRequest>(async (request) => {
-    const functionName = 'setUserDisabledStatus';
-    console.log(`--- ${functionName} Cloud Function triggered ---`);
-    console.log(`${functionName} called with data:`, request.data);
-
-    try {
-        // تحويل request إلى LegacyCallableContext
-        const context: LegacyCallableContext = {
-            auth: request.auth ? {
-                uid: request.auth.uid,
-                token: request.auth.token
-            } : undefined,
-            rawRequest: request.rawRequest
-        };
-        ensureAdmin(context); // Verify caller is admin
-
-        const { uid, disabled } = request.data;
-        if (!uid || typeof uid !== "string") {
-            console.error(`${functionName} error: Invalid UID provided.`);
-            throw new functions.https.HttpsError("invalid-argument", "A valid user ID (UID) must be provided.");
-        }
-        if (typeof disabled !== "boolean") {
-            console.error(`${functionName} error: Invalid disabled status provided.`);
-            throw new functions.https.HttpsError("invalid-argument", "A valid disabled status (boolean) must be provided.");
-        }
-
-        console.log(`Attempting to set disabled=${disabled} for user ${uid} by admin ${request.auth?.uid}`);
-        await admin.auth().updateUser(uid, { disabled });
-        console.log(`Successfully set disabled=${disabled} for user ${uid}.`);
-        return { result: `Successfully set disabled=${disabled} for user ${uid}.` };
-
-    } catch (error: any) {
-        console.error(`Error in ${functionName} for user ${request.data.uid}:`, error);
-        if (error instanceof functions.https.HttpsError) {
-            throw error;
-        }
-        console.error(`Detailed error in ${functionName}:`, error.message, error.stack);
-        throw new functions.https.HttpsError(
-            "internal",
-            `Failed to set disabled status: ${error.message || 'Unknown internal server error.'}`
-        );
-    }
-});
+// تم حذف setUserDisabledStatus - لم تعد مطلوبة
 
 // HTTP version with CORS support - تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
 // export const setUserDisabledStatusHttp = createHttpFunction(...);
@@ -474,8 +120,13 @@ interface CreateUserRequest {
  */
 export const createUser = createCallableFunction<CreateUserRequest>(async (request) => {
     const functionName = 'createUser';
-    console.log(`--- ${functionName} Cloud Function triggered ---`);
-    console.log(`${functionName} called with data:`, request.data);
+    console.log(`🚀 --- ${functionName} Cloud Function triggered ---`);
+    console.log(`🚀 ${functionName} called with data:`, request.data);
+    console.log(`🚀 ${functionName} auth context:`, request.auth ? 'Present' : 'Missing');
+    if (request.auth) {
+        console.log(`🚀 ${functionName} user ID:`, request.auth.uid);
+        console.log(`🚀 ${functionName} token keys:`, Object.keys(request.auth.token || {}));
+    }
 
     try {
         // تحويل request إلى LegacyCallableContext
@@ -488,7 +139,7 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
         };
         ensureAdmin(context); // Verify caller is admin
 
-        const { email, password, name, role, accountType, organizationId, departmentId } = request.data;
+        let { email, password, name, role, accountType, organizationId, departmentId } = request.data;
         // Basic input validation
         if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             console.error(`${functionName} error: Invalid email provided.`);
@@ -510,15 +161,23 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
         }
 
         // إذا كان نوع الحساب فردي، نتأكد من أن الدور هو 'independent'
-        if (accountType === 'individual' && role !== 'independent' && role !== 'owner' && role !== 'admin' && role !== 'individual_admin') {
+        if (accountType === 'individual' && role !== 'independent' && role !== 'system_owner' && role !== 'system_admin' && role !== 'individual_admin') {
             console.log(`${functionName}: Changing role from '${role}' to 'independent' for individual account type`);
+            role = 'independent';  // تحديث المتغير المحلي أيضاً
             request.data.role = 'independent';
         }
 
-        // التحقق من أن المستدعي مالك إذا كان يحاول إنشاء مستخدم بدور مالك أو مسؤول
-        if ((role === 'owner' || role === 'admin') && !context.auth?.token.owner) {
-            console.error(`${functionName} error: Only owners can create owner or admin users.`);
-            throw new functions.https.HttpsError("permission-denied", "فقط المالك يمكنه إنشاء مستخدمين بدور مالك أو مسؤول.");
+        // التحقق من أن المستدعي مالك النظام إذا كان يحاول إنشاء مستخدم بدور مالك أو مسؤول
+        console.log(`${functionName} DEBUG: Checking system owner permissions`);
+        console.log(`${functionName} DEBUG: role = ${role}`);
+        console.log(`${functionName} DEBUG: context.auth?.token.system_owner = ${context.auth?.token.system_owner}`);
+        console.log(`${functionName} DEBUG: context.auth?.token.role = ${context.auth?.token.role}`);
+        console.log(`${functionName} DEBUG: Full token:`, JSON.stringify(context.auth?.token, null, 2));
+
+        if ((role === 'system_owner' || role === 'system_admin') && !context.auth?.token.system_owner) {
+            console.error(`${functionName} error: Only system owners can create system owner or admin users.`);
+            console.error(`${functionName} error: Current user token:`, JSON.stringify(context.auth?.token, null, 2));
+            throw new functions.https.HttpsError("permission-denied", "فقط مالك النظام يمكنه إنشاء مستخدمين بدور مالك أو مسؤول النظام.");
         }
 
         // Validate account type
@@ -534,23 +193,23 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
             throw new functions.https.HttpsError("invalid-argument", "Organization ID is required for organization accounts.");
         }
 
-        // التحقق من وجود البريد الإلكتروني مسبقاً
+        // التحقق من وجود البريد الإلكتروني مسبقاً - إصلاح المنطق
         try {
             const existingUser = await admin.auth().getUserByEmail(email);
-            if (existingUser) {
-                console.error(`${functionName} error: Email ${email} already exists with UID ${existingUser.uid}`);
-                throw new functions.https.HttpsError("already-exists", "فشل إنشاء المستخدم: البريد الإلكتروني مستخدم بالفعل.");
-            }
+            // إذا وصلنا هنا، فالمستخدم موجود بالفعل
+            console.error(`${functionName} error: Email ${email} already exists with UID ${existingUser.uid}`);
+            throw new functions.https.HttpsError("already-exists", "فشل إنشاء المستخدم: البريد الإلكتروني مستخدم بالفعل.");
         } catch (error: any) {
             if (error.code === 'auth/user-not-found') {
                 // البريد الإلكتروني غير موجود، يمكن المتابعة
                 console.log(`${functionName}: Email ${email} is available for new user creation`);
             } else if (error instanceof functions.https.HttpsError) {
-                // إعادة رمي الخطأ إذا كان من النوع المطلوب
+                // إعادة رمي الخطأ إذا كان من النوع المطلوب (مثل already-exists)
                 throw error;
             } else {
-                // خطأ آخر في التحقق، نسجله ونتابع
-                console.warn(`${functionName}: Error checking email existence, proceeding with creation:`, error);
+                // خطأ آخر في التحقق، نرمي خطأ عام
+                console.error(`${functionName}: Unexpected error checking email existence:`, error);
+                throw new functions.https.HttpsError("internal", "خطأ في التحقق من البريد الإلكتروني");
             }
         }
 
@@ -559,18 +218,19 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
         const userRecord = await admin.auth().createUser({ email, password, displayName: userName });
         console.log(`User ${email} created with UID ${userRecord.uid}.`);
 
-        // تعيين الخصائص حسب الدور والنوع
+        // تعيين الخصائص حسب الدور والنوع (النظام الموحد)
         const customClaims: Record<string, any> = {
             role,
             accountType,
-
-            // الأدوار الجديدة
             system_owner: role === 'system_owner',
             system_admin: role === 'system_admin',
             organization_owner: role === 'organization_owner',
-            admin: role === 'admin',
-            owner: role === 'owner',
-            individual_admin: role === 'individual_admin'
+            org_admin: role === 'org_admin',
+            org_supervisor: role === 'org_supervisor',
+            org_engineer: role === 'org_engineer',
+            org_technician: role === 'org_technician',
+            org_assistant: role === 'org_assistant',
+            independent: role === 'independent'
         };
 
         // إضافة معلومات المؤسسة إذا كان نوع الحساب مؤسسة
@@ -588,7 +248,12 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
             system_owner: customClaims.system_owner,
             system_admin: customClaims.system_admin,
             organization_owner: customClaims.organization_owner,
-            admin: customClaims.admin
+            org_admin: customClaims.org_admin,
+            org_supervisor: customClaims.org_supervisor,
+            org_engineer: customClaims.org_engineer,
+            org_technician: customClaims.org_technician,
+            org_assistant: customClaims.org_assistant,
+            independent: customClaims.independent
         });
 
         await admin.auth().setCustomUserClaims(userRecord.uid, customClaims);
@@ -610,13 +275,16 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
             disabled: false,
             customPermissions: [],                   // ✅ إضافة customPermissions
 
-            // الأدوار الجديدة
+            // الأدوار (النظام الموحد)
             isSystemOwner: role === 'system_owner',
             isSystemAdmin: role === 'system_admin',
             isOrganizationOwner: role === 'organization_owner',
-            isAdmin: role === 'admin',
-            isOwner: role === 'owner',
-            isIndividualAdmin: role === 'individual_admin'
+            isOrgAdmin: role === 'org_admin',
+            isOrgSupervisor: role === 'org_supervisor',
+            isOrgEngineer: role === 'org_engineer',
+            isOrgTechnician: role === 'org_technician',
+            isOrgAssistant: role === 'org_assistant',
+            isIndependent: role === 'independent'
         };
 
         if (accountType === 'individual') {
@@ -668,10 +336,395 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
     }
 });
 
-// HTTP version with CORS support - تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
-// export const createUserHttp = createHttpFunction(async (req, res) => {
-//     // Function body removed to reduce resource usage
-// });
+// ===== دالة واحدة شاملة للتحكم الديناميكي =====
+export const dynamicFunctionControl = createHttpFunction<any>(async (request) => {
+    const functionName = 'dynamicFunctionControl';
+    console.log(`🚀 --- ${functionName} triggered ---`);
+    console.log(`🚀 Request data:`, request.data);
+
+    try {
+        const { action, targetFunction, userData, config } = request.data;
+
+        // التحقق من الصلاحيات
+        const context: LegacyCallableContext = {
+            auth: request.auth ? {
+                uid: request.auth.uid,
+                token: request.auth.token
+            } : undefined,
+            rawRequest: request.rawRequest
+        };
+        ensureAdmin(context);
+
+        // الحصول على إعدادات الدالة من Django
+        const functionConfig = await getFunctionConfig(targetFunction || 'createUser');
+
+        console.log(`🔧 Function config for ${targetFunction}:`, functionConfig);
+
+        switch (action) {
+            case 'createUser':
+                return await handleCreateUser(request, functionConfig);
+
+            case 'updateUser':
+                return await handleUpdateUser(request, functionConfig);
+
+            case 'deleteUser':
+                return await handleDeleteUser(request, functionConfig);
+
+            case 'listUsers':
+                return await handleListUsers(request, functionConfig);
+
+            case 'toggleFunction':
+                return await handleToggleFunction(targetFunction, functionConfig);
+
+            case 'getConfig':
+                return { config: functionConfig };
+
+            default:
+                throw new functions.https.HttpsError("invalid-argument", `Unknown action: ${action}`);
+        }
+
+    } catch (error: any) {
+        console.error(`Error in ${functionName}:`, error);
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
+        throw new functions.https.HttpsError("internal", error.message || 'Unknown error');
+    }
+});
+
+// دالة مساعدة للحصول على إعدادات الدالة من Django
+async function getFunctionConfig(functionName: string) {
+    try {
+        // محاولة الحصول من Django API
+        const response = await fetch(`http://localhost:8000/api/firebase-config/${functionName}/`);
+        if (response.ok) {
+            return await response.json();
+        }
+    } catch (error) {
+        console.log('Could not fetch from Django, using defaults');
+    }
+
+    // إعدادات افتراضية آمنة
+    return {
+        function_type: 'callable',
+        is_enabled: true,
+        cors_enabled: false,
+        require_auth: true,
+        admin_only: true,
+        security_level: 'high',
+        security_warnings: [],
+        security_score: 50
+    };
+}
+
+// معالج إنشاء المستخدم
+async function handleCreateUser(request: any, config: any) {
+    if (!config.is_enabled) {
+        throw new functions.https.HttpsError("failed-precondition", "دالة إنشاء المستخدم معطلة حالياً");
+    }
+
+    console.log(`🔒 Security level: ${config.security_level}, Score: ${config.security_score}`);
+
+    let { email, password, name, role, accountType, organizationId, departmentId } = request.data.userData || request.data;
+
+    // التحقق من صحة البيانات
+    if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        throw new functions.https.HttpsError("invalid-argument", "A valid email must be provided.");
+    }
+    if (!password || typeof password !== "string" || password.length < 6) {
+        throw new functions.https.HttpsError("invalid-argument", "A valid password (at least 6 characters) must be provided.");
+    }
+
+    const validRoles = ['system_owner', 'system_admin', 'organization_owner', 'org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant', 'independent'];
+    if (!validRoles.includes(role)) {
+        throw new functions.https.HttpsError("invalid-argument", `A valid role must be provided. Valid roles are: ${validRoles.join(', ')}`);
+    }
+
+    // التحقق من وجود البريد الإلكتروني
+    try {
+        const existingUser = await admin.auth().getUserByEmail(email);
+        throw new functions.https.HttpsError("already-exists", "فشل إنشاء المستخدم: البريد الإلكتروني مستخدم بالفعل.");
+    } catch (error: any) {
+        if (error.code !== 'auth/user-not-found') {
+            throw error;
+        }
+    }
+
+    // إنشاء المستخدم
+    const userName = name || email.split('@')[0] || 'مستخدم';
+    const userRecord = await admin.auth().createUser({ email, password, displayName: userName });
+
+    // تعيين الخصائص
+    const customClaims: Record<string, any> = {
+        role,
+        accountType: accountType || 'individual',
+        system_owner: role === 'system_owner',
+        system_admin: role === 'system_admin',
+        organization_owner: role === 'organization_owner',
+        admin: ['system_owner', 'system_admin', 'organization_owner'].includes(role),
+        owner: ['system_owner', 'organization_owner'].includes(role)
+    };
+
+    await admin.auth().setCustomUserClaims(userRecord.uid, customClaims);
+
+    // حفظ في Firestore
+    const completeUserData = {
+        uid: userRecord.uid,
+        name: userName,
+        email: email,
+        displayName: userName,
+        role: role,
+        accountType: accountType || 'individual',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdBy: request.auth?.uid,
+        disabled: false,
+        isSystemOwner: role === 'system_owner',
+        isSystemAdmin: role === 'system_admin',
+        isAdmin: ['system_owner', 'system_admin', 'organization_owner'].includes(role),
+        isOwner: ['system_owner', 'organization_owner'].includes(role)
+    };
+
+    await db.collection('users').doc(userRecord.uid).set(completeUserData);
+
+    console.log(`✅ Successfully created user ${email} (UID: ${userRecord.uid}) with role '${role}'`);
+    return { uid: userRecord.uid, message: `تم إنشاء المستخدم بنجاح` };
+}
+
+// معالج تحديث المستخدم
+async function handleUpdateUser(request: any, config: any) {
+    if (!config.is_enabled) {
+        throw new functions.https.HttpsError("failed-precondition", "دالة تحديث المستخدم معطلة حالياً");
+    }
+
+    const { uid, updates } = request.data;
+
+    if (!uid) {
+        throw new functions.https.HttpsError("invalid-argument", "User UID is required");
+    }
+
+    // تحديث في Firebase Auth إذا لزم الأمر
+    if (updates.email || updates.password || updates.displayName) {
+        const authUpdates: any = {};
+        if (updates.email) authUpdates.email = updates.email;
+        if (updates.password) authUpdates.password = updates.password;
+        if (updates.displayName) authUpdates.displayName = updates.displayName;
+
+        await admin.auth().updateUser(uid, authUpdates);
+    }
+
+    // تحديث Custom Claims
+    if (updates.role) {
+        const customClaims = {
+            role: updates.role,
+            system_owner: updates.role === 'system_owner',
+            system_admin: updates.role === 'system_admin',
+            admin: ['system_owner', 'system_admin', 'organization_owner'].includes(updates.role)
+        };
+        await admin.auth().setCustomUserClaims(uid, customClaims);
+    }
+
+    // تحديث في Firestore
+    const firestoreUpdates = {
+        ...updates,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedBy: request.auth?.uid
+    };
+
+    await db.collection('users').doc(uid).update(firestoreUpdates);
+
+    return { success: true, message: 'تم تحديث المستخدم بنجاح' };
+}
+
+// معالج حذف المستخدم
+async function handleDeleteUser(request: any, config: any) {
+    if (!config.is_enabled) {
+        throw new functions.https.HttpsError("failed-precondition", "دالة حذف المستخدم معطلة حالياً");
+    }
+
+    const { uid } = request.data;
+
+    if (!uid) {
+        throw new functions.https.HttpsError("invalid-argument", "User UID is required");
+    }
+
+    // حذف من Firebase Auth
+    await admin.auth().deleteUser(uid);
+
+    // حذف من Firestore
+    await db.collection('users').doc(uid).delete();
+
+    return { success: true, message: 'تم حذف المستخدم بنجاح' };
+}
+
+// معالج عرض المستخدمين
+async function handleListUsers(request: any, config: any) {
+    if (!config.is_enabled) {
+        throw new functions.https.HttpsError("failed-precondition", "دالة عرض المستخدمين معطلة حالياً");
+    }
+
+    const { limit = 100, pageToken } = request.data;
+
+    const listUsersResult = await admin.auth().listUsers(limit, pageToken);
+
+    return {
+        users: listUsersResult.users.map(user => ({
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            disabled: user.disabled,
+            customClaims: user.customClaims
+        })),
+        pageToken: listUsersResult.pageToken
+    };
+}
+
+// معالج تبديل حالة الدالة
+async function handleToggleFunction(functionName: string, config: any) {
+    // هذا سيتم تنفيذه في Django
+    return {
+        success: true,
+        message: `Function ${functionName} toggle request received`,
+        current_config: config
+    };
+}
+
+// دالة HTTP للتطوير - لحل مشاكل CORS (مبسطة)
+export const createUserHttp = createHttpFunction<CreateUserRequest>(async (request) => {
+    const functionName = 'createUserHttp';
+    console.log(`🚀 --- ${functionName} HTTP Function triggered ---`);
+    console.log(`🚀 ${functionName} called with data:`, request.data);
+    console.log(`🚀 ${functionName} auth context:`, request.auth ? 'Present' : 'Missing');
+    if (request.auth) {
+        console.log(`🚀 ${functionName} user ID:`, request.auth.uid);
+        console.log(`🚀 ${functionName} token keys:`, Object.keys(request.auth.token || {}));
+    }
+
+    try {
+        // تحويل request إلى LegacyCallableContext
+        const context: LegacyCallableContext = {
+            auth: request.auth ? {
+                uid: request.auth.uid,
+                token: request.auth.token
+            } : undefined,
+            rawRequest: request.rawRequest
+        };
+        ensureAdmin(context); // Verify caller is admin
+
+        let { email, password, name, role, accountType, organizationId, departmentId } = request.data;
+
+        // Basic input validation
+        if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            console.error(`${functionName} error: Invalid email provided.`);
+            throw new functions.https.HttpsError("invalid-argument", "A valid email must be provided.");
+        }
+        if (!password || typeof password !== "string" || password.length < 6) {
+            console.error(`${functionName} error: Invalid password provided (must be at least 6 characters).`);
+            throw new functions.https.HttpsError("invalid-argument", "A valid password (at least 6 characters) must be provided.");
+        }
+
+        const validRoles = ['system_owner', 'system_admin', 'organization_owner', 'org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant', 'independent'];
+        if (!validRoles.includes(role)) {
+            console.error(`${functionName} error: Invalid role provided. Must be one of: ${validRoles.join(', ')}.`);
+            throw new functions.https.HttpsError("invalid-argument", `A valid role must be provided. Valid roles are: ${validRoles.join(', ')}`);
+        }
+
+        // إذا كان نوع الحساب فردي، نتأكد من أن الدور هو 'independent'
+        if (accountType === 'individual' && role !== 'independent' && role !== 'system_owner' && role !== 'system_admin' && role !== 'individual_admin') {
+            console.log(`${functionName}: Changing role from '${role}' to 'independent' for individual account type`);
+            role = 'independent';
+            request.data.role = 'independent';
+        }
+
+        // Validate account type
+        const validAccountTypes = ['individual', 'organization'];
+        if (!accountType || !validAccountTypes.includes(accountType)) {
+            console.error(`${functionName} error: Invalid account type provided. Must be one of: ${validAccountTypes.join(', ')}.`);
+            throw new functions.https.HttpsError("invalid-argument", `A valid account type must be provided. Valid types are: ${validAccountTypes.join(', ')}`);
+        }
+
+        // التحقق من وجود البريد الإلكتروني مسبقاً
+        try {
+            const existingUser = await admin.auth().getUserByEmail(email);
+            console.error(`${functionName} error: Email ${email} already exists with UID ${existingUser.uid}`);
+            throw new functions.https.HttpsError("already-exists", "فشل إنشاء المستخدم: البريد الإلكتروني مستخدم بالفعل.");
+        } catch (error: any) {
+            if (error.code === 'auth/user-not-found') {
+                console.log(`${functionName}: Email ${email} is available for new user creation`);
+            } else if (error instanceof functions.https.HttpsError) {
+                throw error;
+            } else {
+                console.error(`${functionName}: Unexpected error checking email existence:`, error);
+                throw new functions.https.HttpsError("internal", "خطأ في التحقق من البريد الإلكتروني");
+            }
+        }
+
+        console.log(`Attempting to create user ${email} by admin ${request.auth?.uid}`);
+        const userName = name || (email ? email.split('@')[0] : '') || 'مستخدم';
+        const userRecord = await admin.auth().createUser({ email, password, displayName: userName });
+        console.log(`User ${email} created with UID ${userRecord.uid}.`);
+
+        // تعيين الخصائص حسب الدور والنوع
+        const customClaims: Record<string, any> = {
+            role,
+            accountType,
+            system_owner: role === 'system_owner',
+            system_admin: role === 'system_admin',
+            organization_owner: role === 'organization_owner',
+            org_admin: role === 'org_admin',
+            org_supervisor: role === 'org_supervisor',
+            org_engineer: role === 'org_engineer',
+            org_technician: role === 'org_technician',
+            org_assistant: role === 'org_assistant',
+            independent: role === 'independent'
+        };
+
+        await admin.auth().setCustomUserClaims(userRecord.uid, customClaims);
+
+        // Save user data in Firestore
+        const completeUserData = {
+            uid: userRecord.uid,
+            name: userName,
+            email: email,
+            displayName: userName,
+            role: role,
+            accountType: accountType,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdBy: request.auth?.uid,
+            disabled: false,
+            customPermissions: [],
+            isSystemOwner: role === 'system_owner',
+            isSystemAdmin: role === 'system_admin',
+            isOrganizationOwner: role === 'organization_owner',
+            isOrgAdmin: role === 'org_admin',
+            isOrgSupervisor: role === 'org_supervisor',
+            isOrgEngineer: role === 'org_engineer',
+            isOrgTechnician: role === 'org_technician',
+            isOrgAssistant: role === 'org_assistant',
+            isIndependent: role === 'independent'
+        };
+
+        await db.collection('users').doc(userRecord.uid).set(completeUserData);
+        console.log(`Successfully created user ${email} (UID: ${userRecord.uid}) with role '${role}'.`);
+
+        return { uid: userRecord.uid };
+
+    } catch (error: any) {
+        console.error(`Error creating user ${request.data.email}:`, error);
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
+        let clientErrorMessage = `Failed to create user: ${error.message || 'Unknown internal server error.'}`;
+        if (error.code === 'auth/email-already-exists') {
+            clientErrorMessage = 'فشل إنشاء المستخدم: البريد الإلكتروني مستخدم بالفعل.';
+        } else if (error.code === 'auth/invalid-password') {
+            clientErrorMessage = 'فشل إنشاء المستخدم: كلمة المرور غير صالحة (يجب أن تكون 6 أحرف على الأقل).';
+        }
+        console.error(`Detailed error in ${functionName}:`, error.message, error.stack);
+        throw new functions.https.HttpsError("internal", clientErrorMessage);
+    }
+});
 
 
 /**
@@ -810,3 +863,5 @@ export {
 } from './organization';
 
 // وظائف المصادقة والذكاء الاصطناعي تم تصديرها بالفعل في بداية الملف
+
+// تم حذف جميع النسخ HTTP - نستخدم Callable Functions فقط

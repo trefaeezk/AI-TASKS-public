@@ -4,10 +4,6 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import cors from 'cors';
-
-// تكوين CORS
-export const corsHandler = cors({ origin: true });
 
 /**
  * نوع بديل لـ CallableContext من Firebase Functions v1
@@ -45,10 +41,23 @@ export function createCallableFunction<T = any, R = any>(
   const region = options.region || 'us-central1';
   const requireAuth = options.requireAuth !== false; // افتراضياً true إلا إذا تم تحديده صراحةً كـ false
   // Ensure maxInstances is set to 10 by default for callable functions
-  const runWithOptions = { maxInstances: 10, ...options.runWith };
+  const runWithOptions = {
+    maxInstances: 10,
+    cors: true, // إضافة دعم CORS
+    ...options.runWith
+  };
 
   return functions.region(region).runWith(runWithOptions).https.onCall(async (data, context) => {
     try {
+      // إضافة headers للـ CORS
+      if (context.rawRequest && context.rawRequest.res) {
+        const res = context.rawRequest.res;
+        res.set('Access-Control-Allow-Origin', '*');
+        res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        res.set('Access-Control-Max-Age', '3600');
+      }
+
       // التحقق من المصادقة إذا كانت مطلوبة
       if (requireAuth && !context.auth) {
         throw new functions.https.HttpsError(
@@ -87,53 +96,98 @@ export function createCallableFunction<T = any, R = any>(
 }
 
 /**
- * إنشاء دالة Firebase HTTP بالصيغة الجديدة (v6+)
- *
- * @param handler دالة المعالجة
- * @param options خيارات الدالة (اختياري)
- * @returns دالة Firebase HTTP
+ * إنشاء دالة HTTP مع دعم CORS للتطوير
+ * تستخدم فقط في بيئة التطوير لحل مشاكل CORS
  */
-export function createHttpFunction(
-  handler: (req: functions.https.Request, res: any, userId?: string) => Promise<void> | void,
+export function createHttpFunction<T = any, R = any>(
+  handler: (request: CallableRequest<T>) => Promise<R> | R,
   options: { region?: string; requireAuth?: boolean; runWith?: functions.RuntimeOptions } = {}
 ) {
   const region = options.region || 'us-central1';
-  const requireAuth = options.requireAuth !== false; // افتراضياً true إلا إذا تم تحديده صراحةً كـ false
-  // Ensure maxInstances is set to 10 by default for HTTP functions
+  const requireAuth = options.requireAuth !== false;
   const runWithOptions = { maxInstances: 10, ...options.runWith };
 
   return functions.region(region).runWith(runWithOptions).https.onRequest(async (req, res) => {
-    // التعامل مع CORS
-    return corsHandler(req, res, async () => {
-      try {
-        // التحقق من المصادقة إذا كانت مطلوبة
-        let userId: string | undefined;
+    // إعداد CORS
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Firebase-Instance-ID-Token');
+    res.set('Access-Control-Max-Age', '3600');
 
-        if (requireAuth) {
-          const authHeader = req.headers.authorization;
-          if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            res.status(401).send({ error: 'يجب توفير رمز المصادقة.' });
-            return;
-          }
+    // التعامل مع preflight requests
+    if (req.method === 'OPTIONS') {
+      res.status(204).send('');
+      return;
+    }
 
-          const idToken = authHeader.split('Bearer ')[1];
-          try {
-            const decodedToken = await admin.auth().verifyIdToken(idToken);
-            userId = decodedToken.uid;
-          } catch (error) {
-            res.status(401).send({ error: 'رمز المصادقة غير صالح.' });
+    try {
+      // التحقق من طريقة الطلب
+      if (req.method !== 'POST') {
+        res.status(405).json({ error: 'Method not allowed' });
+        return;
+      }
+
+      // استخراج البيانات من الطلب
+      const data = req.body?.data || req.body;
+
+      // محاولة استخراج معلومات المصادقة من headers
+      let auth: any = undefined;
+      const authHeader = req.headers.authorization;
+
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+          const token = authHeader.substring(7);
+          const decodedToken = await admin.auth().verifyIdToken(token);
+          auth = {
+            uid: decodedToken.uid,
+            token: decodedToken
+          };
+        } catch (error) {
+          console.error('Error verifying token:', error);
+          if (requireAuth) {
+            res.status(401).json({ error: 'Unauthorized' });
             return;
           }
         }
+      }
 
-        // تنفيذ الدالة
-        await handler(req, res, userId);
-      } catch (error: any) {
-        console.error('Error in HTTP function:', error);
-        res.status(500).send({
-          error: error.message || 'حدث خطأ داخلي غير معروف.'
+      // التحقق من المصادقة إذا كانت مطلوبة
+      if (requireAuth && !auth) {
+        res.status(401).json({ error: 'Authentication required' });
+        return;
+      }
+
+      // إنشاء كائن request
+      const request: CallableRequest<T> = {
+        data: data,
+        auth: auth,
+        rawRequest: req
+      };
+
+      // تنفيذ الدالة
+      const result = await handler(request);
+
+      // إرجاع النتيجة
+      res.status(200).json({ data: result });
+
+    } catch (error: any) {
+      console.error('Error in HTTP function:', error);
+
+      if (error instanceof functions.https.HttpsError) {
+        res.status(400).json({
+          error: {
+            code: error.code,
+            message: error.message
+          }
+        });
+      } else {
+        res.status(500).json({
+          error: {
+            code: 'internal',
+            message: error.message || 'Internal server error'
+          }
         });
       }
-    });
+    }
   });
 }

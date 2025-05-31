@@ -5,7 +5,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { db, ensureAuthenticated } from '../shared/utils';
-import { v1Functions } from '../shared/v1-compatibility';
+// تم حذف v1-compatibility - لم يعد مطلوب
 import { createCallableFunction } from '../shared/function-utils';
 import { CallableRequest } from '../shared/types';
 
@@ -200,9 +200,8 @@ export const approveOrganizationRequest = createCallableFunction<ApproveOrganiza
         // تعيين المستخدم كمالك في المؤسسة مع تحديد نوع الحساب ومعرف المؤسسة
         const newClaims = {
             ...requesterClaims,
-            role: 'owner',
-            admin: true, // إضافة صلاحية المسؤول
-            owner: true, // إضافة صلاحية المالك
+            role: 'organization_owner',
+            organization_owner: true, // النظام الجديد
             accountType: 'organization',
             organizationId
         };

@@ -4,12 +4,12 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import cors from 'cors';
+// تم حذف cors - لم يعد مطلوب
 import { db } from '../shared/utils';
 import { validateInput, logFunctionStart, logFunctionEnd, logFunctionError } from '../shared/logging-utils';
 import { ensureOrgAdmin, ensureOrgMembership, ensureCanInviteToOrganization } from './utils';
 import { createCallableFunction } from '../shared/function-utils';
-import { v1Functions } from '../shared/v1-compatibility';
+// تم حذف v1-compatibility - لم يعد مطلوب
 
 // تصدير وظائف طلبات إنشاء المؤسسات
 export * from './requests';
@@ -45,8 +45,7 @@ export {
   exportOkrToExcel
 } from './okrStats';
 
-// تكوين CORS
-const corsHandler = cors({ origin: true });
+// تم حذف CORS - لم يعد مطلوب
 
 /**
  * نوع بيانات طلب إنشاء مؤسسة جديدة

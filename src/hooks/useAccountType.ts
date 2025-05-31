@@ -7,8 +7,6 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { db } from '@/config/firebase';
-import { doc, getDoc } from 'firebase/firestore';
 
 export type AccountType = 'individual' | 'organization' | 'loading' | null;
 
@@ -24,70 +22,60 @@ export interface UseAccountTypeResult {
 
 /**
  * خطاف للتحقق من نوع الحساب (فردي أو مؤسسة)
+ * يستخدم Custom Claims بدلاً من Firestore للحصول على استجابة أسرع
  *
  * @returns {UseAccountTypeResult} معلومات حول نوع الحساب
  */
 export function useAccountType(): UseAccountTypeResult {
-  const { user } = useAuth();
+  const { user, userClaims, loading: authLoading } = useAuth();
   const [accountType, setAccountType] = useState<AccountType>('loading');
   const [organizationId, setOrganizationId] = useState<string | undefined>(undefined);
   const [departmentId, setDepartmentId] = useState<string | undefined>(undefined);
   const [error, setError] = useState<Error | undefined>(undefined);
 
   useEffect(() => {
-    if (!user) {
-      console.log('[useAccountType] No user, setting accountType to null');
-      setAccountType(null);
+    if (authLoading) {
+      console.log('[useAccountType] Auth still loading, waiting...');
+      setAccountType('loading');
       return;
     }
 
-    console.log('[useAccountType] Fetching account type for user:', user.uid);
+    if (!user) {
+      console.log('[useAccountType] No user, setting accountType to null');
+      setAccountType(null);
+      setOrganizationId(undefined);
+      setDepartmentId(undefined);
+      setError(undefined);
+      return;
+    }
 
-    const fetchAccountType = async () => {
-      try {
-        // التحقق من وثيقة المستخدم
-        console.log('[useAccountType] Checking users collection for user:', user.uid);
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
+    console.log('[useAccountType] Checking account type from userClaims:', userClaims);
 
-        if (!userDoc.exists()) {
-          console.log('[useAccountType] User document not found in users collection');
+    // استخدام Custom Claims للحصول على نوع الحساب بسرعة
+    if (userClaims) {
+      console.log('[useAccountType] Using userClaims for account type:', userClaims.accountType);
 
-          // التحقق من وثيقة المستخدم في مجموعة individuals
-          console.log('[useAccountType] Checking individuals collection for user:', user.uid);
-          const individualDoc = await getDoc(doc(db, 'individuals', user.uid));
+      const claimsAccountType = userClaims.accountType || 'individual';
+      setAccountType(claimsAccountType);
+      setOrganizationId(userClaims.organizationId);
+      setDepartmentId(userClaims.departmentId);
+      setError(undefined);
+    } else {
+      // إذا لم تكن Custom Claims متوفرة بعد، نحاول تحديث البيانات
+      console.log('[useAccountType] No userClaims available, trying to refresh...');
 
-          if (individualDoc.exists()) {
-            console.log('[useAccountType] User found in individuals collection, setting accountType to individual');
-            setAccountType('individual');
-          } else {
-            console.log('[useAccountType] User not found in any collection, setting accountType to null');
-            setAccountType(null);
-          }
-          return;
-        }
-
-        const userData = userDoc.data();
-        console.log('[useAccountType] User data:', userData);
-
-        // التحقق من وجود حقل organizationId
-        if (userData.organizationId) {
-          console.log('[useAccountType] User has organizationId, setting accountType to organization');
-          setAccountType('organization');
-          setOrganizationId(userData.organizationId);
-          setDepartmentId(userData.departmentId);
-        } else {
-          console.log('[useAccountType] User has no organizationId, setting accountType to individual');
+      // إعطاء وقت قصير للـ Auth Context لتحديث البيانات
+      const timeout = setTimeout(() => {
+        if (!userClaims) {
+          console.log('[useAccountType] Still no userClaims after timeout, defaulting to individual');
           setAccountType('individual');
+          setError(undefined);
         }
-      } catch (err) {
-        console.error('[useAccountType] Error fetching account type:', err);
-        setError(err instanceof Error ? err : new Error(String(err)));
-        setAccountType(null);
-      }
-    };
+      }, 3000); // 3 ثوانٍ timeout
 
-    fetchAccountType();
-  }, [user]);
+      return () => clearTimeout(timeout);
+    }
+  }, [user, userClaims, authLoading]);
 
   return {
     accountType,

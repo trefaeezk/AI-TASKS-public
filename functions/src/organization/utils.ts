@@ -56,8 +56,8 @@ export const hasOrganizationRole = async (
         const memberData = memberDoc.data();
         const userRole = memberData?.role;
 
-        // ترتيب الأدوار من الأعلى إلى الأدنى
-        const roleHierarchy = ['admin', 'engineer', 'supervisor', 'technician', 'assistant', 'user'];
+        // ترتيب الأدوار من الأعلى إلى الأدنى (النظام الموحد)
+        const roleHierarchy = ['organization_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
 
         // التحقق من أن دور المستخدم أعلى من أو يساوي الدور المطلوب
         const userRoleIndex = roleHierarchy.indexOf(userRole);
@@ -132,7 +132,10 @@ export const ensureOrgAdmin = async (context: LegacyCallableContext, orgId: stri
     const memberDoc = await db.collection('organizations').doc(orgId)
         .collection('members').doc(uid).get();
 
-    if (!memberDoc.exists || memberDoc.data()?.role !== 'admin') {
+    const memberData = memberDoc.data();
+    const isOrgAdmin = memberData?.role === 'organization_owner' || memberData?.role === 'org_admin';
+
+    if (!memberDoc.exists || !isOrgAdmin) {
         throw new functions.https.HttpsError(
             'permission-denied',
             'يجب أن تكون مديرًا في المؤسسة للوصول إلى هذه الوظيفة.'

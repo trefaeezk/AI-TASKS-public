@@ -54,20 +54,35 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
         // Force refresh to get the latest claims
         const idTokenResult = await user.getIdTokenResult(true); // FORCE REFRESH = TRUE
         console.log('[AdminProtectedRoute] User Claims:', idTokenResult.claims); // Log claims
-        // التحقق من دور المالك أو المسؤول (النظام الجديد والقديم)
-        const userIsSystemOwner = idTokenResult.claims.system_owner === true;
-        const userIsSystemAdmin = idTokenResult.claims.system_admin === true;
-        const userIsOwner = idTokenResult.claims.owner === true;
-        const userIsAdmin = idTokenResult.claims.admin === true;
+        // التحقق من الأدوار الموحدة حسب الهيكلة المتفق عليها
+        const userRole = idTokenResult.claims.role;
 
-        // دعم كلا النظامين
-        const hasOwnerAccess = userIsSystemOwner || userIsOwner;
-        const hasAdminAccess = userIsSystemAdmin || userIsAdmin;
+        // أدوار النظام العامة (المستوى 1-2)
+        const userIsSystemOwner = userRole === 'system_owner' || idTokenResult.claims.system_owner === true;
+        const userIsSystemAdmin = userRole === 'system_admin' || idTokenResult.claims.system_admin === true;
+
+        // أدوار المؤسسات (المستوى 3-8)
+        const userIsOrganizationOwner = userRole === 'organization_owner' || idTokenResult.claims.organization_owner === true;
+        const userIsOrgAdmin = userRole === 'org_admin' || idTokenResult.claims.org_admin === true;
+        const userIsOrgSupervisor = userRole === 'org_supervisor' || idTokenResult.claims.org_supervisor === true;
+        const userIsOrgEngineer = userRole === 'org_engineer' || idTokenResult.claims.org_engineer === true;
+        const userIsOrgTechnician = userRole === 'org_technician' || idTokenResult.claims.org_technician === true;
+        const userIsOrgAssistant = userRole === 'org_assistant' || idTokenResult.claims.org_assistant === true;
+
+        // النظام الموحد - تحديد مستويات الوصول
+        const hasOwnerAccess = userIsSystemOwner;
+        const hasAdminAccess = userIsSystemAdmin || userIsOrganizationOwner ||
+                               userIsOrgAdmin || userIsOrgSupervisor || userIsOrgEngineer ||
+                               userIsOrgTechnician || userIsOrgAssistant;
 
         console.log('[AdminProtectedRoute] System Owner:', userIsSystemOwner);
         console.log('[AdminProtectedRoute] System Admin:', userIsSystemAdmin);
-        console.log('[AdminProtectedRoute] Legacy Owner:', userIsOwner);
-        console.log('[AdminProtectedRoute] Legacy Admin:', userIsAdmin);
+        console.log('[AdminProtectedRoute] Organization Owner:', userIsOrganizationOwner);
+        console.log('[AdminProtectedRoute] Org Admin:', userIsOrgAdmin);
+        console.log('[AdminProtectedRoute] Org Supervisor:', userIsOrgSupervisor);
+        console.log('[AdminProtectedRoute] Org Engineer:', userIsOrgEngineer);
+        console.log('[AdminProtectedRoute] Org Technician:', userIsOrgTechnician);
+        console.log('[AdminProtectedRoute] Org Assistant:', userIsOrgAssistant);
         console.log('[AdminProtectedRoute] Has Owner Access:', hasOwnerAccess);
         console.log('[AdminProtectedRoute] Has Admin Access:', hasAdminAccess);
         setIsAdmin(hasAdminAccess);

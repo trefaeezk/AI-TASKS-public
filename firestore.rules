@@ -1,9 +1,125 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // قواعد مؤقتة مبسطة - السماح لجميع المستخدمين المسجلين
+
+    // ===== دوال مساعدة =====
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserToken() {
+      return request.auth.token;
+    }
+
+    // التحقق من مالك النظام
+    function isSystemOwner() {
+      return isAuthenticated() && (
+        getUserToken().system_owner == true ||
+        getUserToken().role == 'system_owner'
+      );
+    }
+
+    // التحقق من أدمن النظام
+    function isSystemAdmin() {
+      return isAuthenticated() && (
+        getUserToken().system_admin == true ||
+        getUserToken().role == 'system_admin'
+      );
+    }
+
+    // التحقق من مالك المؤسسة
+    function isOrganizationOwner() {
+      return isAuthenticated() && (
+        getUserToken().organization_owner == true ||
+        getUserToken().role == 'organization_owner'
+      );
+    }
+
+    // التحقق من أدوار المؤسسات
+    function isOrgAdmin() {
+      return isAuthenticated() && getUserToken().role == 'org_admin';
+    }
+
+    function isOrgSupervisor() {
+      return isAuthenticated() && getUserToken().role == 'org_supervisor';
+    }
+
+    function isOrgEngineer() {
+      return isAuthenticated() && getUserToken().role == 'org_engineer';
+    }
+
+    function isOrgTechnician() {
+      return isAuthenticated() && getUserToken().role == 'org_technician';
+    }
+
+    function isOrgAssistant() {
+      return isAuthenticated() && getUserToken().role == 'org_assistant';
+    }
+
+    // التحقق من صلاحيات النظام العليا
+    function hasSystemAccess() {
+      return isSystemOwner() || isSystemAdmin();
+    }
+
+    // التحقق من صلاحيات إدارية عامة (النظام الموحد)
+    function hasAdminAccess() {
+      return hasSystemAccess() || isOrganizationOwner() ||
+             isOrgAdmin() || isOrgSupervisor() || isOrgEngineer() ||
+             isOrgTechnician() || isOrgAssistant();
+    }
+
+    // ===== قواعد فئات المهام =====
+    match /taskCategories/{categoryId} {
+      // السماح للجميع بالقراءة
+      allow read: if isAuthenticated();
+
+      // السماح للأدمن بالكتابة
+      allow write: if hasAdminAccess();
+    }
+
+    // ===== قواعد المستخدمين =====
+    match /users/{userId} {
+      // قراءة البيانات الشخصية
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId || hasAdminAccess()
+      );
+
+      // كتابة البيانات الشخصية
+      allow write: if isAuthenticated() && (
+        request.auth.uid == userId || hasAdminAccess()
+      );
+    }
+
+    // ===== قواعد المهام =====
+    match /tasks/{taskId} {
+      allow read, write: if isAuthenticated() && (
+        hasAdminAccess() ||
+        resource.data.createdBy == request.auth.uid ||
+        resource.data.assignedTo == request.auth.uid
+      );
+    }
+
+    // ===== قواعد المؤسسات =====
+    match /organizations/{orgId} {
+      allow read: if isAuthenticated() && (
+        hasSystemAccess() ||
+        getUserToken().organizationId == orgId
+      );
+
+      allow write: if hasSystemAccess() || isOrganizationOwner();
+    }
+
+    // ===== إعدادات النظام =====
+    match /system/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if hasSystemAccess();
+    }
+
+    // ===== قواعد عامة للمجموعات الأخرى =====
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      // قاعدة احتياطية - السماح للمستخدمين المسجلين بالقراءة والأدمن بالكتابة
+      allow read: if isAuthenticated();
+      allow write: if hasAdminAccess();
     }
   }
 }

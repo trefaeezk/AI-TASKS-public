@@ -1,9 +1,0 @@
-{
-  "projects": {
-    "default": "tasks-intelligence",
-    "organization": "tasks-intelligence",
-    "test": "tasks-intelligence"
-  },
-  "targets": {},
-  "etags": {}
-}

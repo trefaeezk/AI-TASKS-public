@@ -4,15 +4,11 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import cors from 'cors';
 import { db } from '../shared/utils';
 import { ensureUserOwnership } from './utils';
 import { PermissionKey } from '../shared/permissions';
 import { createCallableFunction } from '../shared/function-utils';
-import { v1Functions } from '../shared/v1-compatibility';
-
-// تكوين CORS
-const corsHandler = cors({ origin: true });
+// تم حذف v1-compatibility و CORS - لم يعودا مطلوبين
 
 /**
  * نوع بيانات طلب إنشاء مستخدم فردي

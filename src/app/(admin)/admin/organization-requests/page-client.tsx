@@ -43,10 +43,10 @@ export default function OrganizationRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  // التحقق من أن المستخدم مالك النظام أو مدير النظام
+  // التحقق من أن المستخدم مالك النظام أو مدير النظام (النظام الجديد فقط)
   const isSystemOwner = userClaims?.system_owner === true;
   const isSystemAdmin = userClaims?.system_admin === true;
-  const isOwner = isSystemOwner || isSystemAdmin || userClaims?.owner === true || userClaims?.admin === true;
+  const isOwner = isSystemOwner || isSystemAdmin;
 
   // طباعة معلومات المستخدم للتصحيح
   console.log('User Claims:', userClaims);
@@ -233,34 +233,7 @@ export default function OrganizationRequestsPage() {
               </ul>
 
               <div className="mt-4 space-y-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    try {
-                      // استدعاء دالة تعيين المستخدم كمالك
-                      const functions = getFunctions();
-                      const setOwnerRoleFunction = httpsCallable(functions, 'setOwnerRole');
-                      await setOwnerRoleFunction({ uid: user?.uid, isOwner: true });
-
-                      toast({
-                        title: 'تم تعيين نفسك كمالك',
-                        description: 'تم تعيينك كمالك بنجاح. يرجى تسجيل الخروج وإعادة تسجيل الدخول لتفعيل الصلاحيات الجديدة.',
-                      });
-                    } catch (error) {
-                      console.error('Error setting owner role:', error);
-                      toast({
-                        title: 'خطأ',
-                        description: 'حدث خطأ أثناء تعيين نفسك كمالك',
-                        variant: 'destructive',
-                      });
-                    }
-                  }}
-                  className="w-full"
-                >
-                  <ShieldCheck className="ml-1.5 h-4 w-4" />
-                  تعيين نفسي كمالك
-                </Button>
+                {/* تم حذف زر setOwnerRole - غير مطلوب */}
 
                 <Button
                   variant="outline"

@@ -132,12 +132,13 @@ const DocumentationPage: React.FC<DocumentationPageProps> = ({
     console.log('User claims:', userClaims);
 
     if (doc.requiredPermission === 'owner') {
-      const hasAccess = userClaims?.owner === true;
+      const hasAccess = userClaims?.system_owner === true;
       console.log('Owner permission check:', hasAccess);
       return hasAccess;
     }
     if (doc.requiredPermission === 'admin') {
-      const hasAccess = userClaims?.admin === true || userClaims?.owner === true;
+      const hasAccess = userClaims?.system_admin === true || userClaims?.system_owner === true ||
+                       userClaims?.organization_owner === true || userClaims?.individual_admin === true;
       console.log('Admin permission check:', hasAccess);
       return hasAccess;
     }

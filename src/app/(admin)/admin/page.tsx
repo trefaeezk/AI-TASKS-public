@@ -45,16 +45,18 @@ export default function AdminDashboard() {
   });
   const [loading, setLoading] = useState(true);
 
-  // التحقق من صلاحيات المستخدم
-  const isSystemOwner = userClaims?.system_owner === true || userClaims?.owner === true;
-  const isSystemAdmin = userClaims?.system_admin === true || userClaims?.admin === true;
-  const canViewUsers = hasPermission('users.view') || isSystemOwner || isSystemAdmin;
+  // التحقق من صلاحيات المستخدم (النظام الجديد فقط)
+  const isSystemOwner = userClaims?.system_owner === true;
+  const isSystemAdmin = userClaims?.system_admin === true;
+  const isOrganizationOwner = userClaims?.organization_owner === true;
+  const isIndividualAdmin = userClaims?.individual_admin === true;
+  const canViewUsers = hasPermission('users.view') || isSystemOwner || isSystemAdmin || isOrganizationOwner || isIndividualAdmin;
   const canManageData = hasPermission('data.view') || isSystemOwner || isSystemAdmin;
 
   // جلب إحصائيات النظام
   useEffect(() => {
     const fetchStats = async () => {
-      if (!user || (!isSystemOwner && !isSystemAdmin)) {
+      if (!user || (!isSystemOwner && !isSystemAdmin && !isOrganizationOwner && !isIndividualAdmin)) {
         setLoading(false);
         return;
       }
