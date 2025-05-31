@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Play, CheckCircle, XCircle } from 'lucide-react';
 import { functions } from '@/lib/firebase';
-import { getSmartFirebaseService } from '@/services/smartFirebaseService';
+import { httpsCallable } from 'firebase/functions';
 import { useAuth } from '@/hooks/use-auth';
 
 interface TestStep {
@@ -84,52 +84,45 @@ export function CreateUserTest() {
       // Step 4: Call createUser function using Smart Service
       updateStep('استدعاء createUser', 'running');
 
-      console.log('🧪 Testing createUser with Smart Firebase Service:', testData);
+      console.log('🧪 Testing createUserHttp directly:', testData);
 
       try {
-        // استخدام الخدمة الذكية
-        const smartService = getSmartFirebaseService(functions);
+        // استخدام createUserHttp مباشرة
+        const createUserFn = httpsCallable(functions, 'createUserHttp');
 
-        // الحصول على إعدادات الدالة أولاً
-        const config = await smartService.getFunctionConfig('createUser');
-        console.log('🔧 Function config:', config);
-
-        updateStep('فحص إعدادات الدالة', 'success', `نوع الدالة: ${config.function_type}, مستوى الأمان: ${config.security_level}`, config);
+        updateStep('فحص إعدادات الدالة', 'success', 'استخدام createUserHttp مباشرة');
 
         // استدعاء الدالة
-        const result = await smartService.createUser(testData);
+        const result = await createUserFn(testData);
 
-        console.log('🧪 Smart createUser result:', result);
+        console.log('🧪 createUserHttp result:', result);
 
-        updateStep('استدعاء createUser', 'success', 'تم استدعاء الدالة بنجاح عبر الخدمة الذكية', {
-          data: result,
-          config: config
+        updateStep('استدعاء createUserHttp', 'success', 'تم استدعاء الدالة بنجاح', {
+          data: result.data
         });
 
         // Step 5: Analyze result
         updateStep('تحليل النتيجة', 'running');
 
-        if (result.error) {
-          updateStep('تحليل النتيجة', 'error', `خطأ من الدالة: ${result.error}`, result);
-        } else if (result.uid) {
-          updateStep('تحليل النتيجة', 'success', `✅ تم إنشاء المستخدم بنجاح: ${result.uid}`, result);
+        if (result.data?.error) {
+          updateStep('تحليل النتيجة', 'error', `خطأ من الدالة: ${result.data.error}`, result.data);
+        } else if (result.data?.uid) {
+          updateStep('تحليل النتيجة', 'success', `✅ تم إنشاء المستخدم بنجاح: ${result.data.uid}`, result.data);
 
           // إضافة خطوة إضافية لعرض التفاصيل
           updateStep('عرض التفاصيل', 'success', `المستخدم: ${testData.email}, الدور: ${testData.role}, النوع: ${testData.accountType}`, {
-            uid: result.uid,
+            uid: result.data.uid,
             email: testData.email,
             role: testData.role,
-            accountType: testData.accountType,
-            securityLevel: config.security_level,
-            functionType: config.function_type
+            accountType: testData.accountType
           });
         } else {
-          updateStep('تحليل النتيجة', 'error', 'نتيجة غير متوقعة من الدالة', result);
+          updateStep('تحليل النتيجة', 'error', 'نتيجة غير متوقعة من الدالة', result.data);
         }
 
       } catch (error: any) {
-        console.error('🧪 Smart createUser error:', error);
-        updateStep('استدعاء createUser', 'error', `فشل استدعاء الدالة: ${error.message}`, {
+        console.error('🧪 createUserHttp error:', error);
+        updateStep('استدعاء createUserHttp', 'error', `فشل استدعاء الدالة: ${error.message}`, {
           error: error.message,
           code: error.code,
           details: error
