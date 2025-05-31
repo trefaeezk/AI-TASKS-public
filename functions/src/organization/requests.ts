@@ -197,14 +197,22 @@ export const approveOrganizationRequest = createCallableFunction<ApproveOrganiza
 
         // تحديث custom claims للمستخدم
         const requesterRecord = await admin.auth().getUser(requestData.userId);
-        const requesterClaims = requesterRecord.customClaims || {};
 
-        // تعيين المستخدم كمالك في المؤسسة (مبسط)
+        // تعيين المستخدم كمالك في المؤسسة (النمط الموحد is* فقط)
         const newClaims = {
-            ...requesterClaims,
             role: 'org_owner',
             accountType: 'organization',
-            organizationId
+            organizationId,
+            // النمط الموحد is* فقط (بدون تكرار)
+            isOrgOwner: true,
+            isSystemOwner: false,
+            isSystemAdmin: false,
+            isOrgAdmin: false,
+            isOrgSupervisor: false,
+            isOrgEngineer: false,
+            isOrgTechnician: false,
+            isOrgAssistant: false,
+            isIndependent: false
         };
 
         console.log(`Setting custom claims for organization creator (${requestData.userId}):`, newClaims);
@@ -219,11 +227,22 @@ export const approveOrganizationRequest = createCallableFunction<ApproveOrganiza
                 name: requesterRecord.displayName || '',
                 email: requesterRecord.email,
                 role: 'org_owner',
-                isOwner: true,
-                isAdmin: true,
+                // الأدوار المنطقية الجديدة فقط
+                isOrgOwner: true,
+                isSystemOwner: false,
+                isSystemAdmin: false,
+                isOrgAdmin: false,
+                isOrgSupervisor: false,
+                isOrgEngineer: false,
+                isOrgTechnician: false,
+                isOrgAssistant: false,
+                isIndependent: false,
+                isOrgMember: false,
                 accountType: 'organization',
                 organizationId,
                 organizationName: organizationData.name,
+                customPermissions: [],
+                disabled: false,
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp()
             });
@@ -231,11 +250,29 @@ export const approveOrganizationRequest = createCallableFunction<ApproveOrganiza
         } else {
             await userDocRef.update({
                 role: 'org_owner',
-                isOwner: true,
-                isAdmin: true,
+                // الأدوار المنطقية الجديدة فقط
+                isOrgOwner: true,
+                isSystemOwner: false,
+                isSystemAdmin: false,
+                isOrgAdmin: false,
+                isOrgSupervisor: false,
+                isOrgEngineer: false,
+                isOrgTechnician: false,
+                isOrgAssistant: false,
+                isIndependent: false,
+                isOrgMember: false,
                 accountType: 'organization',
                 organizationId,
                 organizationName: organizationData.name,
+                // حذف الأدوار القديمة والصلاحيات المخزنة
+                isAdmin: admin.firestore.FieldValue.delete(),
+                isOwner: admin.firestore.FieldValue.delete(),
+                canManageSystem: admin.firestore.FieldValue.delete(),
+                canManageUsers: admin.firestore.FieldValue.delete(),
+                canManageOrganization: admin.firestore.FieldValue.delete(),
+                canManageProjects: admin.firestore.FieldValue.delete(),
+                canViewReports: admin.firestore.FieldValue.delete(),
+                canCreateTasks: admin.firestore.FieldValue.delete(),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp()
             });
             console.log(`Updated user document for organization creator (${requestData.userId})`);

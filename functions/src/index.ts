@@ -45,28 +45,27 @@ const ensureAdmin = (context: LegacyCallableContext) => {
     // 2. التحقق الشامل من جميع أنواع الصلاحيات الإدارية
     const token = context.auth.token || {};
 
-    // الصلاحيات الجديدة
-    const isSystemOwner = token.system_owner === true;
-    const isSystemAdmin = token.system_admin === true;
-    const isOrgOwner = token.org_owner === true;
-    const isIndividualAdmin = token.individual_admin === true;
+    // النمط الموحد is* فقط (بدون تكرار)
+    const isSystemOwner = token.isSystemOwner === true;
+    const isSystemAdmin = token.isSystemAdmin === true;
+    const isOrgOwner = token.isOrgOwner === true;
+    const isOrgAdmin = token.isOrgAdmin === true;
 
     // التحقق من الدور النصي
     const role = token.role;
-    const adminRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'individual_admin'];
+    const adminRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
     const isAdminByRole = role && adminRoles.includes(role);
 
-    console.log(`🔍 Admin check results:`);
+    console.log(`🔍 Admin check results (النمط الموحد):`);
     console.log(`  - isSystemOwner: ${isSystemOwner}`);
     console.log(`  - isSystemAdmin: ${isSystemAdmin}`);
     console.log(`  - isOrgOwner: ${isOrgOwner}`);
-    console.log(`  - isIndividualAdmin: ${isIndividualAdmin}`);
+    console.log(`  - isOrgAdmin: ${isOrgAdmin}`);
     console.log(`  - role: ${role}`);
     console.log(`  - isAdminByRole: ${isAdminByRole}`);
 
-    // التحقق من وجود أي صلاحية إدارية (الأدوار الجديدة فقط)
-    const hasAdminPermission = isSystemOwner || isSystemAdmin || isOrgOwner ||
-                              isIndividualAdmin || isAdminByRole;
+    // التحقق من وجود أي صلاحية إدارية (النمط الموحد)
+    const hasAdminPermission = isSystemOwner || isSystemAdmin || isOrgOwner || isOrgAdmin || isAdminByRole;
 
     if (!hasAdminPermission) {
         console.error(`❌ Authorization Error: User ${context.auth.uid} is not an admin.`);
@@ -405,29 +404,21 @@ export const createUserHttp = createHttpFunction<CreateUserRequest>(async (reque
         const userRecord = await admin.auth().createUser({ email, password, displayName: userName });
         console.log(`User ${email} created with UID ${userRecord.uid}.`);
 
-        // تعيين الخصائص حسب الدور والنوع (الصلاحيات الجديدة)
+        // تعيين الخصائص حسب الدور والنوع (النمط الموحد is* فقط)
         const customClaims: Record<string, any> = {
             role,
             accountType,
             name: userName,
-            // Boolean flags للأدوار
-            system_owner: role === 'system_owner',
-            system_admin: role === 'system_admin',
-            org_owner: role === 'org_owner',
-            org_admin: role === 'org_admin',
-            org_supervisor: role === 'org_supervisor',
-            org_engineer: role === 'org_engineer',
-            org_technician: role === 'org_technician',
-            org_assistant: role === 'org_assistant',
-            independent: role === 'independent',
-            // الصلاحيات الجديدة
-            canManageSystem: role === 'system_owner',
-            canManageUsers: ['system_owner', 'system_admin'].includes(role),
-            canManageOrganization: ['system_owner', 'system_admin', 'org_owner'].includes(role),
-            canManageProjects: ['system_owner', 'system_admin', 'org_owner', 'org_admin'].includes(role),
-            canViewReports: ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer'].includes(role),
-            canCreateTasks: !['org_assistant'].includes(role),
-            isOrgMember: ['org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'].includes(role),
+            // النمط الموحد is* فقط (بدون تكرار)
+            isSystemOwner: role === 'system_owner',
+            isSystemAdmin: role === 'system_admin',
+            isOrgOwner: role === 'org_owner',
+            isOrgAdmin: role === 'org_admin',
+            isOrgSupervisor: role === 'org_supervisor',
+            isOrgEngineer: role === 'org_engineer',
+            isOrgTechnician: role === 'org_technician',
+            isOrgAssistant: role === 'org_assistant',
+            isIndependent: role === 'independent',
             disabled: false
         };
 

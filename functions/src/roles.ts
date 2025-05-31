@@ -89,17 +89,15 @@ export const ensureAdminHttp = async (req: functions.https.Request): Promise<str
     // التحقق من الأدوار الموحدة حسب الهيكلة المتفق عليها
     const userRole = decodedToken.role;
 
-    // أدوار النظام العامة (المستوى 1-2)
-    const isSystemOwner = userRole === 'system_owner' || decodedToken.system_owner === true;
-    const isSystemAdmin = userRole === 'system_admin' || decodedToken.system_admin === true;
-
-    // أدوار المؤسسات (المستوى 3-8)
-    const isOrgOwner = userRole === 'org_owner' || decodedToken.org_owner === true;
-    const isOrgAdmin = userRole === 'org_admin';
-    const isOrgSupervisor = userRole === 'org_supervisor';
-    const isOrgEngineer = userRole === 'org_engineer';
-    const isOrgTechnician = userRole === 'org_technician';
-    const isOrgAssistant = userRole === 'org_assistant';
+    // النمط الموحد is* فقط (بدون تكرار)
+    const isSystemOwner = userRole === 'system_owner' || decodedToken.isSystemOwner === true;
+    const isSystemAdmin = userRole === 'system_admin' || decodedToken.isSystemAdmin === true;
+    const isOrgOwner = userRole === 'org_owner' || decodedToken.isOrgOwner === true;
+    const isOrgAdmin = userRole === 'org_admin' || decodedToken.isOrgAdmin === true;
+    const isOrgSupervisor = userRole === 'org_supervisor' || decodedToken.isOrgSupervisor === true;
+    const isOrgEngineer = userRole === 'org_engineer' || decodedToken.isOrgEngineer === true;
+    const isOrgTechnician = userRole === 'org_technician' || decodedToken.isOrgTechnician === true;
+    const isOrgAssistant = userRole === 'org_assistant' || decodedToken.isOrgAssistant === true;
 
     // التحقق من وجود أي دور إداري
     const hasAdminRole = isSystemOwner || isSystemAdmin || isOrgOwner ||
@@ -151,20 +149,25 @@ export const updateUserRole = createCallableFunction<UpdateUserRoleRequest>(asyn
         const userRecord = await admin.auth().getUser(uid);
         const currentClaims = userRecord.customClaims || {};
 
-        // تحديث Custom Claims مع الأدوار المنطقية الجديدة
+        // تحديث Custom Claims (النمط الموحد is* فقط)
         const newClaims = {
-            ...currentClaims,
             role: role,
-            // تحديث الأدوار المنطقية حسب الدور الجديد
-            system_owner: role === 'system_owner',
-            system_admin: role === 'system_admin',
-            org_owner: role === 'org_owner',
-            org_admin: role === 'org_admin',
-            org_supervisor: role === 'org_supervisor',
-            org_engineer: role === 'org_engineer',
-            org_technician: role === 'org_technician',
-            org_assistant: role === 'org_assistant',
-            independent: role === 'independent'
+            accountType: currentClaims.accountType,
+            organizationId: currentClaims.organizationId,
+            departmentId: currentClaims.departmentId,
+            name: currentClaims.name,
+            // النمط الموحد is* فقط (بدون تكرار)
+            isSystemOwner: role === 'system_owner',
+            isSystemAdmin: role === 'system_admin',
+            isOrgOwner: role === 'org_owner',
+            isOrgAdmin: role === 'org_admin',
+            isOrgSupervisor: role === 'org_supervisor',
+            isOrgEngineer: role === 'org_engineer',
+            isOrgTechnician: role === 'org_technician',
+            isOrgAssistant: role === 'org_assistant',
+            isIndependent: role === 'independent',
+            disabled: currentClaims.disabled || false,
+            customPermissions: currentClaims.customPermissions || []
         };
 
         await admin.auth().setCustomUserClaims(uid, newClaims);
