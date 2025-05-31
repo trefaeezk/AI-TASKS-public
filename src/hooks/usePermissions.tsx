@@ -67,10 +67,10 @@ export function usePermissions() {
       setRole(effectiveRole);
 
       // الحصول على الصلاحيات المخصصة من userClaims أولاً
-      let fetchedCustomPermissions: PermissionKey[] = userClaims.customPermissions || [];
+      let finalCustomPermissions: PermissionKey[] = userClaims.customPermissions || [];
 
       // إذا لم تكن موجودة في claims، جلبها من Firestore
-      if (fetchedCustomPermissions.length === 0) {
+      if (finalCustomPermissions.length === 0) {
         // جميع المستخدمين الآن في مجموعة users الموحدة
         const userDocPath = `users/${user.uid}`;
 
@@ -81,10 +81,10 @@ export function usePermissions() {
           const userData = userDoc.data();
           console.log("[usePermissions] User document data from Firestore:", userData);
           if (userData.customPermissions && Array.isArray(userData.customPermissions)) {
-            setCustomPermissions(userData.customPermissions);
-            console.log("[usePermissions] Custom permissions set:", userData.customPermissions);
+            finalCustomPermissions = userData.customPermissions;
+            console.log("[usePermissions] Custom permissions loaded from Firestore:", finalCustomPermissions);
           } else {
-            setCustomPermissions([]);
+            finalCustomPermissions = [];
             console.log("[usePermissions] No custom permissions in Firestore doc.");
           }
            // التحقق من تطابق الأدوار مع النظام الجديد
@@ -98,17 +98,19 @@ export function usePermissions() {
             }
           }
         } else {
-          setCustomPermissions([]);
+          finalCustomPermissions = [];
           console.log("[usePermissions] User document not found at path:", userDocPath, "No custom permissions loaded.");
         }
         } else {
-          setCustomPermissions([]);
+          finalCustomPermissions = [];
           console.log("[usePermissions] No valid userDocPath, no custom permissions loaded.");
         }
+      } else {
+        console.log("[usePermissions] Custom permissions loaded from Claims:", finalCustomPermissions);
       }
 
-      console.log("[usePermissions] Final custom permissions:", fetchedCustomPermissions);
-      setCustomPermissions(fetchedCustomPermissions);
+      console.log("[usePermissions] Final custom permissions:", finalCustomPermissions);
+      setCustomPermissions(finalCustomPermissions);
 
     } catch (err: any) {
       console.error('[usePermissions] Error in determinePermissions:', err);
@@ -119,17 +121,17 @@ export function usePermissions() {
       console.log("[usePermissions] Finished determinePermissions, setting internalLoading to false.");
       setInternalLoading(false);
     }
-  }, [user, userClaims]); // Removed refreshUserData from dependencies to prevent loops
+  }, [user?.uid, userClaims?.role, userClaims?.customPermissions?.length]); // Specific dependencies to prevent loops
 
   useEffect(() => {
     console.log("[usePermissions] useEffect triggered. authContextLoading:", authContextLoading);
-    if (!authContextLoading) { // Only run if AuthContext is not loading
+    if (!authContextLoading && user && userClaims) { // Only run if AuthContext is not loading and we have data
       determinePermissions();
     } else {
        // If authContext is loading, ensure usePermissions also reflects loading
        if(!internalLoading) setInternalLoading(true);
     }
-  }, [authContextLoading, determinePermissions]);
+  }, [authContextLoading, user?.uid, userClaims?.role]); // Remove determinePermissions from dependencies
 
 
   const getAllPermissions = useCallback((): PermissionKey[] => {
@@ -143,7 +145,7 @@ export function usePermissions() {
     // console.log('[usePermissions] getAllPermissions: Custom permissions =', customPermissions);
 
     if (customPermissions.length === 0) {
-    //   console.log('[usePermissions] getAllPermissions: No custom permissions, returning default permissions');
+      // console.log('[usePermissions] getAllPermissions: No custom permissions, returning default permissions');
       return defaultPerms;
     }
     const allPermissions = [...new Set([...defaultPerms, ...customPermissions])];
@@ -153,13 +155,13 @@ export function usePermissions() {
 
   const hasPermission = useCallback((permissionString: string): boolean => {
     if (authContextLoading || internalLoading || !user) {
-      console.log('[usePermissions] hasPermission: Loading or no user, returning false for', permissionString);
+      // console.log('[usePermissions] hasPermission: Loading or no user, returning false for', permissionString);
       return false;
     }
 
     // التحقق من الأدوار عالية المستوى أولاً
     if (role === 'system_owner' || role === 'system_admin') {
-      console.log(`[usePermissions] hasPermission: User has high-level role '${role}', granting access to '${permissionString}'`);
+      // console.log(`[usePermissions] hasPermission: User has high-level role '${role}', granting access to '${permissionString}'`);
       return true;
     }
 
@@ -171,7 +173,7 @@ export function usePermissions() {
     }
     const key = permissionToKey({ area, action });
     const result = currentAllPermissions.includes(key);
-    console.log(`[usePermissions] hasPermission: Checking '${key}' in [${currentAllPermissions.join(', ')}] -> ${result} (role: ${role})`);
+    // console.log(`[usePermissions] hasPermission: Checking '${key}' in [${currentAllPermissions.join(', ')}] -> ${result} (role: ${role})`);
     return result;
   }, [user, getAllPermissions, authContextLoading, internalLoading, role]);
 

@@ -81,7 +81,7 @@ export function useAccountType(): UseAccountTypeResult {
     accountType,
     isIndividual: accountType === 'individual',
     isOrganization: accountType === 'organization',
-    isLoading: accountType === 'loading',
+    isLoading: authLoading || accountType === null, // إصلاح منطق التحميل
     organizationId,
     departmentId,
     error

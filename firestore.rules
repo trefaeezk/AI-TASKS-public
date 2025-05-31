@@ -68,6 +68,83 @@ service cloud.firestore {
              isOrgTechnician() || isOrgAssistant();
     }
 
+    // ===== الصلاحيات الجديدة =====
+
+    // التحقق من صلاحية إدارة النظام
+    function canManageSystem() {
+      return isAuthenticated() && (
+        getUserToken().canManageSystem == true ||
+        isSystemOwner()
+      );
+    }
+
+    // التحقق من صلاحية إدارة المستخدمين
+    function canManageUsers() {
+      return isAuthenticated() && (
+        getUserToken().canManageUsers == true ||
+        hasSystemAccess()
+      );
+    }
+
+    // التحقق من صلاحية إدارة المؤسسات
+    function canManageOrganization() {
+      return isAuthenticated() && (
+        getUserToken().canManageOrganization == true ||
+        hasSystemAccess() || isOrganizationOwner()
+      );
+    }
+
+    // التحقق من صلاحية إدارة المشاريع
+    function canManageProjects() {
+      return isAuthenticated() && (
+        getUserToken().canManageProjects == true ||
+        hasSystemAccess() || isOrganizationOwner() || isOrgAdmin()
+      );
+    }
+
+    // التحقق من صلاحية عرض التقارير
+    function canViewReports() {
+      return isAuthenticated() && (
+        getUserToken().canViewReports == true ||
+        hasSystemAccess() || isOrganizationOwner() ||
+        isOrgAdmin() || isOrgSupervisor() || isOrgEngineer()
+      );
+    }
+
+    // التحقق من صلاحية إنشاء المهام
+    function canCreateTasks() {
+      return isAuthenticated() && (
+        getUserToken().canCreateTasks == true ||
+        hasSystemAccess() || isOrganizationOwner() ||
+        isOrgAdmin() || isOrgSupervisor() || isOrgEngineer() || isOrgTechnician() ||
+        isIndependent() || // المستخدمون المستقلون يمكنهم إنشاء المهام
+        isIndividualAccount() // أصحاب الحسابات الفردية يمكنهم إنشاء المهام
+      );
+    }
+
+    // التحقق من المستخدم المستقل
+    function isIndependent() {
+      return isAuthenticated() && getUserToken().role == 'independent';
+    }
+
+    // التحقق من نوع الحساب الفردي
+    function isIndividualAccount() {
+      return isAuthenticated() && getUserToken().accountType == 'individual';
+    }
+
+    // التحقق من المستخدم الفردي (دور مستقل أو نوع حساب فردي)
+    function isIndividualUser() {
+      return isIndependent() || isIndividualAccount();
+    }
+
+    // التحقق من الصلاحيات المخصصة
+    function hasCustomPermission(permission) {
+      return isAuthenticated() &&
+        getUserToken().customPermissions != null &&
+        getUserToken().customPermissions is list &&
+        permission in getUserToken().customPermissions;
+    }
+
     // ===== قواعد فئات المهام =====
     match /taskCategories/{categoryId} {
       // السماح للجميع بالقراءة
@@ -81,45 +158,96 @@ service cloud.firestore {
     match /users/{userId} {
       // قراءة البيانات الشخصية
       allow read: if isAuthenticated() && (
-        request.auth.uid == userId || hasAdminAccess()
+        request.auth.uid == userId ||
+        canManageUsers() ||
+        hasCustomPermission('users:view') ||
+        hasAdminAccess()
       );
 
       // كتابة البيانات الشخصية
       allow write: if isAuthenticated() && (
-        request.auth.uid == userId || hasAdminAccess()
+        request.auth.uid == userId ||
+        canManageUsers() ||
+        hasCustomPermission('users:edit') ||
+        hasAdminAccess()
       );
     }
 
     // ===== قواعد المهام =====
     match /tasks/{taskId} {
-      allow read, write: if isAuthenticated() && (
+      // قراءة المهام
+      allow read: if isAuthenticated() && (
+        hasCustomPermission('tasks:view') ||
+        canCreateTasks() ||
         hasAdminAccess() ||
+        isIndependent() || // المستخدمون المستقلون يمكنهم قراءة المهام
         resource.data.createdBy == request.auth.uid ||
         resource.data.assignedTo == request.auth.uid
+      );
+
+      // إنشاء المهام
+      allow create: if isAuthenticated() && (
+        hasCustomPermission('tasks:create') ||
+        canCreateTasks() ||
+        hasAdminAccess() ||
+        isIndependent() // المستخدمون المستقلون يمكنهم إنشاء المهام
+      );
+
+      // تعديل المهام
+      allow update: if isAuthenticated() && (
+        hasCustomPermission('tasks:edit') ||
+        canCreateTasks() ||
+        hasAdminAccess() ||
+        isIndependent() || // المستخدمون المستقلون يمكنهم تعديل المهام
+        resource.data.createdBy == request.auth.uid
+      );
+
+      // حذف المهام
+      allow delete: if isAuthenticated() && (
+        hasCustomPermission('tasks:delete') ||
+        hasAdminAccess() ||
+        isIndependent() || // المستخدمون المستقلون يمكنهم حذف المهام
+        resource.data.createdBy == request.auth.uid
       );
     }
 
     // ===== قواعد المؤسسات =====
     match /organizations/{orgId} {
       allow read: if isAuthenticated() && (
+        canManageOrganization() ||
         hasSystemAccess() ||
         getUserToken().organizationId == orgId
       );
 
-      allow write: if hasSystemAccess() || isOrganizationOwner();
+      allow write: if canManageOrganization() || hasSystemAccess() || isOrganizationOwner();
     }
 
     // ===== إعدادات النظام =====
     match /system/{document=**} {
-      allow read: if isAuthenticated();
-      allow write: if hasSystemAccess();
+      allow read: if isAuthenticated() && (
+        hasCustomPermission('settings:view') ||
+        hasSystemAccess()
+      );
+      allow write: if canManageSystem() || hasSystemAccess();
+    }
+
+    // ===== قواعد خاصة للحسابات الفردية =====
+    match /individualData/{userId} {
+      // أصحاب الحسابات الفردية يمكنهم الوصول لبياناتهم الشخصية
+      allow read, write: if isAuthenticated() && (
+        request.auth.uid == userId && isIndividualAccount()
+      );
     }
 
     // ===== قواعد عامة للمجموعات الأخرى =====
     match /{document=**} {
       // قاعدة احتياطية - السماح للمستخدمين المسجلين بالقراءة والأدمن بالكتابة
-      allow read: if isAuthenticated();
-      allow write: if hasAdminAccess();
+      allow read: if isAuthenticated() && (
+        hasAdminAccess() ||
+        isIndividualAccount() || // أصحاب الحسابات الفردية يمكنهم القراءة
+        isIndependent() // المستخدمون المستقلون يمكنهم القراءة
+      );
+      allow write: if hasAdminAccess() || isIndividualAccount();
     }
   }
 }
