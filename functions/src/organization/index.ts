@@ -254,98 +254,7 @@ export const updateOrganization = createCallableFunction<UpdateOrganizationReque
     }
 });
 
-/**
- * نوع بيانات طلب إضافة عضو إلى المؤسسة
- */
-interface AddOrganizationMemberRequest {
-    orgId: string;
-    userId: string;
-    role: string;
-}
 
-/**
- * إضافة عضو إلى المؤسسة
- */
-export const addOrganizationMember = createCallableFunction<AddOrganizationMemberRequest>(async (request) => {
-    const data = request.data;
-    const context = {
-        auth: request.auth ? {
-            uid: request.auth.uid,
-            token: request.auth.token
-        } : undefined,
-        rawRequest: request.rawRequest
-    };
-    const functionName = 'addOrganizationMember';
-    console.log(`[Organization] --- ${functionName} Cloud Function triggered ---`);
-
-    try {
-        const { orgId, userId, role } = data;
-
-        // التحقق من صحة المدخلات
-        if (!orgId || typeof orgId !== "string") {
-            throw new functions.https.HttpsError(
-                "invalid-argument",
-                "يجب توفير معرف المؤسسة."
-            );
-        }
-
-        if (!userId || typeof userId !== "string") {
-            throw new functions.https.HttpsError(
-                "invalid-argument",
-                "يجب توفير معرف المستخدم."
-            );
-        }
-
-        const validRoles = ['org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant'];
-        if (!role || typeof role !== "string" || !validRoles.includes(role)) {
-            throw new functions.https.HttpsError(
-                "invalid-argument",
-                `يجب توفير دور صالح. الأدوار الصالحة هي: ${validRoles.join(', ')}`
-            );
-        }
-
-        // التحقق من أن المستخدم يملك صلاحيات إضافة أعضاء في المؤسسة
-        await ensureCanInviteToOrganization(context, orgId);
-
-        // التحقق من وجود المستخدم
-        try {
-            await admin.auth().getUser(userId);
-        } catch (error) {
-            throw new functions.https.HttpsError(
-                "not-found",
-                "لم يتم العثور على المستخدم."
-            );
-        }
-
-        // التحقق من وجود المؤسسة
-        const orgDoc = await db.collection('organizations').doc(orgId).get();
-        if (!orgDoc.exists) {
-            throw new functions.https.HttpsError(
-                "not-found",
-                "لم يتم العثور على المؤسسة."
-            );
-        }
-
-        // إضافة المستخدم كعضو في المؤسسة
-        await db.collection('organizations').doc(orgId).collection('members').doc(userId).set({
-            role,
-            joinedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-
-        console.log(`[Organization] Successfully added user ${userId} to organization ${orgId} with role ${role}.`);
-        return { success: true };
-
-    } catch (error: any) {
-        console.error(`[Organization] Error in ${functionName}:`, error);
-        if (error instanceof functions.https.HttpsError) {
-            throw error;
-        }
-        throw new functions.https.HttpsError(
-            "internal",
-            `Failed to add organization member: ${error.message || 'Unknown internal server error.'}`
-        );
-    }
-});
 
 /**
  * نوع بيانات طلب إزالة عضو من المؤسسة
@@ -418,6 +327,97 @@ export const removeOrganizationMember = createCallableFunction<RemoveOrganizatio
         throw new functions.https.HttpsError(
             "internal",
             `Failed to remove organization member: ${error.message || 'Unknown internal server error.'}`
+        );
+    }
+});
+
+
+interface UpdateOrganizationMemberRequest {
+    orgId: string;
+    userId: string;
+    role?: string;
+    departmentId?: string | null;
+}
+
+/**
+ * تحديث عضو في المؤسسة
+ */
+export const updateOrganizationMember = createCallableFunction<UpdateOrganizationMemberRequest>(async (request) => {
+    const data = request.data;
+    const context = {
+        auth: request.auth ? {
+            uid: request.auth.uid,
+            token: request.auth.token
+        } : undefined,
+        rawRequest: request.rawRequest
+    };
+    const functionName = 'updateOrganizationMember';
+    console.log(`[Organization] --- ${functionName} Cloud Function triggered ---`);
+
+    try {
+        const { orgId, userId, role, departmentId } = data;
+
+        // التحقق من صحة المدخلات
+        if (!orgId || typeof orgId !== "string") {
+            throw new functions.https.HttpsError(
+                "invalid-argument",
+                "يجب توفير معرف المؤسسة."
+            );
+        }
+
+        if (!userId || typeof userId !== "string") {
+            throw new functions.https.HttpsError(
+                "invalid-argument",
+                "يجب توفير معرف المستخدم."
+            );
+        }
+
+        // التحقق من أن المستخدم يملك صلاحيات تعديل أعضاء في المؤسسة
+        await ensureCanInviteToOrganization(context, orgId);
+
+        // التحقق من وجود العضو في المؤسسة
+        const memberDoc = await db.collection('organizations').doc(orgId).collection('members').doc(userId).get();
+        if (!memberDoc.exists) {
+            throw new functions.https.HttpsError(
+                "not-found",
+                "العضو غير موجود في المؤسسة."
+            );
+        }
+
+        // إعداد البيانات للتحديث
+        const updateData: { [key: string]: any } = {
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (role !== undefined) {
+            const validRoles = ['org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant'];
+            if (!validRoles.includes(role)) {
+                throw new functions.https.HttpsError(
+                    "invalid-argument",
+                    `يجب توفير دور صالح. الأدوار الصالحة هي: ${validRoles.join(', ')}`
+                );
+            }
+            updateData.role = role;
+        }
+
+        if (departmentId !== undefined) {
+            updateData.departmentId = departmentId;
+        }
+
+        // تحديث بيانات العضو
+        await db.collection('organizations').doc(orgId).collection('members').doc(userId).update(updateData);
+
+        console.log(`[Organization] Successfully updated user ${userId} in organization ${orgId}.`);
+        return { success: true };
+
+    } catch (error: any) {
+        console.error(`[Organization] Error in ${functionName}:`, error);
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
+        throw new functions.https.HttpsError(
+            "internal",
+            `Failed to update organization member: ${error.message || 'Unknown internal server error.'}`
         );
     }
 });

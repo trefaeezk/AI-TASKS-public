@@ -120,15 +120,15 @@ export const verifyAccountType = createCallableFunction<VerifyAccountTypeRequest
                 console.log(`User ${uid} is the creator of organization ${organizationId} but not a member. Adding as admin.`);
 
                 await db.collection('organizations').doc(organizationId).collection('members').doc(uid).set({
-                    role: 'admin',
+                    role: 'org_admin',
                     joinedAt: admin.firestore.FieldValue.serverTimestamp()
                 });
 
-                // تحديث custom claims للمستخدم
+                // تحديث custom claims للمستخدم (الأدوار الجديدة)
                 await admin.auth().setCustomUserClaims(uid, {
                     ...customClaims,
-                    role: 'admin',
-                    admin: true,
+                    role: 'org_admin',
+                    org_admin: true,
                     accountType: 'organization',
                     organizationId
                 });
@@ -154,7 +154,7 @@ export const verifyAccountType = createCallableFunction<VerifyAccountTypeRequest
             const memberDoc = await db.collection('organizations').doc(organizationId)
                 .collection('members').doc(uid).get();
 
-            const role = memberDoc.exists ? memberDoc.data()?.role : 'user';
+            const role = memberDoc.exists ? memberDoc.data()?.role : 'org_assistant';
 
             return {
                 success: true,
@@ -234,14 +234,14 @@ export const updateAccountType = createCallableFunction<UpdateAccountTypeRequest
                     const orgDoc = await db.collection('organizations').doc(effectiveOrgId).get();
                     if (orgDoc.exists && orgDoc.data()?.createdBy === uid) {
                         console.log(`User ${uid} is the creator of organization ${effectiveOrgId}, setting as organization owner`);
-                        newClaims.role = 'organization_owner';
-                        newClaims.organization_owner = true;
+                        newClaims.role = 'org_owner';
+                        newClaims.org_owner = true;
 
                         // تحديث وثيقة المستخدم في مجموعة users
                         const userDocRef = db.collection('users').doc(uid);
                         await userDocRef.set({
-                            role: 'organization_owner',
-                            isOrganizationOwner: true,
+                            role: 'org_owner',
+                            isOrgOwner: true,
                             accountType: 'organization',
                             organizationId: effectiveOrgId,
                             organizationName: orgDoc.data()?.name || '',
@@ -250,7 +250,7 @@ export const updateAccountType = createCallableFunction<UpdateAccountTypeRequest
 
                         // تحديث وثيقة العضوية في المؤسسة
                         await db.collection('organizations').doc(effectiveOrgId).collection('members').doc(uid).set({
-                            role: 'owner',
+                            role: 'org_owner',
                             joinedAt: admin.firestore.FieldValue.serverTimestamp()
                         }, { merge: true });
                     }
@@ -290,7 +290,7 @@ export const updateAccountType = createCallableFunction<UpdateAccountTypeRequest
                     // الأدوار الجديدة
                     isSystemOwner: false,
                     isSystemAdmin: false,
-                    isOrganizationOwner: false,
+                    isOrgOwner: false,
                     isAdmin: false,
                     isOwner: false,
                     isIndividualAdmin: false

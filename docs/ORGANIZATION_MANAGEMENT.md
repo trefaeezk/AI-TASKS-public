@@ -299,7 +299,7 @@ async function createOrganizationStructure(
 ### 👑 أدوار المؤسسة
 ```typescript
 type OrganizationRole = 
-  | 'organization_owner'  // مالك المؤسسة
+  | 'org_owner'  // مالك المؤسسة
   | 'org_admin'          // أدمن المؤسسة
   | 'org_supervisor'     // مشرف
   | 'org_engineer'       // مهندس

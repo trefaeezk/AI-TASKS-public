@@ -22,6 +22,22 @@ import { Translate } from '@/components/Translate';
 import { ManagedUser } from '@/types/user';
 import { useToast } from '@/hooks/use-toast';
 
+// دالة لعرض أسماء الأدوار بالعربية
+const getRoleDisplayName = (role: string): string => {
+  const roleNames: Record<string, string> = {
+    'system_owner': 'مالك النظام',
+    'system_admin': 'أدمن النظام العام',
+    'independent': 'مستخدم مستقل',
+    'org_owner': 'مالك المؤسسة',
+    'org_admin': 'أدمن المؤسسة',
+    'org_supervisor': 'مشرف',
+    'org_engineer': 'مهندس',
+    'org_technician': 'فني',
+    'org_assistant': 'مساعد فني'
+  };
+  return roleNames[role] || role;
+};
+
 export default function UsersPage() {
   const { user, userClaims, refreshUserData } = useAuth();
   const { checkPermission, loading: permissionsLoading } = usePermissions();
@@ -76,7 +92,7 @@ export default function UsersPage() {
           disabled: false,
           customPermissions: [],
           isAdmin: member.role === 'system_admin' || member.role === 'system_owner' ||
-                   member.role === 'organization_owner' || member.role === 'individual_admin',
+                   member.role === 'org_owner' || member.role === 'individual_admin',
           accountType: 'organization',
           organizationId
         }));
@@ -119,8 +135,8 @@ export default function UsersPage() {
               userRole = 'system_owner';
             } else if (user.customClaims?.system_admin) {
               userRole = 'system_admin';
-            } else if (user.customClaims?.organization_owner) {
-              userRole = 'organization_owner';
+            } else if (user.customClaims?.org_owner) {
+              userRole = 'org_owner';
             } else if (user.customClaims?.individual_admin) {
               userRole = 'individual_admin';
             }
@@ -134,7 +150,7 @@ export default function UsersPage() {
             disabled: user.disabled || false,
             customPermissions: user.customClaims?.customPermissions || [],
             isAdmin: user.customClaims?.system_admin === true || user.customClaims?.system_owner === true ||
-                     user.customClaims?.organization_owner === true || user.customClaims?.individual_admin === true,
+                     user.customClaims?.org_owner === true || user.customClaims?.individual_admin === true,
             accountType: user.customClaims?.accountType || 'individual',
             organizationId: user.customClaims?.organizationId
           };

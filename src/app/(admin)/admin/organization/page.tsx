@@ -37,7 +37,7 @@ export default function OrganizationPage() {
   const hasManagePermission = hasPermission('organization.manage');
   const isSystemOwner = userClaims?.system_owner === true;
   const isSystemAdmin = userClaims?.system_admin === true;
-  const isOrganizationOwner = userClaims?.organization_owner === true;
+  const isOrgOwner = userClaims?.org_owner === true;
   const organizationId = userClaims?.organizationId;
 
   useEffect(() => {

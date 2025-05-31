@@ -37,11 +37,11 @@ service cloud.firestore {
     }
 
     // التحقق من مالك المؤسسة (النظام الجديد)
-    function isOrganizationOwner(orgId) {
+    function isOrgOwner(orgId) {
       return isAuthenticated() && (
-        getUserToken().isOrganizationOwner == true ||
+        getUserToken().isOrgOwner == true ||
         (getUserToken().organizationId == orgId && getUserToken().isOwner == true) ||
-        getUserToken().role == 'organization_owner'
+        getUserToken().role == 'org_owner'
       );
     }
 
@@ -90,7 +90,7 @@ service cloud.firestore {
         // منع تعديل الأدوار الحساسة بنفسه
         !('isSystemOwner' in request.resource.data) &&
         !('isSystemAdmin' in request.resource.data) &&
-        !('isOrganizationOwner' in request.resource.data) &&
+        !('isOrgOwner' in request.resource.data) &&
         !('isOwner' in request.resource.data) &&
         !('isAdmin' in request.resource.data) &&
         !('role' in request.resource.data)
@@ -116,14 +116,14 @@ service cloud.firestore {
       // قراءة المؤسسة
       allow read: if isAuthenticated() && (
         hasSystemAccess() ||
-        isOrganizationOwner(orgId) ||
+        isOrgOwner(orgId) ||
         isOrganizationMember(orgId)
       );
 
       // كتابة المؤسسة
       allow write: if isAuthenticated() && (
         hasSystemAccess() ||
-        isOrganizationOwner(orgId) ||
+        isOrgOwner(orgId) ||
         isOrganizationAdmin(orgId)
       );
 
@@ -138,14 +138,14 @@ service cloud.firestore {
       match /members/{memberId} {
         allow read: if isAuthenticated() && (
           hasSystemAccess() ||
-          isOrganizationOwner(orgId) ||
+          isOrgOwner(orgId) ||
           isOrganizationMember(orgId) ||
           memberId == getUserId()
         );
 
         allow write: if isAuthenticated() && (
           hasSystemAccess() ||
-          isOrganizationOwner(orgId) ||
+          isOrgOwner(orgId) ||
           isOrganizationAdmin(orgId)
         );
       }
@@ -154,13 +154,13 @@ service cloud.firestore {
       match /departments/{departmentId} {
         allow read: if isAuthenticated() && (
           hasSystemAccess() ||
-          isOrganizationOwner(orgId) ||
+          isOrgOwner(orgId) ||
           isOrganizationMember(orgId)
         );
 
         allow write: if isAuthenticated() && (
           hasSystemAccess() ||
-          isOrganizationOwner(orgId) ||
+          isOrgOwner(orgId) ||
           isOrganizationAdmin(orgId)
         );
       }
@@ -221,7 +221,7 @@ service cloud.firestore {
         )) ||
         // مهام المؤسسة
         (resource.data.organizationId != null && (
-          isOrganizationOwner(resource.data.organizationId) ||
+          isOrgOwner(resource.data.organizationId) ||
           isOrganizationAdmin(resource.data.organizationId) ||
           resource.data.createdBy == getUserId()
         ))
@@ -306,7 +306,7 @@ service cloud.firestore {
         (request.resource.data.organizationId == null &&
          request.resource.data.userId == getUserId()) ||
         (request.resource.data.organizationId != null && (
-          isOrganizationOwner(request.resource.data.organizationId) ||
+          isOrgOwner(request.resource.data.organizationId) ||
           isOrganizationAdmin(request.resource.data.organizationId)
         ))
       );
@@ -315,7 +315,7 @@ service cloud.firestore {
         hasSystemAccess() ||
         (resource.data.organizationId == null && resource.data.userId == getUserId()) ||
         (resource.data.organizationId != null && (
-          isOrganizationOwner(resource.data.organizationId) ||
+          isOrgOwner(resource.data.organizationId) ||
           isOrganizationAdmin(resource.data.organizationId)
         ))
       );
@@ -334,7 +334,7 @@ service cloud.firestore {
         (request.resource.data.organizationId == null &&
          request.resource.data.userId == getUserId()) ||
         (request.resource.data.organizationId != null && (
-          isOrganizationOwner(request.resource.data.organizationId) ||
+          isOrgOwner(request.resource.data.organizationId) ||
           isOrganizationAdmin(request.resource.data.organizationId) ||
           request.resource.data.createdBy == getUserId()
         ))
@@ -344,7 +344,7 @@ service cloud.firestore {
         hasSystemAccess() ||
         (resource.data.organizationId == null && resource.data.userId == getUserId()) ||
         (resource.data.organizationId != null && (
-          isOrganizationOwner(resource.data.organizationId) ||
+          isOrgOwner(resource.data.organizationId) ||
           isOrganizationAdmin(resource.data.organizationId) ||
           resource.data.createdBy == getUserId()
         ))
@@ -370,7 +370,7 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         hasSystemAccess() ||
         resource.data.userId == getUserId() ||
-        isOrganizationOwner(resource.data.organizationId) ||
+        isOrgOwner(resource.data.organizationId) ||
         isOrganizationAdmin(resource.data.organizationId)
       );
 
@@ -380,7 +380,7 @@ service cloud.firestore {
       allow update, delete: if isAuthenticated() && (
         hasSystemAccess() ||
         resource.data.userId == getUserId() ||
-        isOrganizationOwner(resource.data.organizationId) ||
+        isOrgOwner(resource.data.organizationId) ||
         isOrganizationAdmin(resource.data.organizationId)
       );
     }

@@ -76,7 +76,7 @@ export default function MembersPage() {
 
   const organizationId = userClaims?.organizationId;
   // استخدام أسماء الحقول الصحيحة من قاعدة البيانات
-  const isOwner = userClaims?.organization_owner === true || userClaims?.isOwner === true;
+  const isOwner = userClaims?.org_owner === true || userClaims?.isOwner === true;
   const isAdmin = userClaims?.admin === true || userClaims?.isAdmin === true;
 
   // 📊 تصفية الأعضاء حسب التبويب
@@ -242,18 +242,18 @@ export default function MembersPage() {
     try {
       const idToken = await user.getIdToken();
 
-      // استدعاء وظيفة إضافة عضو
-      const addMemberToOrganization = httpsCallable(functions, 'addMemberToOrganization');
-      await addMemberToOrganization({
+      // استدعاء وظيفة دعوة عضو (الدالة الصحيحة)
+      const inviteUserToOrganization = httpsCallable(functions, 'inviteUserToOrganization');
+      await inviteUserToOrganization({
         email: formData.email,
         role: formData.role,
         departmentId: formData.departmentId === 'none' ? null : formData.departmentId,
-        organizationId
+        organizationId: organizationId
       });
 
       toast({
-        title: 'تمت إضافة العضو بنجاح',
-        description: 'تمت إضافة العضو إلى المؤسسة بنجاح.',
+        title: 'تم إرسال الدعوة بنجاح',
+        description: `تم إرسال دعوة إلى ${formData.email} للانضمام إلى المؤسسة.`,
       });
 
       // إعادة تعيين نموذج الإضافة
@@ -284,13 +284,13 @@ export default function MembersPage() {
     try {
       const idToken = await user.getIdToken();
 
-      // استدعاء وظيفة تعديل عضو
-      const updateMemberInOrganization = httpsCallable(functions, 'updateMemberInOrganization');
-      await updateMemberInOrganization({
-        uid: selectedMember.uid,
+      // استدعاء وظيفة تعديل عضو (الاسم الصحيح)
+      const updateOrganizationMember = httpsCallable(functions, 'updateOrganizationMember');
+      await updateOrganizationMember({
+        userId: selectedMember.uid,
         role: formData.role,
         departmentId: formData.departmentId === 'none' ? null : formData.departmentId,
-        organizationId
+        orgId: organizationId
       });
 
       toast({
@@ -320,11 +320,11 @@ export default function MembersPage() {
     try {
       const idToken = await user.getIdToken();
 
-      // استدعاء وظيفة حذف عضو
-      const removeMemberFromOrganization = httpsCallable(functions, 'removeMemberFromOrganization');
-      await removeMemberFromOrganization({
-        uid: selectedMember.uid,
-        organizationId
+      // استدعاء وظيفة حذف عضو (الاسم الصحيح)
+      const removeOrganizationMember = httpsCallable(functions, 'removeOrganizationMember');
+      await removeOrganizationMember({
+        userId: selectedMember.uid,
+        orgId: organizationId
       });
 
       toast({
@@ -643,7 +643,7 @@ export default function MembersPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {isOwner && <SelectItem value="organization_owner"><Translate text="roles.organization_owner" /></SelectItem>}
+                  {isOwner && <SelectItem value="org_owner"><Translate text="roles.org_owner" /></SelectItem>}
                   <SelectItem value="org_admin"><Translate text="roles.org_admin" /></SelectItem>
                   <SelectItem value="org_engineer"><Translate text="roles.org_engineer" /></SelectItem>
                   <SelectItem value="org_supervisor"><Translate text="roles.org_supervisor" /></SelectItem>
@@ -729,7 +729,7 @@ export default function MembersPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {isOwner && <SelectItem value="organization_owner"><Translate text="roles.organization_owner" /></SelectItem>}
+                  {isOwner && <SelectItem value="org_owner"><Translate text="roles.org_owner" /></SelectItem>}
                   <SelectItem value="org_admin"><Translate text="roles.org_admin" /></SelectItem>
                   <SelectItem value="org_engineer"><Translate text="roles.org_engineer" /></SelectItem>
                   <SelectItem value="org_supervisor"><Translate text="roles.org_supervisor" /></SelectItem>

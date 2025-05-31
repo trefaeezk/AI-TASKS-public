@@ -27,7 +27,7 @@ const roleIcons: Record<UserRole, React.ReactNode> = {
   independent: <UserCog className="h-4 w-4 ml-2" />,
 
   // أدوار المؤسسات
-  organization_owner: <ShieldAlert className="h-4 w-4 ml-2 text-orange-600" />,
+  org_owner: <ShieldAlert className="h-4 w-4 ml-2 text-orange-600" />,
   org_admin: <ShieldAlert className="h-4 w-4 ml-2" />,
   org_supervisor: <Shield className="h-4 w-4 ml-2" />,
   org_engineer: <ShieldCheck className="h-4 w-4 ml-2" />,

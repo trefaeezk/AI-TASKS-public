@@ -148,7 +148,7 @@ const en = {
     independent: "Independent User",
 
     // Organization roles
-    organization_owner: "Organization Owner",
+    org_owner: "Organization Owner",
     org_admin: "Organization Admin",
     org_supervisor: "Supervisor",
     org_engineer: "Engineer",
@@ -163,7 +163,7 @@ const en = {
     independent: "Independent User - Manages only their personal tasks and data",
 
     // Organization roles
-    organization_owner: "Organization Owner - Full permissions within the organization",
+    org_owner: "Organization Owner - Full permissions within the organization",
     org_admin: "Organization Admin - Broad administrative permissions within the organization",
     org_supervisor: "Supervisor - Supervises teams and tasks, manages operations",
     org_engineer: "Engineer - Designs and plans projects and technical solutions",

@@ -62,7 +62,7 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
         const userIsSystemAdmin = userRole === 'system_admin' || idTokenResult.claims.system_admin === true;
 
         // أدوار المؤسسات (المستوى 3-8)
-        const userIsOrganizationOwner = userRole === 'organization_owner' || idTokenResult.claims.organization_owner === true;
+        const userisOrgOwner = userRole === 'org_owner' || idTokenResult.claims.org_owner === true;
         const userIsOrgAdmin = userRole === 'org_admin' || idTokenResult.claims.org_admin === true;
         const userIsOrgSupervisor = userRole === 'org_supervisor' || idTokenResult.claims.org_supervisor === true;
         const userIsOrgEngineer = userRole === 'org_engineer' || idTokenResult.claims.org_engineer === true;
@@ -71,13 +71,13 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
 
         // النظام الموحد - تحديد مستويات الوصول
         const hasOwnerAccess = userIsSystemOwner;
-        const hasAdminAccess = userIsSystemAdmin || userIsOrganizationOwner ||
+        const hasAdminAccess = userIsSystemAdmin || userisOrgOwner ||
                                userIsOrgAdmin || userIsOrgSupervisor || userIsOrgEngineer ||
                                userIsOrgTechnician || userIsOrgAssistant;
 
         console.log('[AdminProtectedRoute] System Owner:', userIsSystemOwner);
         console.log('[AdminProtectedRoute] System Admin:', userIsSystemAdmin);
-        console.log('[AdminProtectedRoute] Organization Owner:', userIsOrganizationOwner);
+        console.log('[AdminProtectedRoute] Organization Owner:', userisOrgOwner);
         console.log('[AdminProtectedRoute] Org Admin:', userIsOrgAdmin);
         console.log('[AdminProtectedRoute] Org Supervisor:', userIsOrgSupervisor);
         console.log('[AdminProtectedRoute] Org Engineer:', userIsOrgEngineer);

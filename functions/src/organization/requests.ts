@@ -126,11 +126,13 @@ export const approveOrganizationRequest = createCallableFunction<ApproveOrganiza
         }
         const uid = auth.uid;
 
-        // التحقق من أن المستخدم مالك
+        // التحقق من أن المستخدم مالك النظام (الأدوار الجديدة فقط)
         const userRecord = await admin.auth().getUser(uid);
         const customClaims = userRecord.customClaims || {};
 
-        if (!customClaims.owner) {
+        const isSystemOwner = customClaims.system_owner === true;
+
+        if (!isSystemOwner) {
             throw new functions.https.HttpsError(
                 'permission-denied',
                 'يجب أن تكون مالك النظام للموافقة على طلبات إنشاء المؤسسات.'
@@ -178,9 +180,9 @@ export const approveOrganizationRequest = createCallableFunction<ApproveOrganiza
         const organizationRef = await db.collection('organizations').add(organizationData);
         const organizationId = organizationRef.id;
 
-        // إضافة المستخدم كمالك للمؤسسة
+        // إضافة المستخدم كمالك للمؤسسة (الدور الجديد)
         await db.collection('organizations').doc(organizationId).collection('members').doc(requestData.userId).set({
-            role: 'owner',
+            role: 'org_owner',
             joinedAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
@@ -200,8 +202,8 @@ export const approveOrganizationRequest = createCallableFunction<ApproveOrganiza
         // تعيين المستخدم كمالك في المؤسسة مع تحديد نوع الحساب ومعرف المؤسسة
         const newClaims = {
             ...requesterClaims,
-            role: 'organization_owner',
-            organization_owner: true, // النظام الجديد
+            role: 'org_owner',
+            org_owner: true, // النظام الجديد
             accountType: 'organization',
             organizationId
         };
@@ -217,7 +219,7 @@ export const approveOrganizationRequest = createCallableFunction<ApproveOrganiza
             await userDocRef.set({
                 name: requesterRecord.displayName || '',
                 email: requesterRecord.email,
-                role: 'owner',
+                role: 'org_owner',
                 isOwner: true,
                 isAdmin: true,
                 accountType: 'organization',
@@ -229,7 +231,7 @@ export const approveOrganizationRequest = createCallableFunction<ApproveOrganiza
             console.log(`Created user document for organization creator (${requestData.userId})`);
         } else {
             await userDocRef.update({
-                role: 'owner',
+                role: 'org_owner',
                 isOwner: true,
                 isAdmin: true,
                 accountType: 'organization',
@@ -285,11 +287,13 @@ export const rejectOrganizationRequest = createCallableFunction<RejectOrganizati
         }
         const uid = auth.uid;
 
-        // التحقق من أن المستخدم مالك
+        // التحقق من أن المستخدم مالك النظام (الأدوار الجديدة فقط)
         const userRecord = await admin.auth().getUser(uid);
         const customClaims = userRecord.customClaims || {};
 
-        if (!customClaims.owner) {
+        const isSystemOwner = customClaims.system_owner === true;
+
+        if (!isSystemOwner) {
             throw new functions.https.HttpsError(
                 'permission-denied',
                 'يجب أن تكون مالك النظام لرفض طلبات إنشاء المؤسسات.'

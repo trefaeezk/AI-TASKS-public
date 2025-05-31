@@ -119,7 +119,7 @@ const handleToggleDisabled = async (userId: string, disabled: boolean) => {
 
 - `system_owner`: مالك النظام (أعلى صلاحية)
 - `system_admin`: مدير النظام
-- `organization_owner`: مالك المؤسسة
+- `org_owner`: مالك المؤسسة
 - `org_admin`: مدير المؤسسة
 - `org_supervisor`: مشرف المؤسسة
 - `org_engineer`: مهندس المؤسسة

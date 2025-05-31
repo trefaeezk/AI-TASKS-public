@@ -409,7 +409,7 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
                   <SelectValue placeholder="اختر الدور" />
                 </SelectTrigger>
                 <SelectContent>
-                  {isOwner && <SelectItem value="organization_owner">مالك المؤسسة</SelectItem>}
+                  {isOwner && <SelectItem value="org_owner">مالك المؤسسة</SelectItem>}
                   <SelectItem value="org_admin">أدمن المؤسسة</SelectItem>
                   <SelectItem value="org_engineer">مهندس</SelectItem>
                   <SelectItem value="org_supervisor">مشرف</SelectItem>

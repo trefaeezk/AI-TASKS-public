@@ -28,10 +28,10 @@ service cloud.firestore {
     }
 
     // التحقق من مالك المؤسسة
-    function isOrganizationOwner() {
+    function isOrgOwner() {
       return isAuthenticated() && (
-        getUserToken().organization_owner == true ||
-        getUserToken().role == 'organization_owner'
+        getUserToken().org_owner == true ||
+        getUserToken().role == 'org_owner'
       );
     }
 
@@ -63,7 +63,7 @@ service cloud.firestore {
 
     // التحقق من صلاحيات إدارية عامة (النظام الموحد)
     function hasAdminAccess() {
-      return hasSystemAccess() || isOrganizationOwner() ||
+      return hasSystemAccess() || isOrgOwner() ||
              isOrgAdmin() || isOrgSupervisor() || isOrgEngineer() ||
              isOrgTechnician() || isOrgAssistant();
     }
@@ -90,7 +90,7 @@ service cloud.firestore {
     function canManageOrganization() {
       return isAuthenticated() && (
         getUserToken().canManageOrganization == true ||
-        hasSystemAccess() || isOrganizationOwner()
+        hasSystemAccess() || isOrgOwner()
       );
     }
 
@@ -98,7 +98,7 @@ service cloud.firestore {
     function canManageProjects() {
       return isAuthenticated() && (
         getUserToken().canManageProjects == true ||
-        hasSystemAccess() || isOrganizationOwner() || isOrgAdmin()
+        hasSystemAccess() || isOrgOwner() || isOrgAdmin()
       );
     }
 
@@ -106,7 +106,7 @@ service cloud.firestore {
     function canViewReports() {
       return isAuthenticated() && (
         getUserToken().canViewReports == true ||
-        hasSystemAccess() || isOrganizationOwner() ||
+        hasSystemAccess() || isOrgOwner() ||
         isOrgAdmin() || isOrgSupervisor() || isOrgEngineer()
       );
     }
@@ -115,7 +115,7 @@ service cloud.firestore {
     function canCreateTasks() {
       return isAuthenticated() && (
         getUserToken().canCreateTasks == true ||
-        hasSystemAccess() || isOrganizationOwner() ||
+        hasSystemAccess() || isOrgOwner() ||
         isOrgAdmin() || isOrgSupervisor() || isOrgEngineer() || isOrgTechnician() ||
         isIndependent() || // المستخدمون المستقلون يمكنهم إنشاء المهام
         isIndividualAccount() // أصحاب الحسابات الفردية يمكنهم إنشاء المهام
@@ -219,7 +219,7 @@ service cloud.firestore {
         getUserToken().organizationId == orgId
       );
 
-      allow write: if canManageOrganization() || hasSystemAccess() || isOrganizationOwner();
+      allow write: if canManageOrganization() || hasSystemAccess() || isOrgOwner();
     }
 
     // ===== إعدادات النظام =====

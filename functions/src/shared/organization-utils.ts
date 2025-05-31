@@ -34,7 +34,8 @@ export const isOrganizationAdmin = async (userId: string, organizationId: string
         }
 
         const memberData = memberDoc.data();
-        return memberData?.role === 'admin';
+        const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+        return isOrgAdmin;
     } catch (error) {
         console.error(`Error checking if user ${userId} is admin of organization ${organizationId}:`, error);
         return false;
@@ -91,7 +92,7 @@ export const hasOrganizationRole = async (
         const userRole = memberData?.role;
 
         // ترتيب الأدوار من الأعلى إلى الأدنى (النظام الموحد)
-        const roleHierarchy = ['organization_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
+        const roleHierarchy = ['org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
 
         // التحقق من أن دور المستخدم أعلى من أو يساوي الدور المطلوب
         const userRoleIndex = roleHierarchy.indexOf(userRole);

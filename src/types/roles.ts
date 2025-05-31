@@ -10,7 +10,7 @@ export type UserRole =
   | 'independent'     // مستخدم مستقل (فردي)
 
   // أدوار المؤسسات
-  | 'organization_owner' // مالك المؤسسة
+  | 'org_owner' // مالك المؤسسة
   | 'org_admin'       // أدمن المؤسسة
   | 'org_supervisor'  // مشرف
   | 'org_engineer'    // مهندس
@@ -87,7 +87,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // مالك المؤسسة - صلاحيات كاملة داخل المؤسسة
-  organization_owner: [
+  org_owner: [
     'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
@@ -185,7 +185,7 @@ export const ROLE_DESCRIPTION_KEYS: Record<UserRole, string> = {
   independent: 'roleDescriptions.independent',
 
   // أدوار المؤسسات
-  organization_owner: 'roleDescriptions.organization_owner',
+  org_owner: 'roleDescriptions.org_owner',
   org_admin: 'roleDescriptions.org_admin',
   org_supervisor: 'roleDescriptions.org_supervisor',
   org_engineer: 'roleDescriptions.org_engineer',
@@ -200,7 +200,7 @@ export const ROLE_HIERARCHY: UserRole[] = [
   'system_admin',
 
   // أدوار المؤسسات (حسب المستوى)
-  'organization_owner',
+  'org_owner',
   'org_admin',
   'org_supervisor',
   'org_engineer',

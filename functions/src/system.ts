@@ -130,7 +130,7 @@ export const setupSystem = createCallableFunction<SetupSystemRequest>(async (req
             ...(type === 'organization' && { organizationName }),
             settings: settings || {
                 allowSelfRegistration: type === 'individual',
-                defaultUserRole: type === 'individual' ? 'independent' : 'user',
+                defaultUserRole: type === 'individual' ? 'independent' : 'org_assistant',
                 autoActivateUsers: type === 'individual',
                 enableNotifications: true
             },
@@ -220,7 +220,7 @@ export const switchSystemType = createCallableFunction<SwitchSystemTypeRequest>(
         // الحصول على معلومات المستخدم الحالية
         const userRecord = await admin.auth().getUser(uid);
         const customClaims = userRecord.customClaims || {};
-        const currentRole = customClaims.role || 'user';
+        const currentRole = customClaims.role || 'independent';
 
         // تحديد الدور الجديد بناءً على نوع النظام
         let newRole = currentRole;

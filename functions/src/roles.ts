@@ -34,7 +34,7 @@ export const ensureAdmin = (context: LegacyCallableContext): void => {
     const isSystemAdmin = userRole === 'system_admin' || context.auth.token.system_admin === true;
 
     // أدوار المؤسسات (المستوى 3-8)
-    const isOrganizationOwner = userRole === 'organization_owner' || context.auth.token.organization_owner === true;
+    const isOrgOwner = userRole === 'org_owner' || context.auth.token.org_owner === true;
     const isOrgAdmin = userRole === 'org_admin';
     const isOrgSupervisor = userRole === 'org_supervisor';
     const isOrgEngineer = userRole === 'org_engineer';
@@ -44,7 +44,7 @@ export const ensureAdmin = (context: LegacyCallableContext): void => {
     console.log('🔍 ensureAdmin: Role checks:', {
         isSystemOwner,
         isSystemAdmin,
-        isOrganizationOwner,
+        isOrgOwner,
         isOrgAdmin,
         isOrgSupervisor,
         isOrgEngineer,
@@ -53,7 +53,7 @@ export const ensureAdmin = (context: LegacyCallableContext): void => {
     });
 
     // التحقق من وجود أي دور إداري
-    const hasAdminRole = isSystemOwner || isSystemAdmin || isOrganizationOwner ||
+    const hasAdminRole = isSystemOwner || isSystemAdmin || isOrgOwner ||
                          isOrgAdmin || isOrgSupervisor || isOrgEngineer ||
                          isOrgTechnician || isOrgAssistant;
 
@@ -94,7 +94,7 @@ export const ensureAdminHttp = async (req: functions.https.Request): Promise<str
     const isSystemAdmin = userRole === 'system_admin' || decodedToken.system_admin === true;
 
     // أدوار المؤسسات (المستوى 3-8)
-    const isOrganizationOwner = userRole === 'organization_owner' || decodedToken.organization_owner === true;
+    const isOrgOwner = userRole === 'org_owner' || decodedToken.org_owner === true;
     const isOrgAdmin = userRole === 'org_admin';
     const isOrgSupervisor = userRole === 'org_supervisor';
     const isOrgEngineer = userRole === 'org_engineer';
@@ -102,7 +102,7 @@ export const ensureAdminHttp = async (req: functions.https.Request): Promise<str
     const isOrgAssistant = userRole === 'org_assistant';
 
     // التحقق من وجود أي دور إداري
-    const hasAdminRole = isSystemOwner || isSystemAdmin || isOrganizationOwner ||
+    const hasAdminRole = isSystemOwner || isSystemAdmin || isOrgOwner ||
                          isOrgAdmin || isOrgSupervisor || isOrgEngineer ||
                          isOrgTechnician || isOrgAssistant;
 

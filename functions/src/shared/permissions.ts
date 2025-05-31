@@ -14,7 +14,7 @@ export type UserRole =
   | 'independent'     // مستخدم مستقل (فردي)
 
   // أدوار المؤسسات
-  | 'organization_owner' // مالك المؤسسة
+  | 'org_owner' // مالك المؤسسة
   | 'org_admin'       // أدمن المؤسسة
   | 'org_supervisor'  // مشرف
   | 'org_engineer'    // مهندس
@@ -80,7 +80,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // مالك المؤسسة - صلاحيات كاملة داخل المؤسسة
-  organization_owner: [
+  org_owner: [
     'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
@@ -180,7 +180,7 @@ export const hasPermission = async (
     }
 
     // مالك المؤسسة - صلاحيات كاملة داخل المؤسسة
-    if (customClaims.organization_owner === true || userRole === 'organization_owner') {
+    if (customClaims.org_owner === true || userRole === 'org_owner') {
       return true;
     }
 
@@ -251,8 +251,8 @@ export const getUserPermissions = async (userId: string): Promise<PermissionKey[
     }
 
     // مالك المؤسسة - صلاحيات كاملة داخل المؤسسة
-    if (customClaims.organization_owner === true || userRole === 'organization_owner') {
-      return DEFAULT_ROLE_PERMISSIONS.organization_owner;
+    if (customClaims.org_owner === true || userRole === 'org_owner') {
+      return DEFAULT_ROLE_PERMISSIONS.org_owner;
     }
 
     // أدمن المؤسسة - صلاحيات إدارية واسعة داخل المؤسسة

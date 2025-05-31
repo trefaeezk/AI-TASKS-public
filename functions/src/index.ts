@@ -48,31 +48,25 @@ const ensureAdmin = (context: LegacyCallableContext) => {
     // الصلاحيات الجديدة
     const isSystemOwner = token.system_owner === true;
     const isSystemAdmin = token.system_admin === true;
-    const isOrganizationOwner = token.organization_owner === true;
+    const isOrgOwner = token.org_owner === true;
     const isIndividualAdmin = token.individual_admin === true;
-
-    // الصلاحيات القديمة للتوافق
-    const isLegacyAdmin = token.admin === true;
-    const isOwner = token.owner === true;
 
     // التحقق من الدور النصي
     const role = token.role;
-    const adminRoles = ['system_owner', 'system_admin', 'organization_owner', 'org_admin', 'individual_admin'];
+    const adminRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'individual_admin'];
     const isAdminByRole = role && adminRoles.includes(role);
 
     console.log(`🔍 Admin check results:`);
     console.log(`  - isSystemOwner: ${isSystemOwner}`);
     console.log(`  - isSystemAdmin: ${isSystemAdmin}`);
-    console.log(`  - isOrganizationOwner: ${isOrganizationOwner}`);
+    console.log(`  - isOrgOwner: ${isOrgOwner}`);
     console.log(`  - isIndividualAdmin: ${isIndividualAdmin}`);
-    console.log(`  - isLegacyAdmin: ${isLegacyAdmin}`);
-    console.log(`  - isOwner: ${isOwner}`);
     console.log(`  - role: ${role}`);
     console.log(`  - isAdminByRole: ${isAdminByRole}`);
 
-    // التحقق من وجود أي صلاحية إدارية
-    const hasAdminPermission = isSystemOwner || isSystemAdmin || isOrganizationOwner ||
-                              isIndividualAdmin || isLegacyAdmin || isOwner || isAdminByRole;
+    // التحقق من وجود أي صلاحية إدارية (الأدوار الجديدة فقط)
+    const hasAdminPermission = isSystemOwner || isSystemAdmin || isOrgOwner ||
+                              isIndividualAdmin || isAdminByRole;
 
     if (!hasAdminPermission) {
         console.error(`❌ Authorization Error: User ${context.auth.uid} is not an admin.`);
@@ -80,7 +74,7 @@ const ensureAdmin = (context: LegacyCallableContext) => {
         console.error(`❌ Token values:`, token);
         throw new functions.https.HttpsError(
             "permission-denied",
-            `ليس لديك صلاحيات إدارية. الأدوار المطلوبة: system_owner, system_admin, organization_owner, org_admin, أو individual_admin. دورك الحالي: ${role || 'غير محدد'}`
+            `ليس لديك صلاحيات إدارية. الأدوار المطلوبة: system_owner, system_admin, org_owner, org_admin, أو individual_admin. دورك الحالي: ${role || 'غير محدد'}`
         );
     }
 
@@ -154,7 +148,7 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
             console.error(`${functionName} error: Invalid name provided.`);
             throw new functions.https.HttpsError("invalid-argument", "Name must be a valid string if provided.");
         }
-        const validRoles = ['system_owner', 'system_admin', 'organization_owner', 'org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant', 'independent'];
+        const validRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant', 'independent'];
         if (!validRoles.includes(role)) { // Validate role input
             console.error(`${functionName} error: Invalid role provided. Must be one of: ${validRoles.join(', ')}.`);
             throw new functions.https.HttpsError("invalid-argument", `A valid role must be provided. Valid roles are: ${validRoles.join(', ')}`);
@@ -224,7 +218,7 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
             accountType,
             system_owner: role === 'system_owner',
             system_admin: role === 'system_admin',
-            organization_owner: role === 'organization_owner',
+            org_owner: role === 'org_owner',
             org_admin: role === 'org_admin',
             org_supervisor: role === 'org_supervisor',
             org_engineer: role === 'org_engineer',
@@ -247,7 +241,7 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
             accountType,
             system_owner: customClaims.system_owner,
             system_admin: customClaims.system_admin,
-            organization_owner: customClaims.organization_owner,
+            org_owner: customClaims.org_owner,
             org_admin: customClaims.org_admin,
             org_supervisor: customClaims.org_supervisor,
             org_engineer: customClaims.org_engineer,
@@ -278,7 +272,7 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
             // الأدوار (النظام الموحد)
             isSystemOwner: role === 'system_owner',
             isSystemAdmin: role === 'system_admin',
-            isOrganizationOwner: role === 'organization_owner',
+            isOrgOwner: role === 'org_owner',
             isOrgAdmin: role === 'org_admin',
             isOrgSupervisor: role === 'org_supervisor',
             isOrgEngineer: role === 'org_engineer',
@@ -370,7 +364,7 @@ export const createUserHttp = createHttpFunction<CreateUserRequest>(async (reque
             throw new functions.https.HttpsError("invalid-argument", "A valid password (at least 6 characters) must be provided.");
         }
 
-        const validRoles = ['system_owner', 'system_admin', 'organization_owner', 'org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant', 'independent'];
+        const validRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant', 'independent'];
         if (!validRoles.includes(role)) {
             console.error(`${functionName} error: Invalid role provided. Must be one of: ${validRoles.join(', ')}.`);
             throw new functions.https.HttpsError("invalid-argument", `A valid role must be provided. Valid roles are: ${validRoles.join(', ')}`);
@@ -419,7 +413,7 @@ export const createUserHttp = createHttpFunction<CreateUserRequest>(async (reque
             // Boolean flags للأدوار
             system_owner: role === 'system_owner',
             system_admin: role === 'system_admin',
-            organization_owner: role === 'organization_owner',
+            org_owner: role === 'org_owner',
             org_admin: role === 'org_admin',
             org_supervisor: role === 'org_supervisor',
             org_engineer: role === 'org_engineer',
@@ -429,9 +423,9 @@ export const createUserHttp = createHttpFunction<CreateUserRequest>(async (reque
             // الصلاحيات الجديدة
             canManageSystem: role === 'system_owner',
             canManageUsers: ['system_owner', 'system_admin'].includes(role),
-            canManageOrganization: ['system_owner', 'system_admin', 'organization_owner'].includes(role),
-            canManageProjects: ['system_owner', 'system_admin', 'organization_owner', 'org_admin'].includes(role),
-            canViewReports: ['system_owner', 'system_admin', 'organization_owner', 'org_admin', 'org_supervisor', 'org_engineer'].includes(role),
+            canManageOrganization: ['system_owner', 'system_admin', 'org_owner'].includes(role),
+            canManageProjects: ['system_owner', 'system_admin', 'org_owner', 'org_admin'].includes(role),
+            canViewReports: ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer'].includes(role),
             canCreateTasks: !['org_assistant'].includes(role),
             isOrgMember: ['org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'].includes(role),
             disabled: false
@@ -462,7 +456,7 @@ export const createUserHttp = createHttpFunction<CreateUserRequest>(async (reque
             system_admin: role === 'system_admin',
             isSystemOwner: role === 'system_owner',
             isSystemAdmin: role === 'system_admin',
-            isOrganizationOwner: role === 'organization_owner',
+            isOrgOwner: role === 'org_owner',
             isOrgAdmin: role === 'org_admin',
             isOrgSupervisor: role === 'org_supervisor',
             isOrgEngineer: role === 'org_engineer',
@@ -473,9 +467,9 @@ export const createUserHttp = createHttpFunction<CreateUserRequest>(async (reque
             // الصلاحيات الجديدة
             canManageSystem: role === 'system_owner',
             canManageUsers: ['system_owner', 'system_admin'].includes(role),
-            canManageOrganization: ['system_owner', 'system_admin', 'organization_owner'].includes(role),
-            canManageProjects: ['system_owner', 'system_admin', 'organization_owner', 'org_admin'].includes(role),
-            canViewReports: ['system_owner', 'system_admin', 'organization_owner', 'org_admin', 'org_supervisor', 'org_engineer'].includes(role),
+            canManageOrganization: ['system_owner', 'system_admin', 'org_owner'].includes(role),
+            canManageProjects: ['system_owner', 'system_admin', 'org_owner', 'org_admin'].includes(role),
+            canViewReports: ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer'].includes(role),
             canCreateTasks: !['org_assistant'].includes(role)
         };
 
@@ -557,11 +551,11 @@ export const listFirebaseUsers = createCallableFunction<ListFirebaseUsersRequest
                 uid: user.uid,
                 email: user.email,
                 name: user.displayName || (firestoreData?.name as string | undefined),
-                role: customClaims.role || firestoreData?.role || 'user',
+                role: customClaims.role || firestoreData?.role || 'independent',
                 customPermissions: firestoreData?.customPermissions,
                 canManageSystem: !!customClaims.system_owner,
                 canManageUsers: !!(customClaims.system_owner || customClaims.system_admin),
-                canManageOrganization: !!(customClaims.system_owner || customClaims.system_admin || customClaims.organization_owner),
+                canManageOrganization: !!(customClaims.system_owner || customClaims.system_admin || customClaims.org_owner),
                 disabled: user.disabled,
                 createdAt: firestoreData?.createdAt,
                 lastLogin: user.metadata.lastSignInTime ? new Date(user.metadata.lastSignInTime).getTime() : null
@@ -608,7 +602,7 @@ export {
   createOrganization,
   getOrganization,
   updateOrganization,
-  addOrganizationMember,
+  updateOrganizationMember,
   removeOrganizationMember,
   getOrganizationMembers,
   requestOrganization,

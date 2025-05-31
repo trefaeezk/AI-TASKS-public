@@ -18,13 +18,13 @@ import { firestoreListenerManager, handleFirestoreError } from '@/utils/firestor
 interface UserClaims {
   // الأدوار المتاحة في النظام الجديد:
   // - أدوار النظام العامة: 'system_owner', 'system_admin', 'independent'
-  // - أدوار المؤسسات: 'organization_owner', 'admin', 'supervisor', 'engineer', 'technician', 'assistant'
+  // - أدوار المؤسسات: 'org_owner', 'admin', 'supervisor', 'engineer', 'technician', 'assistant'
   role?: UserRole;
 
   // الصلاحيات الخاصة (للتوافق مع النظام الجديد)
   system_owner?: boolean;       // مالك النظام (أعلى صلاحية)
   system_admin?: boolean;       // أدمن النظام العام
-  organization_owner?: boolean; // مالك المؤسسة
+  org_owner?: boolean; // مالك المؤسسة
   admin?: boolean;              // أدمن المؤسسة
 
   // معلومات الحساب
@@ -90,7 +90,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // الأدوار الجديدة
           isSystemOwner: false,
           isSystemAdmin: false,
-          isOrganizationOwner: false,
+          isOrgOwner: false,
           isAdmin: false,
           isOwner: false,
           isIndividualAdmin: false,
@@ -207,7 +207,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (orgData.ownerId === currentUser.uid || orgData.createdBy === currentUser.uid) {
           isOwner = true;
-          userRole = 'organization_owner';
+          userRole = 'org_owner';
           console.log("[AuthContext] 👑 المستخدم مالك المؤسسة");
         } else {
           // التحقق من العضوية
@@ -226,7 +226,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             isAdmin = userRole === 'admin';
 
             // التأكد من أن الدور صحيح للمؤسسات
-            const validOrgRoles: UserRole[] = ['organization_owner', 'admin', 'supervisor', 'engineer', 'technician', 'assistant'];
+            const validOrgRoles: UserRole[] = ['org_owner', 'admin', 'supervisor', 'engineer', 'technician', 'assistant'];
             if (!validOrgRoles.includes(userRole as UserRole)) {
               userRole = 'assistant'; // الدور الافتراضي للمؤسسات
             }
@@ -246,7 +246,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
 
             // التأكد من أن الدور صحيح
-            const validOrgRoles: UserRole[] = ['organization_owner', 'admin', 'supervisor', 'engineer', 'technician', 'assistant'];
+            const validOrgRoles: UserRole[] = ['org_owner', 'admin', 'supervisor', 'engineer', 'technician', 'assistant'];
             if (!validOrgRoles.includes(userRole as UserRole)) {
               userRole = 'assistant';
             }
@@ -258,7 +258,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           role: userRole,
           organizationId: organizationId,
           organizationName: orgData.name || 'مؤسسة',
-          organization_owner: isOwner,
+          org_owner: isOwner,
           admin: isAdmin,
           system_owner: userData.system_owner || false,
           system_admin: userData.system_admin || false,
@@ -272,7 +272,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log("  - الدور:", finalClaims.role);
         console.log("  - معرف المؤسسة:", finalClaims.organizationId);
         console.log("  - اسم المؤسسة:", finalClaims.organizationName);
-        console.log("  - مالك المؤسسة:", finalClaims.organization_owner);
+        console.log("  - مالك المؤسسة:", finalClaims.org_owner);
         console.log("  - أدمن المؤسسة:", finalClaims.admin);
         console.log("  - مالك النظام:", finalClaims.system_owner);
         console.log("  - أدمن النظام:", finalClaims.system_admin);

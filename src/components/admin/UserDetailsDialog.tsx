@@ -17,6 +17,22 @@ import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { Translate } from '../Translate';
 
+// دالة لعرض أسماء الأدوار بالعربية
+const getRoleDisplayName = (role: string): string => {
+  const roleNames: Record<string, string> = {
+    'system_owner': 'مالك النظام',
+    'system_admin': 'أدمن النظام العام',
+    'independent': 'مستخدم مستقل',
+    'org_owner': 'مالك المؤسسة',
+    'org_admin': 'أدمن المؤسسة',
+    'org_supervisor': 'مشرف',
+    'org_engineer': 'مهندس',
+    'org_technician': 'فني',
+    'org_assistant': 'مساعد فني'
+  };
+  return roleNames[role] || role;
+};
+
 interface UserDetailsDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -151,7 +167,7 @@ export function UserDetailsDialog({
                     <Label className="text-muted-foreground">الدور الحالي</Label>
                     <p className="text-sm font-medium bg-primary/10 text-primary px-2 py-1 rounded-md inline-block">
                       {user.role ? (
-                        <Translate text={`roles.${user.role}`} defaultValue={user.role} />
+                        getRoleDisplayName(user.role)
                       ) : (
                         'غير محدد'
                       )}
@@ -176,7 +192,7 @@ export function UserDetailsDialog({
                       <SelectItem value="independent">مستخدم مستقل</SelectItem>
 
                       {/* أدوار المؤسسات */}
-                      <SelectItem value="organization_owner">مالك المؤسسة</SelectItem>
+                      <SelectItem value="org_owner">مالك المؤسسة</SelectItem>
                       <SelectItem value="org_admin">أدمن المؤسسة</SelectItem>
                       <SelectItem value="org_supervisor">مشرف</SelectItem>
                       <SelectItem value="org_engineer">مهندس</SelectItem>

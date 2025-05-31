@@ -23,8 +23,8 @@ export const canInviteToOrganization = async (userId: string, organizationId: st
         const memberData = memberDoc.data();
         const role = memberData?.role;
 
-        // الأدوار التي يمكنها إضافة أعضاء
-        const rolesWithInvitePermission = ['admin', 'engineer', 'supervisor'];
+        // الأدوار التي يمكنها إضافة أعضاء (الأدوار الجديدة)
+        const rolesWithInvitePermission = ['org_admin', 'org_engineer', 'org_supervisor'];
 
         return rolesWithInvitePermission.includes(role);
     } catch (error) {
@@ -57,7 +57,7 @@ export const hasOrganizationRole = async (
         const userRole = memberData?.role;
 
         // ترتيب الأدوار من الأعلى إلى الأدنى (النظام الموحد)
-        const roleHierarchy = ['organization_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
+        const roleHierarchy = ['org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
 
         // التحقق من أن دور المستخدم أعلى من أو يساوي الدور المطلوب
         const userRoleIndex = roleHierarchy.indexOf(userRole);
@@ -133,7 +133,7 @@ export const ensureOrgAdmin = async (context: LegacyCallableContext, orgId: stri
         .collection('members').doc(uid).get();
 
     const memberData = memberDoc.data();
-    const isOrgAdmin = memberData?.role === 'organization_owner' || memberData?.role === 'org_admin';
+    const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
 
     if (!memberDoc.exists || !isOrgAdmin) {
         throw new functions.https.HttpsError(
@@ -193,7 +193,10 @@ export const ensureOrgAdminHttp = async (req: functions.https.Request, orgId: st
     const memberDoc = await db.collection('organizations').doc(orgId)
         .collection('members').doc(decodedToken.uid).get();
 
-    if (!memberDoc.exists || memberDoc.data()?.role !== 'admin') {
+    const memberData = memberDoc.data();
+    const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+
+    if (!memberDoc.exists || !isOrgAdmin) {
         throw new functions.https.HttpsError(
             'permission-denied',
             'يجب أن تكون مديرًا في المؤسسة للوصول إلى هذه الوظيفة.'

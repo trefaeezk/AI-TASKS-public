@@ -141,7 +141,7 @@ export function useFirebaseAuth() {
             // الأدوار الجديدة
             isSystemOwner: false,
             isSystemAdmin: false,
-            isOrganizationOwner: false,
+            isOrgOwner: false,
             isAdmin: false,
             isOwner: false,
             isIndividualAdmin: false,
@@ -300,7 +300,7 @@ export function useFirebaseAuth() {
             // الأدوار الجديدة
             isSystemOwner: false,
             isSystemAdmin: false,
-            isOrganizationOwner: false,
+            isOrgOwner: false,
             isAdmin: false,
             isOwner: false,
             isIndividualAdmin: false,

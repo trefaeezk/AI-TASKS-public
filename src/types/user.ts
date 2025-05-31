@@ -53,7 +53,7 @@ export interface UserData {
   // الأدوار الجديدة
   isSystemOwner: boolean;
   isSystemAdmin: boolean;
-  isOrganizationOwner: boolean;
+  isOrgOwner: boolean;
   isAdmin: boolean;
   isOwner: boolean;
   isIndividualAdmin: boolean;

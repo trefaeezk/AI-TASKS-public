@@ -52,8 +52,8 @@ export function usePermissions() {
         effectiveRole = 'system_owner';
       } else if (userClaims.system_admin) {
         effectiveRole = 'system_admin';
-      } else if (userClaims.organization_owner) {
-        effectiveRole = 'organization_owner';
+      } else if (userClaims.org_owner) {
+        effectiveRole = 'org_owner';
       } else if (userClaims.org_admin) {
         effectiveRole = 'org_admin';
       } else if (userClaims.role) {
@@ -90,7 +90,7 @@ export function usePermissions() {
            // التحقق من تطابق الأدوار مع النظام الجديد
            if (userData.role && userData.role !== effectiveRole) {
             // تحقق من الأدوار عالية المستوى التي لا يجب تغييرها
-            const highLevelRoles = ['system_owner', 'system_admin', 'organization_owner'];
+            const highLevelRoles = ['system_owner', 'system_admin', 'org_owner'];
             if (!highLevelRoles.includes(effectiveRole)) {
               console.warn(`[usePermissions] Role mismatch: Claims ('${effectiveRole}') vs Firestore ('${userData.role}'). Consider refreshing claims.`);
               // يمكن استدعاء refreshUserData() هنا، لكن احذر من الحلقات اللانهائية

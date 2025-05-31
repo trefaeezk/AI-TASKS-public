@@ -240,10 +240,10 @@ export default function OrganizationRequestsPage() {
                   size="sm"
                   onClick={async () => {
                     try {
-                      // تعيين المستخدم كمالك بشكل مباشر عن طريق تحديث وثيقة المستخدم
+                      // تعيين المستخدم كمالك بشكل مباشر عن طريق تحديث وثيقة المستخدم (الدور الجديد)
                       const userDocRef = doc(db, 'users', user?.uid || '');
                       await updateDoc(userDocRef, {
-                        role: 'owner',
+                        role: 'org_owner',
                         isOwner: true,
                         isAdmin: true,
                         updatedAt: new Date()

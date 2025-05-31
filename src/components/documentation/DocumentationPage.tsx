@@ -138,7 +138,7 @@ const DocumentationPage: React.FC<DocumentationPageProps> = ({
     }
     if (doc.requiredPermission === 'admin') {
       const hasAccess = userClaims?.system_admin === true || userClaims?.system_owner === true ||
-                       userClaims?.organization_owner === true || userClaims?.individual_admin === true;
+                       userClaims?.org_owner === true || userClaims?.individual_admin === true;
       console.log('Admin permission check:', hasAccess);
       return hasAccess;
     }

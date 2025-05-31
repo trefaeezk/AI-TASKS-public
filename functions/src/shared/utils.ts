@@ -83,7 +83,8 @@ export const isOrganizationAdmin = async (userId: string, orgId: string): Promis
     }
 
     const data = memberDoc.data();
-    return data?.role === 'admin';
+    const isOrgAdmin = data?.role === 'org_owner' || data?.role === 'org_admin';
+    return isOrgAdmin;
 };
 
 /**
