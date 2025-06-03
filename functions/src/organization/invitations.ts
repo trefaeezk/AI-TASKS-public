@@ -17,6 +17,7 @@ interface InviteUserToOrganizationRequest {
     organizationId: string;
     email: string;
     role: string;
+    departmentId?: string;
 }
 
 /**
@@ -38,7 +39,7 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
         const uid = auth.uid;
 
         // التحقق من صحة المدخلات
-        const { organizationId, email, role } = data;
+        const { organizationId, email, role, departmentId } = data;
 
         if (!organizationId || typeof organizationId !== 'string') {
             throw new functions.https.HttpsError(
@@ -126,6 +127,7 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
             organizationName: organizationData?.name || '',
             email,
             role,
+            departmentId: departmentId || null,
             status: 'pending', // pending, accepted, rejected
             invitedBy: uid,
             invitedByName: auth?.token.name || '',
@@ -139,8 +141,35 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
 
         console.log(`Organization invitation created with ID: ${invitationRef.id}`);
 
-        // إرسال إشعار للمستخدم (يمكن تنفيذه لاحقًا)
-        // TODO: إرسال إشعار للمستخدم
+        // إرسال إيميل الدعوة
+        try {
+            // استيراد دالة إرسال الإيميل
+            const { sendOrganizationInvitationEmail } = await import('../email/index');
+
+            // إنشاء رابط الدعوة
+            const invitationUrl = `https://studio--tasks-intelligence.web.app/invitation/${invitationRef.id}`;
+
+            // الحصول على اسم المرسل
+            const inviterName = auth?.token?.name || auth?.token?.email || 'مدير المؤسسة';
+
+            // إرسال الإيميل
+            const emailSent = await sendOrganizationInvitationEmail(
+                email,
+                organizationData?.name || 'المؤسسة',
+                inviterName,
+                role,
+                invitationUrl
+            );
+
+            if (emailSent) {
+                console.log(`✅ Invitation email sent successfully to ${email}`);
+            } else {
+                console.warn(`⚠️ Failed to send invitation email to ${email}`);
+            }
+        } catch (emailError) {
+            console.error('Error sending invitation email:', emailError);
+            // لا نفشل العملية إذا فشل إرسال الإيميل
+        }
 
         return {
             success: true,
@@ -154,6 +183,132 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
         throw new functions.https.HttpsError(
             'internal',
             `Failed to invite user to organization: ${error.message || 'Unknown error'}`
+        );
+    }
+});
+
+/**
+ * نوع بيانات طلب جلب معلومات الدعوة العامة
+ */
+interface GetInvitationInfoRequest {
+    invitationId: string;
+}
+
+/**
+ * جلب معلومات الدعوة العامة (للمستخدمين غير المسجلين)
+ * يعرض فقط المعلومات الآمنة والضرورية
+ * يتبع نفس نمط listFirebaseUsers
+ */
+export const getInvitationInfo = createCallableFunction<GetInvitationInfoRequest>(async (request: CallableRequest<GetInvitationInfoRequest>) => {
+    const { data } = request;
+    const functionName = 'getInvitationInfo';
+    console.log(`--- ${functionName} Cloud Function triggered ---`);
+    console.log(`Fetching invitation info for ID: ${data.invitationId}`);
+
+    try {
+        // التحقق من صحة المدخلات
+        const { invitationId } = data;
+
+        if (!invitationId || typeof invitationId !== 'string') {
+            throw new functions.https.HttpsError(
+                'invalid-argument',
+                'يجب توفير معرف دعوة صالح.'
+            );
+        }
+
+        // الحصول على الدعوة
+        const invitationDoc = await db.collection('organizationInvitations').doc(invitationId).get();
+
+        if (!invitationDoc.exists) {
+            throw new functions.https.HttpsError(
+                'not-found',
+                'الدعوة غير موجودة أو انتهت صلاحيتها.'
+            );
+        }
+
+        const invitationData = invitationDoc.data();
+
+        // التحقق من أن الدعوة معلقة
+        if (invitationData?.status !== 'pending') {
+            throw new functions.https.HttpsError(
+                'failed-precondition',
+                `هذه الدعوة ${invitationData?.status === 'accepted' ? 'تم قبولها بالفعل' : 'تم رفضها بالفعل'}.`
+            );
+        }
+
+        // جلب معلومات المؤسسة (مثل نمط listFirebaseUsers)
+        console.log(`Fetching organization data for ID: ${invitationData.organizationId}`);
+        const organizationDoc = await db.collection('organizations').doc(invitationData.organizationId).get();
+        const organizationData = organizationDoc.exists ? organizationDoc.data() : null;
+
+        if (!organizationData) {
+            console.warn(`Organization ${invitationData.organizationId} not found in Firestore`);
+        } else {
+            console.log(`Successfully fetched organization: ${organizationData.name}`);
+        }
+
+        // جلب معلومات القسم إذا كان محدد (مع معالجة الأخطاء)
+        let departmentData: any = null;
+        if (invitationData.departmentId) {
+            try {
+                console.log(`Fetching department data for ID: ${invitationData.departmentId}`);
+                const departmentDoc = await db.collection('organizations')
+                    .doc(invitationData.organizationId)
+                    .collection('departments')
+                    .doc(invitationData.departmentId)
+                    .get();
+
+                if (departmentDoc.exists) {
+                    const docData = departmentDoc.data();
+                    if (docData) {
+                        departmentData = docData;
+                        console.log(`Successfully fetched department: ${departmentData.name}`);
+                    }
+                } else {
+                    console.warn(`Department ${invitationData.departmentId} not found`);
+                }
+            } catch (departmentError) {
+                console.error(`Error fetching department ${invitationData.departmentId}:`, departmentError);
+                // لا نفشل العملية إذا فشل جلب القسم
+            }
+        }
+
+        // إرجاع المعلومات الآمنة فقط (مثل نمط listFirebaseUsers)
+        const result = {
+            success: true,
+            invitation: {
+                id: invitationId,
+                email: invitationData.email,
+                role: invitationData.role,
+                status: invitationData.status,
+                invitedByName: invitationData.invitedByName || 'مدير المؤسسة',
+                createdAt: invitationData.createdAt,
+                departmentId: invitationData.departmentId || null
+            },
+            organization: {
+                id: invitationData.organizationId,
+                name: organizationData?.name || 'مؤسسة غير معروفة',
+                description: organizationData?.description || null,
+                type: organizationData?.type || null,
+                website: organizationData?.website || null
+            },
+            department: departmentData ? {
+                id: invitationData.departmentId,
+                name: departmentData.name || 'قسم غير معروف',
+                description: departmentData.description || null
+            } : null
+        };
+
+        console.log(`Successfully processed invitation info for ${invitationData.email}`);
+        return result;
+    } catch (error: any) {
+        console.error(`Error in ${functionName}:`, error);
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
+        throw new functions.https.HttpsError(
+            'internal',
+            `Failed to get invitation info: ${error.message || 'Unknown error'}`
         );
     }
 });

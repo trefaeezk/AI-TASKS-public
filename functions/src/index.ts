@@ -592,9 +592,12 @@ export {
   requestOrganization,
   approveOrganizationRequest,
   rejectOrganizationRequest,
+  // دوال الدعوات
   inviteUserToOrganization,
+  getInvitationInfo,
   acceptOrganizationInvitation,
   rejectOrganizationInvitation,
+  // دوال OKR
   createOkrPeriod,
   getOkrPeriods,
   updateOkrPeriod,

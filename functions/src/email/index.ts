@@ -207,6 +207,108 @@ function generateOTP(): string {
 }
 
 /**
+ * إرسال دعوة للانضمام إلى مؤسسة
+ * @param to عنوان البريد الإلكتروني للمستلم
+ * @param organizationName اسم المؤسسة
+ * @param inviterName اسم الشخص الذي أرسل الدعوة
+ * @param role الدور المطلوب
+ * @param invitationUrl رابط قبول الدعوة
+ * @returns وعد بنتيجة إرسال البريد الإلكتروني
+ */
+export const sendOrganizationInvitationEmail = async (
+  to: string,
+  organizationName: string,
+  inviterName: string,
+  role: string,
+  invitationUrl: string
+): Promise<boolean> => {
+  const subject = `دعوة للانضمام إلى مؤسسة ${organizationName}`;
+
+  // ترجمة الأدوار للعربية
+  const roleTranslations: { [key: string]: string } = {
+    'org_owner': 'مالك المؤسسة',
+    'org_admin': 'مدير المؤسسة',
+    'org_supervisor': 'مشرف',
+    'org_engineer': 'مهندس',
+    'org_technician': 'فني',
+    'org_assistant': 'مساعد'
+  };
+
+  const roleInArabic = roleTranslations[role] || role;
+
+  const text = `
+مرحبًا،
+
+تم دعوتك للانضمام إلى مؤسسة "${organizationName}" بدور "${roleInArabic}" من قبل ${inviterName}.
+
+للانضمام إلى المؤسسة، يرجى النقر على الرابط التالي:
+${invitationUrl}
+
+إذا لم تكن تتوقع هذه الدعوة، يمكنك تجاهل هذا البريد الإلكتروني.
+
+مع تحيات فريق Tasks Intelligence
+  `;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; direction: rtl; background-color: #f8f9fa;">
+      <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #2563eb; margin: 0; font-size: 28px;">Tasks Intelligence</h1>
+          <div style="width: 50px; height: 3px; background-color: #2563eb; margin: 10px auto;"></div>
+        </div>
+
+        <h2 style="color: #1f2937; text-align: center; margin-bottom: 30px;">دعوة للانضمام إلى المؤسسة</h2>
+
+        <div style="background-color: #eff6ff; padding: 20px; border-radius: 8px; border-right: 4px solid #2563eb; margin-bottom: 30px;">
+          <p style="font-size: 16px; line-height: 1.6; margin: 0; color: #1f2937;">
+            <strong>مرحبًا،</strong><br><br>
+            تم دعوتك للانضمام إلى مؤسسة <strong style="color: #2563eb;">"${organizationName}"</strong>
+            بدور <strong style="color: #059669;">"${roleInArabic}"</strong>
+            من قبل <strong>${inviterName}</strong>.
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 40px 0;">
+          <a href="${invitationUrl}"
+             style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+                    color: white;
+                    padding: 15px 30px;
+                    text-decoration: none;
+                    border-radius: 8px;
+                    display: inline-block;
+                    font-weight: bold;
+                    font-size: 16px;
+                    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+                    transition: all 0.3s ease;">
+            🎉 قبول الدعوة والانضمام
+          </a>
+        </div>
+
+        <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; border-right: 4px solid #f59e0b; margin: 30px 0;">
+          <p style="font-size: 14px; margin: 0; color: #92400e;">
+            <strong>ملاحظة:</strong> إذا لم تكن تتوقع هذه الدعوة، يمكنك تجاهل هذا البريد الإلكتروني بأمان.
+          </p>
+        </div>
+
+        <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
+          <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
+            هذا بريد إلكتروني تم إنشاؤه تلقائيًا من نظام Tasks Intelligence<br>
+            يرجى عدم الرد على هذا البريد الإلكتروني
+          </p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  return sendEmail({
+    to,
+    subject,
+    text,
+    html,
+  });
+};
+
+/**
  * وظيفة سحابية لإنشاء وإرسال رمز OTP
  * تتحقق من أن المستخدم هو مالك التطبيق
  * ثم تنشئ رمز OTP وترسله عبر البريد الإلكتروني
