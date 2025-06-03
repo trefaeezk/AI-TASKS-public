@@ -69,6 +69,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const getUserDataFromFirestore = useCallback(async (currentUser: User): Promise<UserClaims> => {
     console.log("[AuthContext] 🔍 جلب بيانات المستخدم:", currentUser.uid);
 
+    // تشخيص الـ Token
+    try {
+      const idTokenResult = await currentUser.getIdTokenResult();
+      console.log("[AuthContext] 🔑 Firebase Token Claims:", idTokenResult.claims);
+      console.log("[AuthContext] 🔑 Token Role:", idTokenResult.claims.role);
+      console.log("[AuthContext] 🔑 Token AccountType:", idTokenResult.claims.accountType);
+      console.log("[AuthContext] 🔑 Token isIndependent:", idTokenResult.claims.isIndependent);
+    } catch (tokenError) {
+      console.error("[AuthContext] ❌ خطأ في جلب Token:", tokenError);
+    }
+
     try {
       // 1️⃣ جلب بيانات المستخدم الأساسية من Firestore
       const userDocRef = doc(db, 'users', currentUser.uid);

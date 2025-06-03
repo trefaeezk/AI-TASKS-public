@@ -287,13 +287,16 @@ export const updateAccountType = createCallableFunction<UpdateAccountTypeRequest
                     createdAt: admin.firestore.FieldValue.serverTimestamp(),
                     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
                     disabled: false,
-                    // الأدوار الجديدة
+                    // النمط الجديد is* فقط
                     isSystemOwner: false,
                     isSystemAdmin: false,
                     isOrgOwner: false,
-                    isAdmin: false,
-                    isOwner: false,
-                    isIndividualAdmin: false
+                    isOrgAdmin: false,
+                    isOrgSupervisor: false,
+                    isOrgEngineer: false,
+                    isOrgTechnician: false,
+                    isOrgAssistant: false,
+                    isIndependent: true
                 });
             } else {
                 // تحديث البيانات الموجودة

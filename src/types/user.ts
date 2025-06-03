@@ -30,7 +30,7 @@ export interface ManagedUser {
   organizationId?: string; // معرف المؤسسة (إذا كان نوع الحساب مؤسسة)
   departmentId?: string; // معرف القسم (إذا كان نوع الحساب مؤسسة)
   customPermissions?: PermissionKey[];
-  isAdmin: boolean; // للتوافق مع الكود القديم
+  hasAdminAccess: boolean; // النمط الجديد - محسوب من الأدوار
   disabled: boolean;
   createdAt?: any; // Firestore timestamp
   lastLogin?: any; // Firestore timestamp
@@ -49,13 +49,16 @@ export interface UserData {
   organizationId?: string;              // معرف المؤسسة (إذا كان نوع الحساب مؤسسة)
   departmentId?: string;                // معرف القسم (إذا كان نوع الحساب مؤسسة)
 
-  // الأدوار الجديدة
+  // النمط الجديد is* فقط
   isSystemOwner: boolean;
   isSystemAdmin: boolean;
   isOrgOwner: boolean;
-  isAdmin: boolean;
-  isOwner: boolean;
-  isIndividualAdmin: boolean;
+  isOrgAdmin: boolean;
+  isOrgSupervisor: boolean;
+  isOrgEngineer: boolean;
+  isOrgTechnician: boolean;
+  isOrgAssistant: boolean;
+  isIndependent: boolean;
 
   // الحالة والصلاحيات
   disabled: boolean;                    // ✅ حالة التفعيل
@@ -72,11 +75,24 @@ export interface UserData {
  * Represents user claims stored in Firebase Auth
  */
 export interface UserClaims {
-  
   role?: UserRole;
   accountType?: SystemType; // نوع الحساب (فرد/مؤسسة)
   organizationId?: string; // معرف المؤسسة (إذا كان نوع الحساب مؤسسة)
   departmentId?: string; // معرف القسم (إذا كان نوع الحساب مؤسسة)
+
+  // النمط الجديد is* فقط
+  isSystemOwner?: boolean;
+  isSystemAdmin?: boolean;
+  isOrgOwner?: boolean;
+  isOrgAdmin?: boolean;
+  isOrgSupervisor?: boolean;
+  isOrgEngineer?: boolean;
+  isOrgTechnician?: boolean;
+  isOrgAssistant?: boolean;
+  isIndependent?: boolean;
+
+  // الصلاحيات المخصصة
+  customPermissions?: PermissionKey[];
 }
 
 /**

@@ -107,7 +107,27 @@ service cloud.firestore {
 
     // التحقق من المستخدم الفردي (دور مستقل أو نوع حساب فردي)
     function isIndividualUser() {
-      return isIndependent() || isIndividualAccount();
+      return isIndependent() || isIndividualAccount() ||
+             (isAuthenticated() && getUserToken().role == 'independent');
+    }
+
+    // التحقق من المستخدم العادي (أي مستخدم مسجل دخول)
+    function isRegularUser() {
+      return isAuthenticated() && (
+        isIndividualUser() ||
+        hasAdminAccess() ||
+        getUserToken().role != null ||
+        // السماح للمستخدمين الجدد بدون token claims
+        (isAuthenticated() && getUserToken().role == null)
+      );
+    }
+
+    // قاعدة مؤقتة للمستخدمين الجدد
+    function isNewUser() {
+      return isAuthenticated() && (
+        getUserToken().role == null ||
+        getUserToken().accountType == null
+      );
     }
 
     // التحقق من الصلاحيات المخصصة
@@ -134,7 +154,9 @@ service cloud.firestore {
         request.auth.uid == userId ||
         canManageUsers() ||
         hasCustomPermission('users:view') ||
-        hasAdminAccess()
+        hasAdminAccess() ||
+        isRegularUser() || // السماح لجميع المستخدمين المسجلين بقراءة بياناتهم
+        isNewUser() // السماح للمستخدمين الجدد
       );
 
       // كتابة البيانات الشخصية
@@ -142,7 +164,9 @@ service cloud.firestore {
         request.auth.uid == userId ||
         canManageUsers() ||
         hasCustomPermission('users:edit') ||
-        hasAdminAccess()
+        hasAdminAccess() ||
+        (request.auth.uid == userId && isRegularUser()) || // السماح للمستخدمين بتعديل بياناتهم
+        (request.auth.uid == userId && isNewUser()) // السماح للمستخدمين الجدد بإنشاء بياناتهم
       );
     }
 
@@ -153,7 +177,8 @@ service cloud.firestore {
         hasCustomPermission('tasks:view') ||
         canCreateTasks() ||
         hasAdminAccess() ||
-        isIndependent() ||
+        isIndividualUser() ||
+        isRegularUser() ||
         resource.data.createdBy == request.auth.uid ||
         resource.data.assignedTo == request.auth.uid
       );
@@ -163,7 +188,8 @@ service cloud.firestore {
         hasCustomPermission('tasks:create') ||
         canCreateTasks() ||
         hasAdminAccess() ||
-        isIndependent()
+        isIndividualUser() ||
+        isRegularUser()
       );
 
       // تعديل المهام
@@ -171,7 +197,8 @@ service cloud.firestore {
         hasCustomPermission('tasks:edit') ||
         canCreateTasks() ||
         hasAdminAccess() ||
-        isIndependent() ||
+        isIndividualUser() ||
+        isRegularUser() ||
         resource.data.createdBy == request.auth.uid
       );
 
@@ -179,7 +206,8 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && (
         hasCustomPermission('tasks:delete') ||
         hasAdminAccess() ||
-        isIndependent() ||
+        isIndividualUser() ||
+        isRegularUser() ||
         resource.data.createdBy == request.auth.uid
       );
     }
@@ -252,10 +280,10 @@ service cloud.firestore {
       // قاعدة احتياطية - السماح للمستخدمين المسجلين بالقراءة والأدمن بالكتابة
       allow read: if isAuthenticated() && (
         hasAdminAccess() ||
-        isIndividualAccount() ||
-        isIndependent()
+        isIndividualUser() ||
+        isRegularUser()
       );
-      allow write: if hasAdminAccess() || isIndividualAccount();
+      allow write: if hasAdminAccess() || isIndividualUser() || isRegularUser();
     }
   }
 }

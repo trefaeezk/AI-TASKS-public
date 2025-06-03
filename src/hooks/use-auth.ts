@@ -20,7 +20,7 @@ export function useAuth() {
   // تحديد الدور بناءً على claims بالترتيب الصحيح
   let role;
   if (auth.userClaims?.isOrgOwner) {
-    role = org_owner ;
+    role = 'org_owner';
   } else if (auth.userClaims?.isOrgAdmin) {
     role = 'org_admin';
   } else {

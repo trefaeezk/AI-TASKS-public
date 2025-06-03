@@ -52,6 +52,15 @@ export function useFirebaseAuth() {
       case 'auth/invalid-email':
          message = 'البريد الإلكتروني غير صالح.'; // Invalid email.
          break;
+      case 'auth/invalid-credential':
+         message = 'البريد الإلكتروني أو كلمة المرور غير صحيحة.'; // Email or password is incorrect.
+         break;
+      case 'auth/user-not-found':
+         message = 'لم يتم العثور على مستخدم بهذا البريد الإلكتروني.'; // User not found with this email.
+         break;
+      case 'auth/wrong-password':
+         message = 'كلمة المرور غير صحيحة.'; // Password is incorrect.
+         break;
       case 'auth/popup-closed-by-user':
           message = 'تم إغلاق نافذة تسجيل الدخول بواسطة المستخدم.';
           break;
@@ -138,13 +147,16 @@ export function useFirebaseAuth() {
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
             disabled: false,
-            // الأدوار الجديدة
+            // النمط الجديد is* فقط
             isSystemOwner: false,
             isSystemAdmin: false,
             isOrgOwner: false,
-            isAdmin: false,
-            isOwner: false,
-            isIndividualAdmin: false,
+            isOrgAdmin: false,
+            isOrgSupervisor: false,
+            isOrgEngineer: false,
+            isOrgTechnician: false,
+            isOrgAssistant: false,
+            isIndependent: true,
             // معلومات المؤسسة (null للأفراد)
             organizationId: null,                   // ✅ معرف المؤسسة
             departmentId: null,                     // ✅ معرف القسم
@@ -201,8 +213,13 @@ export function useFirebaseAuth() {
   const signIn = async (email: string, password: string): Promise<boolean> => {
     setLoading(true);
     setError(null);
+
+    console.log("[useFirebaseAuth] Attempting to sign in with email:", email);
+
     try {
       await signInWithEmailAndPassword(auth, email, password);
+
+      console.log("[useFirebaseAuth] ✅ Sign in successful");
 
       // تحديث token المستخدم لضمان تحميل الصلاحيات الصحيحة
       console.log("[useFirebaseAuth] Refreshing user token after signin");
@@ -216,7 +233,11 @@ export function useFirebaseAuth() {
 
       setLoading(false);
       return true;
-    } catch (err) {
+    } catch (err: any) {
+      console.error("[useFirebaseAuth] ❌ Sign in failed:", err);
+      console.error("[useFirebaseAuth] Error code:", err.code);
+      console.error("[useFirebaseAuth] Error message:", err.message);
+
       handleAuthError(err);
       return false;
     }
@@ -297,13 +318,16 @@ export function useFirebaseAuth() {
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
             disabled: false,
-            // الأدوار الجديدة
+            // النمط الجديد is* فقط
             isSystemOwner: false,
             isSystemAdmin: false,
             isOrgOwner: false,
-            isAdmin: false,
-            isOwner: false,
-            isIndividualAdmin: false,
+            isOrgAdmin: false,
+            isOrgSupervisor: false,
+            isOrgEngineer: false,
+            isOrgTechnician: false,
+            isOrgAssistant: false,
+            isIndependent: true,
             // معلومات المؤسسة (null للأفراد)
             organizationId: null,                   // ✅ معرف المؤسسة
             departmentId: null,                     // ✅ معرف القسم
