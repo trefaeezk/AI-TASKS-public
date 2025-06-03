@@ -20,15 +20,15 @@ import { Translate } from '../Translate';
 // دالة لعرض أسماء الأدوار بالعربية
 const getRoleDisplayName = (role: string): string => {
   const roleNames: Record<string, string> = {
-    'system_owner': 'مالك النظام',
-    'system_admin': 'أدمن النظام العام',
-    'independent': 'مستخدم مستقل',
-    'org_owner': 'مالك المؤسسة',
-    'org_admin': 'أدمن المؤسسة',
-    'org_supervisor': 'مشرف',
-    'org_engineer': 'مهندس',
-    'org_technician': 'فني',
-    'org_assistant': 'مساعد فني'
+    'isSystemOwner': 'مالك النظام',
+    'isSystemAdmin': 'أدمن النظام العام',
+    'isIndependent': 'مستخدم مستقل',
+    'isOrgOwner': 'مالك المؤسسة',
+    'isOrgAdmin': 'أدمن المؤسسة',
+    'isOrgSupervisor': 'مشرف',
+    'isOrgEngineer': 'مهندس',
+    'isOrgTechnician': 'فني',
+    'isOrgAssistant': 'مساعد فني'
   };
   return roleNames[role] || role;
 };
@@ -55,7 +55,7 @@ export function UserDetailsDialog({
   const { toast } = useToast();
   const { refreshUserData } = useAuth();
   const [activeTab, setActiveTab] = useState('details');
-  const [selectedRole, setSelectedRole] = useState<UserRole>('org_assistant');
+  const [selectedRole, setSelectedRole] = useState<UserRole>('isOrgAssistant');
   const [customPermissions, setCustomPermissions] = useState<PermissionKey[]>([]);
   const [isDisabled, setIsDisabled] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -63,7 +63,7 @@ export function UserDetailsDialog({
   // Update state when user changes
   useEffect(() => {
     if (user) {
-      setSelectedRole(user.role || 'org_assistant');
+      setSelectedRole(user.role || 'isOrgAssistant');
       setCustomPermissions(user.customPermissions || []);
       setIsDisabled(user.disabled);
     }
@@ -186,18 +186,18 @@ export function UserDetailsDialog({
                       <SelectValue placeholder="اختر دورًا" />
                     </SelectTrigger>
                     <SelectContent>
-                      {/* أدوار النظام العامة */}
-                      <SelectItem value="system_owner">مالك النظام</SelectItem>
-                      <SelectItem value="system_admin">أدمن النظام العام</SelectItem>
-                      <SelectItem value="independent">مستخدم مستقل</SelectItem>
+                      {/* أدوار النظام العامة (النمط الجديد is* فقط) */}
+                      <SelectItem value="isSystemOwner">مالك النظام</SelectItem>
+                      <SelectItem value="isSystemAdmin">أدمن النظام العام</SelectItem>
+                      <SelectItem value="isIndependent">مستخدم مستقل</SelectItem>
 
-                      {/* أدوار المؤسسات */}
-                      <SelectItem value="org_owner">مالك المؤسسة</SelectItem>
-                      <SelectItem value="org_admin">أدمن المؤسسة</SelectItem>
-                      <SelectItem value="org_supervisor">مشرف</SelectItem>
-                      <SelectItem value="org_engineer">مهندس</SelectItem>
-                      <SelectItem value="org_technician">فني</SelectItem>
-                      <SelectItem value="org_assistant">مساعد فني</SelectItem>
+                      {/* أدوار المؤسسات (النمط الجديد is* فقط) */}
+                      <SelectItem value="isOrgOwner">مالك المؤسسة</SelectItem>
+                      <SelectItem value="isOrgAdmin">أدمن المؤسسة</SelectItem>
+                      <SelectItem value="isOrgSupervisor">مشرف</SelectItem>
+                      <SelectItem value="isOrgEngineer">مهندس</SelectItem>
+                      <SelectItem value="isOrgTechnician">فني</SelectItem>
+                      <SelectItem value="isOrgAssistant">مساعد فني</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

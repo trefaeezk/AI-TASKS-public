@@ -97,7 +97,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           email: currentUser.email,
           displayName: userName,
           accountType: 'individual',
-          role: 'independent',
+          role: 'isIndependent',
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           disabled: false,
@@ -125,7 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         return {
           accountType: 'individual',
-          role: 'independent'
+          role: 'isIndependent'
         };
       }
 
@@ -145,7 +145,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         const individualClaims = {
           accountType: 'individual' as SystemType,
-          role: userData.role || 'independent',
+          role: userData.role || 'isIndependent',
           isSystemOwner: userData.isSystemOwner || false,
           isSystemAdmin: userData.isSystemAdmin || false,
           isOrgOwner: false,
@@ -154,7 +154,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           isOrgEngineer: false,
           isOrgTechnician: false,
           isOrgAssistant: false,
-          isIndependent: (userData.role || 'independent') === 'independent',
+          isIndependent: (userData.role || 'isIndependent') === 'isIndependent',
           customPermissions: userData.customPermissions || [],
           departmentId: userData.departmentId
         };
@@ -171,7 +171,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (!organizationId) {
           console.error("[AuthContext] ❌ حساب مؤسسة بدون معرف مؤسسة!");
-          return { accountType: 'individual', role: 'independent' };
+          return { accountType: 'individual', role: 'isIndependent' };
         }
 
         console.log("[AuthContext] 🎯 الخطوة 3: جلب بيانات المؤسسة");
@@ -182,7 +182,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (!orgDocSnap.exists()) {
           console.error("[AuthContext] ❌ المؤسسة غير موجودة:", organizationId);
-          return { accountType: 'individual', role: 'independent' };
+          return { accountType: 'individual', role: 'isIndependent' };
         }
 
         const orgData = orgDocSnap.data();
@@ -208,7 +208,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (orgData.ownerId === currentUser.uid || orgData.createdBy === currentUser.uid) {
           isOwner = true;
-          userRole = 'org_owner';
+          userRole = 'isOrgOwner';
           console.log("[AuthContext] 👑 المستخدم مالك المؤسسة");
         } else {
           // التحقق من العضوية
@@ -224,12 +224,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             userRole = memberData.role || userData.role || 'assistant';
 
             // تحديد الأدوار بناءً على الدور المحفوظ
-            isAdmin = userRole === 'org_admin';
+            isAdmin = userRole === 'isOrgAdmin';
 
             // التأكد من أن الدور صحيح للمؤسسات
-            const validOrgRoles: UserRole[] = ['org_owner', 'org_admin', 'supervisor', 'engineer', 'technician', 'assistant'];
+            const validOrgRoles: UserRole[] = ['isOrgOwner', 'isOrgAdmin', 'isOrgSupervisor', 'isOrgEngineer', 'isOrgTechnician', 'isOrgAssistant'];
             if (!validOrgRoles.includes(userRole as UserRole)) {
-              userRole = 'assistant'; // الدور الافتراضي للمؤسسات
+              userRole = 'isOrgAssistant'; // الدور الافتراضي للمؤسسات
             }
 
             console.log("[AuthContext] 👥 المستخدم عضو في المؤسسة، الدور:", userRole);
@@ -239,17 +239,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.log("  - سيتم استخدام الدور من userData أو assistant");
 
             // تطبيق نفس منطق التوافق مع النظام القديم
-            userRole = userData.role || 'assistant';
-            if (userData.role === 'org_owner'  && !isOwner) {
-              userRole = 'org_admin';
-            } else if (userData.role === 'independent') {
-              userRole = 'org_admin';
+            userRole = userData.role || 'isOrgAssistant';
+            if (userData.role === 'isOrgOwner'  && !isOwner) {
+              userRole = 'isOrgAdmin';
+            } else if (userData.role === 'isIndependent') {
+              userRole = 'isOrgAdmin';
             }
 
             // التأكد من أن الدور صحيح
-            const validOrgRoles: UserRole[] = ['org_owner', 'org_admin', 'supervisor', 'engineer', 'technician', 'assistant'];
+            const validOrgRoles: UserRole[] = ['isOrgOwner', 'isOrgAdmin', 'isOrgSupervisor', 'isOrgEngineer', 'isOrgTechnician', 'isOrgAssistant'];
             if (!validOrgRoles.includes(userRole as UserRole)) {
-              userRole = 'assistant';
+              userRole = 'isOrgAssistant';
             }
           }
         }
@@ -263,10 +263,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           isSystemAdmin: userData.isSystemAdmin || false,
           isOrgOwner: isOwner,
           isOrgAdmin: isAdmin,
-          isOrgSupervisor: userRole === 'org_supervisor',
-          isOrgEngineer: userRole === 'org_engineer',
-          isOrgTechnician: userRole === 'org_technician',
-          isOrgAssistant: userRole === 'org_assistant',
+          isOrgSupervisor: userRole === 'isOrgSupervisor',
+          isOrgEngineer: userRole === 'isOrgEngineer',
+          isOrgTechnician: userRole === 'isOrgTechnician',
+          isOrgAssistant: userRole === 'isOrgAssistant',
           isIndependent: false,
           customPermissions: userData.customPermissions || [],
           departmentId: userData.departmentId
@@ -301,7 +301,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // حالة افتراضية
       return {
         accountType: 'individual',
-        role: 'independent'
+        role: 'isIndependent'
       };
 
     } catch (error) {
@@ -309,7 +309,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       return {
         accountType: 'individual',
-        role: 'independent'
+        role: 'isIndependent'
       };
     }
   }, []);

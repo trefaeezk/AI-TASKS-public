@@ -6,20 +6,20 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { db } from './utils';
 
-// استيراد أنواع الصلاحيات من ملف types/user.ts - النظام الجديد
+// استيراد أنواع الصلاحيات من ملف types/user.ts - النظام الجديد (النمط is* فقط)
 export type UserRole =
   // أدوار النظام العامة
-  | 'system_owner'    // مالك النظام (أعلى صلاحية)
-  | 'system_admin'    // أدمن النظام العام
-  | 'independent'     // مستخدم مستقل (فردي)
+  | 'isSystemOwner'    // مالك النظام (أعلى صلاحية)
+  | 'isSystemAdmin'    // أدمن النظام العام
+  | 'isIndependent'    // مستخدم مستقل (فردي)
 
   // أدوار المؤسسات
-  | 'org_owner' // مالك المؤسسة
-  | 'org_admin'       // أدمن المؤسسة
-  | 'org_supervisor'  // مشرف
-  | 'org_engineer'    // مهندس
-  | 'org_technician'  // فني
-  | 'org_assistant';  // مساعد فني
+  | 'isOrgOwner'       // مالك المؤسسة
+  | 'isOrgAdmin'       // أدمن المؤسسة
+  | 'isOrgSupervisor'  // مشرف
+  | 'isOrgEngineer'    // مهندس
+  | 'isOrgTechnician'  // فني
+  | 'isOrgAssistant';  // مساعد فني
 
 export type PermissionArea =
   | 'users'      // إدارة المستخدمين
@@ -58,7 +58,7 @@ export const keyToPermission = (key: PermissionKey): Permission => {
 // الصلاحيات الافتراضية لكل دور - النظام الجديد
 export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   // مالك النظام - أعلى صلاحية في النظام بالكامل
-  system_owner: [
+  isSystemOwner: [
     'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
@@ -69,7 +69,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // أدمن النظام العام - صلاحيات واسعة لإدارة النظام
-  system_admin: [
+  isSystemAdmin: [
     'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
@@ -80,7 +80,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // مالك المؤسسة - صلاحيات كاملة داخل المؤسسة
-  org_owner: [
+  isOrgOwner: [
     'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
@@ -91,7 +91,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // أدمن المؤسسة - صلاحيات إدارية واسعة داخل المؤسسة
-  org_admin: [
+  isOrgAdmin: [
     'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
@@ -102,7 +102,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // المهندس لديه صلاحيات واسعة ولكن أقل من المسؤول
-  org_engineer: [
+  isOrgEngineer: [
     'users:view', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:approve',
@@ -112,7 +112,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // المشرف يركز على إدارة المهام والتقارير
-  org_supervisor: [
+  isOrgSupervisor: [
     'users:view',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit',
@@ -122,7 +122,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // الفني يركز على تنفيذ المهام
-  org_technician: [
+  isOrgTechnician: [
     'tasks:view', 'tasks:edit',
     'reports:view', 'reports:create',
     'tools:view', 'tools:edit',
@@ -130,7 +130,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // مساعد الفني لديه صلاحيات محدودة
-  org_assistant: [
+  isOrgAssistant: [
     'tasks:view',
     'reports:view', 'reports:create',
     'tools:view',
@@ -138,7 +138,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // المستخدم المستقل (الفردي) لديه صلاحيات كاملة على المحتوى الخاص به فقط
-  independent: [
+  isIndependent: [
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete',
     'tools:view', 'tools:create', 'tools:edit',
@@ -162,7 +162,7 @@ export const hasPermission = async (
     // الحصول على معلومات المستخدم من Firebase Auth
     const userRecord = await admin.auth().getUser(userId);
     const customClaims = userRecord.customClaims || {};
-    const userRole = customClaims.role as UserRole || 'independent';
+    const userRole = customClaims.role as UserRole || 'isIndependent';
 
     // الحصول على الصلاحيات الافتراضية للدور
     const defaultPermissions = DEFAULT_ROLE_PERMISSIONS[userRole] || [];
@@ -170,22 +170,22 @@ export const hasPermission = async (
     // التحقق من الأدوار عالية المستوى في النظام الجديد
 
     // مالك النظام - أعلى صلاحية
-    if (customClaims.isSystemOwner === true || userRole === 'system_owner') {
+    if (customClaims.isSystemOwner === true || userRole === 'isSystemOwner') {
       return true;
     }
 
     // أدمن النظام العام - صلاحيات واسعة
-    if (customClaims.isSystemAdmin === true || userRole === 'system_admin') {
+    if (customClaims.isSystemAdmin === true || userRole === 'isSystemAdmin') {
       return true;
     }
 
     // مالك المؤسسة - صلاحيات كاملة داخل المؤسسة
-    if (customClaims.isOrgOwner === true || userRole === 'org_owner') {
+    if (customClaims.isOrgOwner === true || userRole === 'isOrgOwner') {
       return true;
     }
 
     // أدمن المؤسسة - صلاحيات إدارية واسعة داخل المؤسسة
-    if (customClaims.isOrgAdmin === true || userRole === 'org_admin') {
+    if (customClaims.isOrgAdmin === true || userRole === 'isOrgAdmin') {
       return true;
     }
 
@@ -207,7 +207,7 @@ export const hasPermission = async (
     }
 
     // إذا كان المستخدم فرديًا، تحقق من مجموعة individuals
-    if (userRole === 'independent') {
+    if (userRole === 'isIndependent') {
       const individualDoc = await db.collection('individuals').doc(userId).get();
       if (individualDoc.exists) {
         const individualData = individualDoc.data();
@@ -233,7 +233,7 @@ export const getUserPermissions = async (userId: string): Promise<PermissionKey[
     // الحصول على معلومات المستخدم من Firebase Auth
     const userRecord = await admin.auth().getUser(userId);
     const customClaims = userRecord.customClaims || {};
-    const userRole = customClaims.role as UserRole || 'independent';
+    const userRole = customClaims.role as UserRole || 'isIndependent';
 
     // الحصول على الصلاحيات الافتراضية للدور
     const defaultPermissions = DEFAULT_ROLE_PERMISSIONS[userRole] || [];
@@ -241,23 +241,23 @@ export const getUserPermissions = async (userId: string): Promise<PermissionKey[
     // التحقق من الأدوار عالية المستوى في النظام الجديد
 
     // مالك النظام - جميع الصلاحيات
-    if (customClaims.isSystemOwner === true || userRole === 'system_owner') {
+    if (customClaims.isSystemOwner === true || userRole === 'isSystemOwner') {
       return Object.values(DEFAULT_ROLE_PERMISSIONS).flat();
     }
 
     // أدمن النظام العام - صلاحيات واسعة
-    if (customClaims.isSystemAdmin === true || userRole === 'system_admin') {
-      return DEFAULT_ROLE_PERMISSIONS.system_admin;
+    if (customClaims.isSystemAdmin === true || userRole === 'isSystemAdmin') {
+      return DEFAULT_ROLE_PERMISSIONS.isSystemAdmin;
     }
 
     // مالك المؤسسة - صلاحيات كاملة داخل المؤسسة
-    if (customClaims.isOrgOwner === true || userRole === 'org_owner') {
-      return DEFAULT_ROLE_PERMISSIONS.org_owner;
+    if (customClaims.isOrgOwner === true || userRole === 'isOrgOwner') {
+      return DEFAULT_ROLE_PERMISSIONS.isOrgOwner;
     }
 
     // أدمن المؤسسة - صلاحيات إدارية واسعة داخل المؤسسة
-    if (customClaims.isOrgAdmin === true || userRole === 'org_admin') {
-      return DEFAULT_ROLE_PERMISSIONS.org_admin;
+    if (customClaims.isOrgAdmin === true || userRole === 'isOrgAdmin') {
+      return DEFAULT_ROLE_PERMISSIONS.isOrgAdmin;
     }
 
     // الحصول على الصلاحيات المخصصة للمستخدم من Firestore
@@ -270,7 +270,7 @@ export const getUserPermissions = async (userId: string): Promise<PermissionKey[
     }
 
     // إذا كان المستخدم فرديًا، أضف الصلاحيات من مجموعة individuals
-    if (userRole === 'independent') {
+    if (userRole === 'isIndependent') {
       const individualDoc = await db.collection('individuals').doc(userId).get();
       if (individualDoc.exists) {
         const individualData = individualDoc.data();
@@ -288,15 +288,15 @@ export const getUserPermissions = async (userId: string): Promise<PermissionKey[
 };
 
 /**
- * حساب الصلاحيات الأساسية ديناميكياً من الدور (بدون تخزين)
+ * حساب الصلاحيات الأساسية ديناميكياً من الدور (بدون تخزين) - النمط الجديد is* فقط
  */
 export function calculateDynamicPermissions(role: string) {
     return {
-        canManageSystem: role === 'system_owner',
-        canManageUsers: ['system_owner', 'system_admin'].includes(role),
-        canManageOrganization: ['system_owner', 'system_admin', 'org_owner'].includes(role),
-        canManageProjects: ['system_owner', 'system_admin', 'org_owner', 'org_admin'].includes(role),
-        canViewReports: ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer'].includes(role),
-        canCreateTasks: !['org_assistant'].includes(role)
+        canManageSystem: role === 'isSystemOwner',
+        canManageUsers: ['isSystemOwner', 'isSystemAdmin'].includes(role),
+        canManageOrganization: ['isSystemOwner', 'isSystemAdmin', 'isOrgOwner'].includes(role),
+        canManageProjects: ['isSystemOwner', 'isSystemAdmin', 'isOrgOwner', 'isOrgAdmin'].includes(role),
+        canViewReports: ['isSystemOwner', 'isSystemAdmin', 'isOrgOwner', 'isOrgAdmin', 'isOrgSupervisor', 'isOrgEngineer'].includes(role),
+        canCreateTasks: !['isOrgAssistant'].includes(role)
     };
 }

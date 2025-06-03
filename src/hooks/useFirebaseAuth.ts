@@ -143,7 +143,7 @@ export function useFirebaseAuth() {
             email: userCredential.user.email,
             displayName: name || userCredential.user.email?.split('@')[0] || 'مستخدم',
             accountType: 'individual',
-            role: 'independent',
+            role: 'isIndependent',
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
             disabled: false,
@@ -174,7 +174,7 @@ export function useFirebaseAuth() {
         }
       }
 
-      // تعيين نوع الحساب كمستقل (individual) والدور كمستخدم مستقل (independent)
+      // تعيين نوع الحساب كمستقل (individual) والدور كمستخدم مستقل (isIndependent)
       try {
         const updateAccountTypeFunc = httpsCallable(functions, 'updateAccountType');
         await updateAccountTypeFunc({
@@ -314,7 +314,7 @@ export function useFirebaseAuth() {
             email: result.user.email,
             displayName: userName,
             accountType: 'individual',
-            role: 'independent',
+            role: 'isIndependent',
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
             disabled: false,

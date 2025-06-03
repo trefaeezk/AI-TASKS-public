@@ -224,14 +224,14 @@ export const sendOrganizationInvitationEmail = async (
 ): Promise<boolean> => {
   const subject = `دعوة للانضمام إلى مؤسسة ${organizationName}`;
 
-  // ترجمة الأدوار للعربية
+  // ترجمة الأدوار للعربية (النمط الجديد is* فقط)
   const roleTranslations: { [key: string]: string } = {
-    'org_owner': 'مالك المؤسسة',
-    'org_admin': 'مدير المؤسسة',
-    'org_supervisor': 'مشرف',
-    'org_engineer': 'مهندس',
-    'org_technician': 'فني',
-    'org_assistant': 'مساعد'
+    'isOrgOwner': 'مالك المؤسسة',
+    'isOrgAdmin': 'مدير المؤسسة',
+    'isOrgSupervisor': 'مشرف',
+    'isOrgEngineer': 'مهندس',
+    'isOrgTechnician': 'فني',
+    'isOrgAssistant': 'مساعد'
   };
 
   const roleInArabic = roleTranslations[role] || role;

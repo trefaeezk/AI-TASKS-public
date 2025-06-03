@@ -19,7 +19,7 @@ export default function DataPage() {
 
   useEffect(() => {
     if (!loading && userClaims) {
-      setIsIndependent(userClaims.role === 'independent');
+      setIsIndependent(userClaims.role === 'isIndependent');
     }
   }, [userClaims, loading]);
 

@@ -95,7 +95,7 @@ export default function AdminDashboardPage() {
             // Check customClaims for admin role (assuming claim is { org_admin: true })
              // Important: Also include name if available from Firestore/Auth
             name: u.displayName ?? u.name ?? 'غير متوفر', // Prioritize displayName, fallback to 'name' if stored
-            role: u.role || u.customClaims?.role || 'independent', // النظام الجديد الموحد
+            role: u.role || u.customClaims?.role || 'isIndependent', // النظام الجديد الموحد
             accountType: u.accountType || u.customClaims?.accountType || 'individual',
             organizationId: u.organizationId || u.customClaims?.organizationId,
             departmentId: u.departmentId || u.customClaims?.departmentId,

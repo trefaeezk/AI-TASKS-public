@@ -48,14 +48,14 @@ export default function InvitationPage() {
   const [invitationInfo, setInvitationInfo] = useState<InvitationInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // ترجمة الأدوار
+  // ترجمة الأدوار (النمط الجديد is* فقط)
   const roleTranslations: { [key: string]: string } = {
-    'org_owner': 'مالك المؤسسة',
-    'org_admin': 'مدير المؤسسة',
-    'org_supervisor': 'مشرف',
-    'org_engineer': 'مهندس',
-    'org_technician': 'فني',
-    'org_assistant': 'مساعد'
+    'isOrgOwner': 'مالك المؤسسة',
+    'isOrgAdmin': 'مدير المؤسسة',
+    'isOrgSupervisor': 'مشرف',
+    'isOrgEngineer': 'مهندس',
+    'isOrgTechnician': 'فني',
+    'isOrgAssistant': 'مساعد'
   };
 
   // جلب بيانات الدعوة باستخدام Firebase Function (آمن للمستخدمين غير المسجلين)

@@ -56,17 +56,17 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
         // التحقق من الأدوار الموحدة حسب الهيكلة المتفق عليها
         const userRole = idTokenResult.claims.role;
 
-        // أدوار النظام العامة (المستوى 1-2)
-        const userIsSystemOwner = userRole === 'system_owner' || idTokenResult.claims.isSystemOwner === true;
-        const userIsSystemAdmin = userRole === 'system_admin' || idTokenResult.claims.isSystemAdmin === true;
+        // أدوار النظام العامة (المستوى 1-2) - النمط الجديد is* فقط
+        const userIsSystemOwner = userRole === 'isSystemOwner' || idTokenResult.claims.isSystemOwner === true;
+        const userIsSystemAdmin = userRole === 'isSystemAdmin' || idTokenResult.claims.isSystemAdmin === true;
 
-        // أدوار المؤسسات (المستوى 3-8)
-        const userisOrgOwner = userRole === 'org_owner' || idTokenResult.claims.isOrgOwner === true;
-        const userIsOrgAdmin = userRole === 'org_admin' || idTokenResult.claims.isOrgAdmin === true;
-        const userIsOrgSupervisor = userRole === 'org_supervisor' || idTokenResult.claims.isOrgSupervisor === true;
-        const userIsOrgEngineer = userRole === 'org_engineer' || idTokenResult.claims.isOrgEngineer === true;
-        const userIsOrgTechnician = userRole === 'org_technician' || idTokenResult.claims.isOrgTechnician === true;
-        const userIsOrgAssistant = userRole === 'org_assistant' || idTokenResult.claims.isOrgAssistant === true;
+        // أدوار المؤسسات (المستوى 3-8) - النمط الجديد is* فقط
+        const userisOrgOwner = userRole === 'isOrgOwner' || idTokenResult.claims.isOrgOwner === true;
+        const userIsOrgAdmin = userRole === 'isOrgAdmin' || idTokenResult.claims.isOrgAdmin === true;
+        const userIsOrgSupervisor = userRole === 'isOrgSupervisor' || idTokenResult.claims.isOrgSupervisor === true;
+        const userIsOrgEngineer = userRole === 'isOrgEngineer' || idTokenResult.claims.isOrgEngineer === true;
+        const userIsOrgTechnician = userRole === 'isOrgTechnician' || idTokenResult.claims.isOrgTechnician === true;
+        const userIsOrgAssistant = userRole === 'isOrgAssistant' || idTokenResult.claims.isOrgAssistant === true;
 
         // النظام الموحد - تحديد مستويات الوصول
         const hasOwnerAccess = userIsSystemOwner;

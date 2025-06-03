@@ -104,7 +104,7 @@ export const createOrganization = createCallableFunction<CreateOrganizationReque
 
         // إضافة المستخدم الحالي كمسؤول في المؤسسة
         await db.collection('organizations').doc(orgId).collection('members').doc(uid).set({
-            role: 'org_admin',
+            role: 'isOrgAdmin',
             joinedAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
@@ -301,7 +301,7 @@ export const removeOrganizationMember = createCallableFunction<RemoveOrganizatio
         // التحقق من أن المستخدم ليس المدير الوحيد في المؤسسة
         if (context.auth?.uid === userId) {
             const adminsSnapshot = await db.collection('organizations').doc(orgId).collection('members')
-                .where('role', '==', 'org_admin').get();
+                .where('role', '==', 'isOrgAdmin').get();
 
             if (adminsSnapshot.size <= 1) {
                 throw new functions.https.HttpsError(
@@ -387,7 +387,7 @@ export const updateOrganizationMember = createCallableFunction<UpdateOrganizatio
         };
 
         if (role !== undefined) {
-            const validRoles = ['org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant'];
+            const validRoles = ['isOrgAdmin', 'isOrgEngineer', 'isOrgSupervisor', 'isOrgTechnician', 'isOrgAssistant'];
             if (!validRoles.includes(role)) {
                 throw new functions.https.HttpsError(
                     "invalid-argument",

@@ -35,11 +35,11 @@ export default function OrganizationMeetingsPage() {
   const [weekDays, setWeekDays] = useState<Date[]>([]);
 
   const organizationId = userClaims?.organizationId;
-  // استخدام أسماء الحقول الصحيحة من قاعدة البيانات
-  const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOwner === true;
-  const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isAdmin === true;
-  const isEngineer = userClaims?.engineer === true;
-  const isSupervisor = userClaims?.supervisor === true;
+  // استخدام النمط الجديد is* فقط (بدون توافق)
+  const isOwner = userClaims?.isOrgOwner === true;
+  const isAdmin = userClaims?.isOrgAdmin === true;
+  const isEngineer = userClaims?.isOrgEngineer === true;
+  const isSupervisor = userClaims?.isOrgSupervisor === true;
   const canCreateMeetings = isOwner || isAdmin || isEngineer || isSupervisor;
 
   // تحديث أيام الأسبوع عند تغيير التاريخ المحدد

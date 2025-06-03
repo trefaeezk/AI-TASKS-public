@@ -130,7 +130,7 @@ export const setupSystem = createCallableFunction<SetupSystemRequest>(async (req
             ...(type === 'organization' && { organizationName }),
             settings: settings || {
                 allowSelfRegistration: type === 'individual',
-                defaultUserRole: type === 'individual' ? 'independent' : 'org_assistant',
+                defaultUserRole: type === 'individual' ? 'isIndependent' : 'isOrgAssistant',
                 autoActivateUsers: type === 'individual',
                 enableNotifications: true
             },
@@ -142,12 +142,12 @@ export const setupSystem = createCallableFunction<SetupSystemRequest>(async (req
         // تعيين المستخدم الحالي كمالك النظام
         await admin.auth().setCustomUserClaims(context.auth.uid, {
             isSystemOwner: true,
-            role: 'system_owner'
+            role: 'isSystemOwner'
         });
 
         // تحديث وثيقة المستخدم في Firestore
         await db.collection('users').doc(context.auth.uid).set({
-            role: 'system_owner',
+            role: 'isSystemOwner',
             email: context.auth.token.email || '',
             name: context.auth.token.name || '',
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -220,14 +220,14 @@ export const switchSystemType = createCallableFunction<SwitchSystemTypeRequest>(
         // الحصول على معلومات المستخدم الحالية
         const userRecord = await admin.auth().getUser(uid);
         const customClaims = userRecord.customClaims || {};
-        const currentRole = customClaims.role || 'independent';
+        const currentRole = customClaims.role || 'isIndependent';
 
         // تحديد الدور الجديد بناءً على نوع النظام
         let newRole = currentRole;
 
         if (type === 'individual') {
             // التحويل إلى نظام الأفراد
-            newRole = 'independent';
+            newRole = 'isIndependent';
 
             // التحقق مما إذا كان المستخدم موجودًا بالفعل في مجموعة individuals
             const individualDoc = await db.collection('individuals').doc(uid).get();

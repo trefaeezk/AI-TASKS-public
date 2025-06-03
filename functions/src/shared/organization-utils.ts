@@ -34,7 +34,7 @@ export const isOrganizationAdmin = async (userId: string, organizationId: string
         }
 
         const memberData = memberDoc.data();
-        const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+        const isOrgAdmin = memberData?.role === 'isOrgOwner' || memberData?.role === 'isOrgAdmin';
         return isOrgAdmin;
     } catch (error) {
         console.error(`Error checking if user ${userId} is admin of organization ${organizationId}:`, error);
@@ -58,8 +58,8 @@ export const canInviteToOrganization = async (userId: string, organizationId: st
         const memberData = memberDoc.data();
         const role = memberData?.role;
 
-        // الأدوار التي يمكنها إضافة أعضاء (النمط الجديد)
-        const rolesWithInvitePermission = ['org_owner', 'org_admin', 'org_supervisor', 'org_engineer'];
+        // الأدوار التي يمكنها إضافة أعضاء (النمط الجديد is* فقط)
+        const rolesWithInvitePermission = ['isOrgOwner', 'isOrgAdmin', 'isOrgSupervisor', 'isOrgEngineer'];
 
         return rolesWithInvitePermission.includes(role);
     } catch (error) {
@@ -91,8 +91,8 @@ export const hasOrganizationRole = async (
         const memberData = memberDoc.data();
         const userRole = memberData?.role;
 
-        // ترتيب الأدوار من الأعلى إلى الأدنى (النظام الموحد)
-        const roleHierarchy = ['org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
+        // ترتيب الأدوار من الأعلى إلى الأدنى (النمط الجديد is* فقط)
+        const roleHierarchy = ['isOrgOwner', 'isOrgAdmin', 'isOrgSupervisor', 'isOrgEngineer', 'isOrgTechnician', 'isOrgAssistant'];
 
         // التحقق من أن دور المستخدم أعلى من أو يساوي الدور المطلوب
         const userRoleIndex = roleHierarchy.indexOf(userRole);

@@ -27,32 +27,32 @@
 
 | الدور | الاسم بالعربية | الوصف | المستوى |
 |-------|----------------|--------|----------|
-| `system_owner` | مالك النظام | أعلى صلاحية في النظام بالكامل، يدير جميع الأنظمة والمؤسسات | 1 |
-| `system_admin` | أدمن النظام العام | صلاحيات واسعة لإدارة النظام والمؤسسات | 2 |
-| `independent` | مستخدم مستقل | يدير مهامه وبياناته الشخصية فقط | 11 |
+| `isSystemOwner` | مالك النظام | أعلى صلاحية في النظام بالكامل، يدير جميع الأنظمة والمؤسسات | 1 |
+| `isSystemAdmin` | أدمن النظام العام | صلاحيات واسعة لإدارة النظام والمؤسسات | 2 |
+| `isIndependent` | مستخدم مستقل | يدير مهامه وبياناته الشخصية فقط | 11 |
 
 ### 🏢 أدوار المؤسسات
 
 | الدور | الاسم بالعربية | الوصف | المستوى |
 |-------|----------------|--------|----------|
-| `org_owner` | مالك المؤسسة | صلاحيات كاملة داخل المؤسسة | 3 |
-| `org_admin` | أدمن المؤسسة | صلاحيات إدارية واسعة داخل المؤسسة | 4 |
-| `org_supervisor` | مشرف | يشرف على الفرق والمهام ويدير العمليات | 5 |
-| `org_engineer` | مهندس | يصمم ويخطط المشاريع والحلول التقنية | 6 |
-| `org_technician` | فني | ينفذ المهام التقنية والصيانة | 7 |
-| `org_assistant` | مساعد فني | يساعد في تنفيذ المهام البسيطة | 8 |
+| `isOrgOwner` | مالك المؤسسة | صلاحيات كاملة داخل المؤسسة | 3 |
+| `isOrgAdmin` | أدمن المؤسسة | صلاحيات إدارية واسعة داخل المؤسسة | 4 |
+| `isOrgSupervisor` | مشرف | يشرف على الفرق والمهام ويدير العمليات | 5 |
+| `isOrgEngineer` | مهندس | يصمم ويخطط المشاريع والحلول التقنية | 6 |
+| `isOrgTechnician` | فني | ينفذ المهام التقنية والصيانة | 7 |
+| `isOrgAssistant` | مساعد فني | يساعد في تنفيذ المهام البسيطة | 8 |
 
 ### 📊 ترتيب الأدوار حسب المستوى
 ```
-1. system_owner (أعلى مستوى)
-2. system_admin
-3. org_owner
-4. org_admin
-5. org_supervisor
-6. org_engineer
-7. org_technician
-8. org_assistant
-9. independent (أقل مستوى)
+1. isSystemOwner (أعلى مستوى)
+2. isSystemAdmin
+3. isOrgOwner
+4. isOrgAdmin
+5. isOrgSupervisor
+6. isOrgEngineer
+7. isOrgTechnician
+8. isOrgAssistant
+9. isIndependent (أقل مستوى)
 ```
 
 ---
@@ -63,7 +63,7 @@
 
 **الخصائص:**
 - نوع الحساب: `individual`
-- الدور الافتراضي: `independent`
+- الدور الافتراضي: `isIndependent`
 - لا ينتمي لمؤسسة
 - يدير مهامه الشخصية فقط
 
@@ -71,7 +71,7 @@
 ```typescript
 {
   accountType: 'individual',
-  role: 'independent',
+  role: 'isIndependent',
   organizationId: null,
   departmentId: null
 }
@@ -81,7 +81,7 @@
 
 **الخصائص:**
 - نوع الحساب: `organization`
-- الدور الافتراضي: `org_assistant`
+- الدور الافتراضي: `isOrgAssistant`
 - ينتمي لمؤسسة محددة
 - قد ينتمي لقسم داخل المؤسسة
 
@@ -89,7 +89,7 @@
 ```typescript
 {
   accountType: 'organization',
-  role: 'org_admin' | 'org_supervisor' | 'org_engineer' | 'org_technician' | 'org_assistant',
+  role: 'isOrgAdmin' | 'isOrgSupervisor' | 'isOrgEngineer' | 'isOrgTechnician' | 'isOrgAssistant',
   organizationId: string,
   departmentId?: string
 }
@@ -113,7 +113,7 @@
 
 ### 🎯 صلاحيات كل دور
 
-#### 🌟 system_owner
+#### 🌟 isSystemOwner
 ```typescript
 // جميع الصلاحيات في جميع المجالات
 [
@@ -122,7 +122,7 @@
 ]
 ```
 
-#### 🔧 system_admin
+#### 🔧 isSystemAdmin
 ```typescript
 // صلاحيات واسعة لإدارة النظام
 [
@@ -136,7 +136,7 @@
 ]
 ```
 
-#### 🏢 org_owner
+#### 🏢 isOrgOwner
 ```typescript
 // صلاحيات كاملة داخل المؤسسة
 [
@@ -150,7 +150,7 @@
 ]
 ```
 
-#### 👨‍💼 org_admin
+#### 👨‍💼 isOrgAdmin
 ```typescript
 // صلاحيات إدارية واسعة داخل المؤسسة
 [
@@ -164,7 +164,7 @@
 ]
 ```
 
-#### 👨‍🔧 org_engineer
+#### 👨‍🔧 isOrgEngineer
 ```typescript
 // صلاحيات واسعة ولكن أقل من المسؤول
 [
@@ -177,7 +177,7 @@
 ]
 ```
 
-#### 👨‍💼 org_supervisor
+#### 👨‍💼 isOrgSupervisor
 ```typescript
 // يركز على إدارة المهام والتقارير
 [
@@ -190,7 +190,7 @@
 ]
 ```
 
-#### 🔧 org_technician
+#### 🔧 isOrgTechnician
 ```typescript
 // يركز على تنفيذ المهام
 [
@@ -201,7 +201,7 @@
 ]
 ```
 
-#### 🤝 org_assistant
+#### 🤝 isOrgAssistant
 ```typescript
 // صلاحيات محدودة
 [
@@ -212,7 +212,7 @@
 ]
 ```
 
-#### 🧑‍💻 independent
+#### 🧑‍💻 isIndependent
 ```typescript
 // صلاحيات كاملة على المحتوى الخاص به فقط
 [
@@ -275,7 +275,7 @@ interface Organization {
 ```typescript
 interface OrganizationMember {
   userId: string;
-  role: 'org_admin' | 'org_supervisor' | 'org_engineer' | 'org_technician' | 'org_assistant';
+  role: 'isOrgAdmin' | 'isOrgSupervisor' | 'isOrgEngineer' | 'isOrgTechnician' | 'isOrgAssistant';
   permissions?: {
     canCreateTasks?: boolean;
     canEditTasks?: boolean;
@@ -311,11 +311,11 @@ interface UserClaims {
   // الدور الحالي
   role?: UserRole;
   
-  // الصلاحيات الخاصة
-  system_owner?: boolean;       // مالك النظام
-  system_admin?: boolean;       // أدمن النظام العام
-  org_owner?: boolean; // مالك المؤسسة
-  org_admin?: boolean;          // أدمن المؤسسة
+  // الصلاحيات الخاصة (النمط الجديد is* فقط)
+  isSystemOwner?: boolean;      // مالك النظام
+  isSystemAdmin?: boolean;      // أدمن النظام العام
+  isOrgOwner?: boolean;         // مالك المؤسسة
+  isOrgAdmin?: boolean;         // أدمن المؤسسة
   
   // معلومات الحساب
   accountType?: 'individual' | 'organization';
@@ -332,7 +332,7 @@ const userData = {
   email: "user@company.com",
   password: "securePassword",
   name: "أحمد محمد",
-  role: "org_engineer",
+  role: "isOrgEngineer",
   accountType: "organization",
   organizationId: "org_123",
   departmentId: "dept_456"
@@ -342,7 +342,7 @@ const userData = {
 ### 🔄 تحديث دور المستخدم
 ```typescript
 // تحديث دور المستخدم
-await updateUserRole(userId, "org_admin");
+await updateUserRole(userId, "isOrgAdmin");
 
 // تحديث الصلاحيات المخصصة
 await updateUserPermissions(userId, [
@@ -361,17 +361,17 @@ await updateUserPermissions(userId, [
 **الهيكل التنظيمي:**
 ```
 مؤسسة التقنية المتقدمة
-├── مالك المؤسسة (org_owner)
-├── أدمن المؤسسة (org_admin)
+├── مالك المؤسسة (isOrgOwner)
+├── أدمن المؤسسة (isOrgAdmin)
 ├── قسم التطوير
-│   ├── مشرف التطوير (org_supervisor)
-│   ├── مهندس أول (org_engineer)
-│   ├── مهندس (org_engineer)
-│   └── فني (org_technician)
+│   ├── مشرف التطوير (isOrgSupervisor)
+│   ├── مهندس أول (isOrgEngineer)
+│   ├── مهندس (isOrgEngineer)
+│   └── فني (isOrgTechnician)
 └── قسم الدعم الفني
-    ├── مشرف الدعم (org_supervisor)
-    ├── فني دعم (org_technician)
-    └── مساعد فني (org_assistant)
+    ├── مشرف الدعم (isOrgSupervisor)
+    ├── فني دعم (isOrgTechnician)
+    └── مساعد فني (isOrgAssistant)
 ```
 
 **توزيع الصلاحيات:**
@@ -386,7 +386,7 @@ await updateUserPermissions(userId, [
 
 **المستخدم المستقل:**
 ```
-أحمد المستقل (independent)
+أحمد المستقل (isIndependent)
 ├── مهامه الشخصية
 ├── تقاريره الخاصة
 ├── لوحة معلوماته

@@ -55,7 +55,7 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
             );
         }
 
-        const validRoles = ['org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant'];
+        const validRoles = ['isOrgAdmin', 'isOrgEngineer', 'isOrgSupervisor', 'isOrgTechnician', 'isOrgAssistant'];
         if (!role || typeof role !== 'string' || !validRoles.includes(role)) {
             throw new functions.https.HttpsError(
                 'invalid-argument',

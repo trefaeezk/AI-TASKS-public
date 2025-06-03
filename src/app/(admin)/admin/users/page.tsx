@@ -25,15 +25,15 @@ import { useToast } from '@/hooks/use-toast';
 // دالة لعرض أسماء الأدوار بالعربية
 const getRoleDisplayName = (role: string): string => {
   const roleNames: Record<string, string> = {
-    'system_owner': 'مالك النظام',
-    'system_admin': 'أدمن النظام العام',
-    'independent': 'مستخدم مستقل',
-    'org_owner': 'مالك المؤسسة',
-    'org_admin': 'أدمن المؤسسة',
-    'org_supervisor': 'مشرف',
-    'org_engineer': 'مهندس',
-    'org_technician': 'فني',
-    'org_assistant': 'مساعد فني'
+    'isSystemOwner': 'مالك النظام',
+    'isSystemAdmin': 'أدمن النظام العام',
+    'isIndependent': 'مستخدم مستقل',
+    'isOrgOwner': 'مالك المؤسسة',
+    'isOrgAdmin': 'أدمن المؤسسة',
+    'isOrgSupervisor': 'مشرف',
+    'isOrgEngineer': 'مهندس',
+    'isOrgTechnician': 'فني',
+    'isOrgAssistant': 'مساعد فني'
   };
   return roleNames[role] || role;
 };
@@ -87,12 +87,12 @@ export default function UsersPage() {
         const orgUsers = result.data.members.map((member: any) => ({
           uid: member.uid,
           email: member.email || '',
-          role: member.role || 'user',
+          role: member.role || 'isOrgAssistant',
           name: member.name || '',
           disabled: false,
           customPermissions: [],
-          isAdmin: member.role === 'system_admin' || member.role === 'system_owner' ||
-                   member.role === 'org_owner' || member.role === 'org_admin',
+          hasAdminAccess: member.role === 'isSystemAdmin' || member.role === 'isSystemOwner' ||
+                         member.role === 'isOrgOwner' || member.role === 'isOrgAdmin',
           accountType: 'organization',
           organizationId
         }));
@@ -121,7 +121,7 @@ export default function UsersPage() {
 
         // تحويل البيانات إلى تنسيق ManagedUser
         const allUsers = result.data.users.map((user: any) => {
-          let userRole: UserRole = 'independent'; // الافتراضي
+          let userRole: UserRole = 'isIndependent'; // الافتراضي
 
           // أولاً: البحث في Firestore
           const firestoreUser = firestoreUsersMap.get(user.email);
@@ -132,13 +132,13 @@ export default function UsersPage() {
             if (user.customClaims?.role) {
               userRole = user.customClaims.role as UserRole;
             } else if (user.customClaims?.isSystemOwner) {
-              userRole = 'system_owner';
+              userRole = 'isSystemOwner';
             } else if (user.customClaims?.isSystemAdmin) {
-              userRole = 'system_admin';
+              userRole = 'isSystemAdmin';
             } else if (user.customClaims?.isOrgOwner) {
-              userRole = 'org_owner';
+              userRole = 'isOrgOwner';
             } else if (user.customClaims?.isOrgAdmin) {
-              userRole = 'org_admin';
+              userRole = 'isOrgAdmin';
             }
           }
 

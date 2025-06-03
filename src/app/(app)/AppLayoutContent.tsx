@@ -300,7 +300,7 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
         // Context not available.
     }
 
-    const isAdmin = role === 'org_admin';
+    const isAdmin = role === 'isOrgAdmin';
 
     const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href));
 
@@ -377,7 +377,7 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                   icon={Shield}
                   label={t('sidebar.adminPanel')}
                   tooltip={t('sidebar.adminPanelTooltip')}
-                  requiredRole="system_admin"
+                  requiredRole="isSystemAdmin"
                 />
                 <PermissionSidebarItem
                   href="/admin/users"
@@ -386,7 +386,7 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                   tooltip={t('sidebar.usersTooltip')}
                   requiredPermission={{ area: 'users', action: 'view' }}
                 />
-                {(role === 'system_owner' || role === 'system_admin' || role === 'org_owner' || role === 'org_admin') && (
+                {(role === 'isSystemOwner' || role === 'isSystemAdmin' || role === 'isOrgOwner' || role === 'isOrgAdmin') && (
                   <PermissionSidebarItem
                     href="/admin/data-management"
                     icon={Database}
@@ -396,7 +396,7 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                   />
                 )}
 
-                {role === 'independent' && (
+                {role === 'isIndependent' && (
                   <PermissionSidebarItem
                     href="/data"
                     icon={Database}
@@ -407,7 +407,7 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                 )}
                 {(() => {
                   console.log('🚨 [ORGANIZATION REQUESTS DEBUG] Starting check...');
-                  const shouldShow = userClaims?.isSystemOwner === true || userClaims?.role === 'system_owner';
+                  const shouldShow = userClaims?.isSystemOwner === true || userClaims?.role === 'isSystemOwner';
                   console.log('🚨 [ORGANIZATION REQUESTS DEBUG] Results:', {
                     userClaims,
                     userClaimsStringified: JSON.stringify(userClaims),
@@ -415,7 +415,7 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                     role: userClaims?.role,
                     shouldShow,
                     condition1: userClaims?.isSystemOwner === true,
-                    condition2: userClaims?.role === 'system_owner'
+                    condition2: userClaims?.role === 'isSystemOwner'
                   });
 
                   if (shouldShow) {
@@ -465,7 +465,7 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                     </div>
                     <div className="flex items-center justify-between w-full">
                       <Badge
-                        variant={role === 'org_admin' || role === 'system_owner' || role === 'org_owner' ? "default" : role === 'assistant' ? "secondary" : "outline"}
+                        variant={role === 'isOrgAdmin' || role === 'isSystemOwner' || role === 'isOrgOwner' ? "default" : role === 'isOrgAssistant' ? "secondary" : "outline"}
                         className="text-[10px] px-1.5 py-0 h-auto"
                       >
                         {loadingPermissions ? t('sidebar.userRoleLoading') : t(`roles.${role}`, role) }

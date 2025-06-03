@@ -48,8 +48,8 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
 
   const isOwner = userClaims?.isOrgOwner === true;
   const isAdmin = userClaims?.isOrgAdmin === true;
-  const isEngineer = userClaims?.engineer === true;
-  const isSupervisor = userClaims?.supervisor === true;
+  const isEngineer = userClaims?.isOrgEngineer === true;
+  const isSupervisor = userClaims?.isOrgSupervisor === true;
   const canEdit = isOwner || isAdmin || isEngineer || isSupervisor || meeting.createdBy === user?.uid;
 
   // تنسيق حالة الاجتماع

@@ -20,7 +20,7 @@ const createUserSchema = z.object({
   email: z.string().email({ message: 'البريد الإلكتروني غير صالح.' }),
   password: z.string().min(6, { message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل.' }),
   name: z.string().min(1, { message: 'الاسم مطلوب.' }),
-  role: z.enum(['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant', 'independent'], {
+  role: z.enum(['isSystemOwner', 'isSystemAdmin', 'isOrgOwner', 'isOrgAdmin', 'isOrgSupervisor', 'isOrgEngineer', 'isOrgTechnician', 'isOrgAssistant', 'isIndependent'], {
     errorMap: () => ({ message: 'الدور مطلوب.' })
   }),
   accountType: z.enum(['individual', 'organization'], {
@@ -54,7 +54,7 @@ export function CreateUserDialog({ isOpen, onOpenChange, onSubmit, loading }: Cr
       email: '',
       password: '',
       name: '',
-      role: 'org_assistant' as UserRole, // الافتراضي حسب الهيكلة الموحدة
+      role: 'isOrgAssistant' as UserRole, // الافتراضي حسب الهيكلة الموحدة
       accountType: 'individual' as SystemType,
       organizationId: '',
       departmentId: '',
@@ -151,18 +151,18 @@ export function CreateUserDialog({ isOpen, onOpenChange, onSubmit, loading }: Cr
                   <SelectValue placeholder="اختر دورًا" />
                 </SelectTrigger>
                 <SelectContent>
-                  {/* أدوار النظام العامة */}
-                  <SelectItem value="system_owner">مالك النظام</SelectItem>
-                  <SelectItem value="system_admin">أدمن النظام العام</SelectItem>
-                  <SelectItem value="independent">مستخدم مستقل</SelectItem>
+                  {/* أدوار النظام العامة (النمط الجديد is* فقط) */}
+                  <SelectItem value="isSystemOwner">مالك النظام</SelectItem>
+                  <SelectItem value="isSystemAdmin">أدمن النظام العام</SelectItem>
+                  <SelectItem value="isIndependent">مستخدم مستقل</SelectItem>
 
-                  {/* أدوار المؤسسات */}
-                  <SelectItem value="org_owner">مالك المؤسسة</SelectItem>
-                  <SelectItem value="org_admin">أدمن المؤسسة</SelectItem>
-                  <SelectItem value="org_supervisor">مشرف</SelectItem>
-                  <SelectItem value="org_engineer">مهندس</SelectItem>
-                  <SelectItem value="org_technician">فني</SelectItem>
-                  <SelectItem value="org_assistant">مساعد فني</SelectItem>
+                  {/* أدوار المؤسسات (النمط الجديد is* فقط) */}
+                  <SelectItem value="isOrgOwner">مالك المؤسسة</SelectItem>
+                  <SelectItem value="isOrgAdmin">أدمن المؤسسة</SelectItem>
+                  <SelectItem value="isOrgSupervisor">مشرف</SelectItem>
+                  <SelectItem value="isOrgEngineer">مهندس</SelectItem>
+                  <SelectItem value="isOrgTechnician">فني</SelectItem>
+                  <SelectItem value="isOrgAssistant">مساعد فني</SelectItem>
                 </SelectContent>
               </Select>
             </div>

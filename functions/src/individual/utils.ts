@@ -58,7 +58,7 @@ export const getIndividualUserData = async (userId: string) => {
 
 /**
  * التحقق مما إذا كان المستخدم فرديًا
- * إذا كان المستخدم لديه دور 'independent' ولكن ليس لديه وثيقة في مجموعة individuals، يتم إنشاء الوثيقة تلقائيًا
+ * إذا كان المستخدم لديه دور 'isIndependent' ولكن ليس لديه وثيقة في مجموعة individuals، يتم إنشاء الوثيقة تلقائيًا
  */
 export const isIndividualUser = async (userId: string, createIfNotExists: boolean = false): Promise<boolean> => {
     // التحقق من وجود وثيقة للمستخدم في مجموعة individuals
@@ -71,7 +71,7 @@ export const isIndividualUser = async (userId: string, createIfNotExists: boolea
     try {
         const userRecord = await admin.auth().getUser(userId);
         const customClaims = userRecord.customClaims || {};
-        const isIndependent = customClaims.role === 'independent' || customClaims.accountType === 'individual';
+        const isIndependent = customClaims.role === 'isIndependent' || customClaims.accountType === 'individual';
 
         // إذا كان المستخدم مستقلاً ولكن ليس لديه وثيقة، وتم طلب إنشاء الوثيقة
         if (isIndependent && createIfNotExists) {
@@ -81,7 +81,7 @@ export const isIndividualUser = async (userId: string, createIfNotExists: boolea
             await db.collection('individuals').doc(userId).set({
                 name: userRecord.displayName || '',
                 email: userRecord.email || '',
-                role: 'independent',
+                role: 'isIndependent',
                 accountType: 'individual',
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp()
@@ -91,7 +91,7 @@ export const isIndividualUser = async (userId: string, createIfNotExists: boolea
             if (!customClaims.accountType || !customClaims.role) {
                 await admin.auth().setCustomUserClaims(userId, {
                     ...customClaims,
-                    role: 'independent',
+                    role: 'isIndependent',
                     accountType: 'individual'
                 });
             }

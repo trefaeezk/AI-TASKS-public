@@ -29,17 +29,17 @@ export const ensureAdmin = (context: LegacyCallableContext): void => {
     const userRole = context.auth.token.role;
     console.log('🔍 ensureAdmin: User role from token:', userRole);
 
-    // أدوار النظام العامة (المستوى 1-2)
-    const isSystemOwner = userRole === 'system_owner' || context.auth.token.isSystemOwner === true;
-    const isSystemAdmin = userRole === 'system_admin' || context.auth.token.isSystemAdmin === true;
+    // أدوار النظام العامة (المستوى 1-2) - النمط الجديد is* فقط
+    const isSystemOwner = userRole === 'isSystemOwner' || context.auth.token.isSystemOwner === true;
+    const isSystemAdmin = userRole === 'isSystemAdmin' || context.auth.token.isSystemAdmin === true;
 
-    // أدوار المؤسسات (المستوى 3-8)
-    const isOrgOwner = userRole === 'org_owner' || context.auth.token.isOrgOwner === true;
-    const isOrgAdmin = userRole === 'org_admin';
-    const isOrgSupervisor = userRole === 'org_supervisor';
-    const isOrgEngineer = userRole === 'org_engineer';
-    const isOrgTechnician = userRole === 'org_technician';
-    const isOrgAssistant = userRole === 'org_assistant';
+    // أدوار المؤسسات (المستوى 3-8) - النمط الجديد is* فقط
+    const isOrgOwner = userRole === 'isOrgOwner' || context.auth.token.isOrgOwner === true;
+    const isOrgAdmin = userRole === 'isOrgAdmin';
+    const isOrgSupervisor = userRole === 'isOrgSupervisor';
+    const isOrgEngineer = userRole === 'isOrgEngineer';
+    const isOrgTechnician = userRole === 'isOrgTechnician';
+    const isOrgAssistant = userRole === 'isOrgAssistant';
 
     console.log('🔍 ensureAdmin: Role checks:', {
         isSystemOwner,
@@ -156,16 +156,16 @@ export const updateUserRole = createCallableFunction<UpdateUserRoleRequest>(asyn
             organizationId: currentClaims.organizationId,
             departmentId: currentClaims.departmentId,
             name: currentClaims.name,
-            // النمط الموحد is* فقط (بدون تكرار)
-            isSystemOwner: role === 'system_owner',
-            isSystemAdmin: role === 'system_admin',
-            isOrgOwner: role === 'org_owner',
-            isOrgAdmin: role === 'org_admin',
-            isOrgSupervisor: role === 'org_supervisor',
-            isOrgEngineer: role === 'org_engineer',
-            isOrgTechnician: role === 'org_technician',
-            isOrgAssistant: role === 'org_assistant',
-            isIndependent: role === 'independent',
+            // النمط الموحد is* فقط (بدون تكرار أو توافق مع الأدوار القديمة)
+            isSystemOwner: role === 'isSystemOwner',
+            isSystemAdmin: role === 'isSystemAdmin',
+            isOrgOwner: role === 'isOrgOwner',
+            isOrgAdmin: role === 'isOrgAdmin',
+            isOrgSupervisor: role === 'isOrgSupervisor',
+            isOrgEngineer: role === 'isOrgEngineer',
+            isOrgTechnician: role === 'isOrgTechnician',
+            isOrgAssistant: role === 'isOrgAssistant',
+            isIndependent: role === 'isIndependent',
             disabled: currentClaims.disabled || false,
             customPermissions: currentClaims.customPermissions || []
         };
@@ -176,18 +176,18 @@ export const updateUserRole = createCallableFunction<UpdateUserRoleRequest>(asyn
         const userDocRef = db.collection('users').doc(uid);
         const userDoc = await userDocRef.get();
 
-        // حساب الأدوار المنطقية والصلاحيات الجديدة
+        // حساب الأدوار المنطقية والصلاحيات الجديدة (النمط is* فقط)
         const roleFlags = {
-            isSystemOwner: role === 'system_owner',
-            isSystemAdmin: role === 'system_admin',
-            isOrgOwner: role === 'org_owner',
-            isOrgAdmin: role === 'org_admin',
-            isOrgSupervisor: role === 'org_supervisor',
-            isOrgEngineer: role === 'org_engineer',
-            isOrgTechnician: role === 'org_technician',
-            isOrgAssistant: role === 'org_assistant',
-            isIndependent: role === 'independent',
-            isOrgMember: ['org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'].includes(role)
+            isSystemOwner: role === 'isSystemOwner',
+            isSystemAdmin: role === 'isSystemAdmin',
+            isOrgOwner: role === 'isOrgOwner',
+            isOrgAdmin: role === 'isOrgAdmin',
+            isOrgSupervisor: role === 'isOrgSupervisor',
+            isOrgEngineer: role === 'isOrgEngineer',
+            isOrgTechnician: role === 'isOrgTechnician',
+            isOrgAssistant: role === 'isOrgAssistant',
+            isIndependent: role === 'isIndependent',
+            isOrgMember: ['isOrgAdmin', 'isOrgSupervisor', 'isOrgEngineer', 'isOrgTechnician', 'isOrgAssistant'].includes(role)
         };
 
         if (userDoc.exists) {

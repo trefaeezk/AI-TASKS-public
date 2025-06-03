@@ -50,7 +50,7 @@ export const DEFAULT_SYSTEM_SETTINGS: Omit<SystemSettings, 'createdAt' | 'update
   type: 'individual',
   settings: {
     allowSelfRegistration: true,
-    defaultUserRole: 'user',
+    defaultUserRole: 'isIndependent',
     autoActivateUsers: true,
     enableNotifications: true
   }
@@ -62,7 +62,7 @@ export const DEFAULT_ORGANIZATION_SETTINGS: Omit<SystemSettings, 'createdAt' | '
   organizationName: 'مؤسستي',
   settings: {
     allowSelfRegistration: false,
-    defaultUserRole: 'user',
+    defaultUserRole: 'isOrgAssistant',
     autoActivateUsers: false,
     enableNotifications: true
   }

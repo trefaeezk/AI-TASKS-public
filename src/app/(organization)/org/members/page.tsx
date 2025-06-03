@@ -68,7 +68,7 @@ export default function MembersPage() {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [formData, setFormData] = useState({
     email: '',
-    role: 'user',
+    role: 'isOrgAssistant',
     departmentId: 'none',
   });
   const [formLoading, setFormLoading] = useState(false);
@@ -172,7 +172,7 @@ export default function MembersPage() {
                 name: userData?.name || userData?.displayName || memberData.displayName || 'مستخدم غير معروف',
 
                 // 🎭 الدور: من عضوية المؤسسة (أولوية)
-                role: memberData.role || userData?.role || 'assistant',
+                role: memberData.role || userData?.role || 'isOrgAssistant',
 
                 // 🏢 القسم: من عضوية المؤسسة
                 departmentId: memberData.departmentId || null,
@@ -259,7 +259,7 @@ export default function MembersPage() {
       // إعادة تعيين نموذج الإضافة
       setFormData({
         email: '',
-        role: 'user',
+        role: 'isOrgAssistant',
         departmentId: 'none',
       });
       setIsAddDialogOpen(false);
@@ -643,12 +643,12 @@ export default function MembersPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {isOwner && <SelectItem value="org_owner"><Translate text="roles.isOrgOwner" /></SelectItem>}
-                  <SelectItem value="org_admin"><Translate text="roles.isOrgAdmin" /></SelectItem>
-                  <SelectItem value="org_engineer"><Translate text="roles.isOrgEngineer" /></SelectItem>
-                  <SelectItem value="org_supervisor"><Translate text="roles.isOrgSupervisor" /></SelectItem>
-                  <SelectItem value="org_technician"><Translate text="roles.isOrgTechnician" /></SelectItem>
-                  <SelectItem value="org_assistant"><Translate text="roles.isOrgAssistant" /></SelectItem>
+                  {isOwner && <SelectItem value="isOrgOwner"><Translate text="roles.isOrgOwner" /></SelectItem>}
+                  <SelectItem value="isOrgAdmin"><Translate text="roles.isOrgAdmin" /></SelectItem>
+                  <SelectItem value="isOrgEngineer"><Translate text="roles.isOrgEngineer" /></SelectItem>
+                  <SelectItem value="isOrgSupervisor"><Translate text="roles.isOrgSupervisor" /></SelectItem>
+                  <SelectItem value="isOrgTechnician"><Translate text="roles.isOrgTechnician" /></SelectItem>
+                  <SelectItem value="isOrgAssistant"><Translate text="roles.isOrgAssistant" /></SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -729,12 +729,12 @@ export default function MembersPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {isOwner && <SelectItem value="org_owner"><Translate text="roles.isOrgOwner" /></SelectItem>}
-                  <SelectItem value="org_admin"><Translate text="roles.isOrgAdmin" /></SelectItem>
-                  <SelectItem value="org_engineer"><Translate text="roles.isOrgEngineer" /></SelectItem>
-                  <SelectItem value="org_supervisor"><Translate text="roles.isOrgSupervisor" /></SelectItem>
-                  <SelectItem value="org_technician"><Translate text="roles.isOrgTechnician" /></SelectItem>
-                  <SelectItem value="org_assistant"><Translate text="roles.isOrgAssistant" /></SelectItem>
+                  {isOwner && <SelectItem value="isOrgOwner"><Translate text="roles.isOrgOwner" /></SelectItem>}
+                  <SelectItem value="isOrgAdmin"><Translate text="roles.isOrgAdmin" /></SelectItem>
+                  <SelectItem value="isOrgEngineer"><Translate text="roles.isOrgEngineer" /></SelectItem>
+                  <SelectItem value="isOrgSupervisor"><Translate text="roles.isOrgSupervisor" /></SelectItem>
+                  <SelectItem value="isOrgTechnician"><Translate text="roles.isOrgTechnician" /></SelectItem>
+                  <SelectItem value="isOrgAssistant"><Translate text="roles.isOrgAssistant" /></SelectItem>
                 </SelectContent>
               </Select>
             </div>

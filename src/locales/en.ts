@@ -142,33 +142,33 @@ const en = {
   },
 
   roles: {
-    // System-wide roles
-    system_owner: "System Owner",
-    system_admin: "System Admin",
-    independent: "Independent User",
+    // System-wide roles (New is* pattern only)
+    isSystemOwner: "System Owner",
+    isSystemAdmin: "System Admin",
+    isIndependent: "Independent User",
 
     // Organization roles
-    org_owner: "Organization Owner",
-    org_admin: "Organization Admin",
-    org_supervisor: "Supervisor",
-    org_engineer: "Engineer",
-    org_technician: "Technician",
-    org_assistant: "Assistant"
+    isOrgOwner: "Organization Owner",
+    isOrgAdmin: "Organization Admin",
+    isOrgSupervisor: "Supervisor",
+    isOrgEngineer: "Engineer",
+    isOrgTechnician: "Technician",
+    isOrgAssistant: "Assistant"
   },
 
   roleDescriptions: {
-    // System-wide roles
-    system_owner: "System Owner - Highest authority in the entire system, manages all systems and organizations",
-    system_admin: "System Admin - Broad permissions to manage the system and organizations",
-    independent: "Independent User - Manages only their personal tasks and data",
+    // System-wide roles (New is* pattern only)
+    isSystemOwner: "System Owner - Highest authority in the entire system, manages all systems and organizations",
+    isSystemAdmin: "System Admin - Broad permissions to manage the system and organizations",
+    isIndependent: "Independent User - Manages only their personal tasks and data",
 
     // Organization roles
-    org_owner: "Organization Owner - Full permissions within the organization",
-    org_admin: "Organization Admin - Broad administrative permissions within the organization",
-    org_supervisor: "Supervisor - Supervises teams and tasks, manages operations",
-    org_engineer: "Engineer - Designs and plans projects and technical solutions",
-    org_technician: "Technician - Executes technical tasks and maintenance",
-    org_assistant: "Assistant - Helps with simple tasks execution"
+    isOrgOwner: "Organization Owner - Full permissions within the organization",
+    isOrgAdmin: "Organization Admin - Broad administrative permissions within the organization",
+    isOrgSupervisor: "Supervisor - Supervises teams and tasks, manages operations",
+    isOrgEngineer: "Engineer - Designs and plans projects and technical solutions",
+    isOrgTechnician: "Technician - Executes technical tasks and maintenance",
+    isOrgAssistant: "Assistant - Helps with simple tasks execution"
   },
 
   common: {

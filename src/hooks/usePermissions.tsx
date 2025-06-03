@@ -48,26 +48,26 @@ export function usePermissions() {
 
       // تحديد الدور بناءً على النمط الجديد is* فقط
       if (userClaims.isSystemOwner) {
-        effectiveRole = 'system_owner';
+        effectiveRole = 'isSystemOwner';
       } else if (userClaims.isSystemAdmin) {
-        effectiveRole = 'system_admin';
+        effectiveRole = 'isSystemAdmin';
       } else if (userClaims.isOrgOwner) {
-        effectiveRole = 'org_owner';
+        effectiveRole = 'isOrgOwner';
       } else if (userClaims.isOrgAdmin) {
-        effectiveRole = 'org_admin';
+        effectiveRole = 'isOrgAdmin';
       } else if (userClaims.isOrgSupervisor) {
-        effectiveRole = 'org_supervisor';
+        effectiveRole = 'isOrgSupervisor';
       } else if (userClaims.isOrgEngineer) {
-        effectiveRole = 'org_engineer';
+        effectiveRole = 'isOrgEngineer';
       } else if (userClaims.isOrgTechnician) {
-        effectiveRole = 'org_technician';
+        effectiveRole = 'isOrgTechnician';
       } else if (userClaims.isOrgAssistant) {
-        effectiveRole = 'org_assistant';
+        effectiveRole = 'isOrgAssistant';
       } else if (userClaims.isIndependent) {
-        effectiveRole = 'independent';
+        effectiveRole = 'isIndependent';
       } else {
         // الدور الافتراضي
-        effectiveRole = userClaims.accountType === 'individual' ? 'independent' : 'org_assistant';
+        effectiveRole = userClaims.accountType === 'individual' ? 'isIndependent' : 'isOrgAssistant';
       }
 
       console.log("[usePermissions] Effective role from claims:", effectiveRole);
@@ -97,7 +97,7 @@ export function usePermissions() {
            // التحقق من تطابق الأدوار مع النظام الجديد
            if (userData.role && userData.role !== effectiveRole) {
             // تحقق من الأدوار عالية المستوى التي لا يجب تغييرها
-            const highLevelRoles = ['system_owner', 'system_admin', 'org_owner'];
+            const highLevelRoles = ['isSystemOwner', 'isSystemAdmin', 'isOrgOwner'];
             if (!highLevelRoles.includes(effectiveRole)) {
               console.warn(`[usePermissions] Role mismatch: Claims ('${effectiveRole}') vs Firestore ('${userData.role}'). Consider refreshing claims.`);
               // يمكن استدعاء refreshUserData() هنا، لكن احذر من الحلقات اللانهائية
@@ -122,7 +122,7 @@ export function usePermissions() {
     } catch (err: any) {
       console.error('[usePermissions] Error in determinePermissions:', err);
       setError(err.message || 'Error fetching user permissions');
-      setRole('org_assistant'); // Fallback role for new system
+      setRole('isOrgAssistant'); // Fallback role for new system
       setCustomPermissions([]);
     } finally {
       console.log("[usePermissions] Finished determinePermissions, setting internalLoading to false.");
@@ -166,7 +166,7 @@ export function usePermissions() {
     }
 
     // التحقق من الأدوار عالية المستوى أولاً
-    if (role === 'system_owner' || role === 'system_admin') {
+    if (role === 'isSystemOwner' || role === 'isSystemAdmin') {
       // console.log(`[usePermissions] hasPermission: User has high-level role '${role}', granting access to '${permissionString}'`);
       return true;
     }

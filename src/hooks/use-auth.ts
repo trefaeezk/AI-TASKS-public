@@ -20,11 +20,11 @@ export function useAuth() {
   // تحديد الدور بناءً على claims بالترتيب الصحيح
   let role;
   if (auth.userClaims?.isOrgOwner) {
-    role = 'org_owner';
+    role = 'isOrgOwner';
   } else if (auth.userClaims?.isOrgAdmin) {
-    role = 'org_admin';
+    role = 'isOrgAdmin';
   } else {
-    role = auth.userClaims?.role || (auth.userClaims?.accountType === 'individual' ? 'independent' : 'user');
+    role = auth.userClaims?.role || (auth.userClaims?.accountType === 'individual' ? 'isIndependent' : 'isOrgAssistant');
   }
 
   return {

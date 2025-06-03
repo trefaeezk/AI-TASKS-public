@@ -62,7 +62,7 @@ export const verifyAccountType = createCallableFunction<VerifyAccountTypeRequest
       accountType,
       organizationId,
       organization: organizationData,
-      role: customClaims.role || 'user',
+      role: customClaims.role || 'isOrgAssistant',
       isAdmin: customClaims.admin || false,
       isOwner: customClaims.owner || false
     };
@@ -151,18 +151,18 @@ export const updateAccountType = createCallableFunction<UpdateAccountTypeRequest
       }
 
       const memberData = memberDoc.data();
-      const role = memberData?.role || 'org_assistant';
+      const role = memberData?.role || 'isOrgAssistant';
 
       newClaims = {
         ...newClaims,
         organizationId,
         role,
-        isOrgOwner: role === 'org_owner',
-        isOrgAdmin: role === 'org_admin',
-        isOrgSupervisor: role === 'org_supervisor',
-        isOrgEngineer: role === 'org_engineer',
-        isOrgTechnician: role === 'org_technician',
-        isOrgAssistant: role === 'org_assistant'
+        isOrgOwner: role === 'isOrgOwner',
+        isOrgAdmin: role === 'isOrgAdmin',
+        isOrgSupervisor: role === 'isOrgSupervisor',
+        isOrgEngineer: role === 'isOrgEngineer',
+        isOrgTechnician: role === 'isOrgTechnician',
+        isOrgAssistant: role === 'isOrgAssistant'
       };
     } else {
       // إذا كان نوع الحساب فردي، نزيل معلومات المؤسسة

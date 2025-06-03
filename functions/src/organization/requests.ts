@@ -200,7 +200,7 @@ export const approveOrganizationRequest = createCallableFunction<ApproveOrganiza
 
         // تعيين المستخدم كمالك في المؤسسة (النمط الجديد is* فقط)
         const newClaims = {
-            role: 'org_owner',
+            role: 'isOrgOwner',
             accountType: 'organization',
             organizationId,
             // النمط الجديد is* فقط - بدون أي توافق قديم
@@ -226,7 +226,7 @@ export const approveOrganizationRequest = createCallableFunction<ApproveOrganiza
             await userDocRef.set({
                 name: requesterRecord.displayName || '',
                 email: requesterRecord.email,
-                role: 'org_owner',
+                role: 'isOrgOwner',
                 // النمط الجديد is* فقط - بدون أي توافق قديم
                 isSystemOwner: false,
                 isSystemAdmin: false,
@@ -248,7 +248,7 @@ export const approveOrganizationRequest = createCallableFunction<ApproveOrganiza
             console.log(`Created user document for organization creator (${requestData.userId})`);
         } else {
             await userDocRef.update({
-                role: 'org_owner',
+                role: 'isOrgOwner',
                 // النمط الجديد is* فقط - بدون أي توافق قديم
                 isSystemOwner: false,
                 isSystemAdmin: false,
@@ -271,6 +271,11 @@ export const approveOrganizationRequest = createCallableFunction<ApproveOrganiza
                 system_admin: admin.firestore.FieldValue.delete(),
                 org_owner: admin.firestore.FieldValue.delete(),
                 org_admin: admin.firestore.FieldValue.delete(),
+                org_supervisor: admin.firestore.FieldValue.delete(),
+                org_engineer: admin.firestore.FieldValue.delete(),
+                org_technician: admin.firestore.FieldValue.delete(),
+                org_assistant: admin.firestore.FieldValue.delete(),
+                independent: admin.firestore.FieldValue.delete(),
                 canManageSystem: admin.firestore.FieldValue.delete(),
                 canManageUsers: admin.firestore.FieldValue.delete(),
                 canManageOrganization: admin.firestore.FieldValue.delete(),

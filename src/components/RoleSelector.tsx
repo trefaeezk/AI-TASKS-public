@@ -19,20 +19,20 @@ interface RoleSelectorProps {
   className?: string;
 }
 
-// Map roles to icons - النظام الجديد
+// Map roles to icons - النظام الجديد (النمط is* فقط)
 const roleIcons: Record<UserRole, React.ReactNode> = {
   // أدوار النظام العامة
-  system_owner: <ShieldAlert className="h-4 w-4 ml-2 text-purple-600" />,
-  system_admin: <ShieldAlert className="h-4 w-4 ml-2 text-blue-600" />,
-  independent: <UserCog className="h-4 w-4 ml-2" />,
+  isSystemOwner: <ShieldAlert className="h-4 w-4 ml-2 text-purple-600" />,
+  isSystemAdmin: <ShieldAlert className="h-4 w-4 ml-2 text-blue-600" />,
+  isIndependent: <UserCog className="h-4 w-4 ml-2" />,
 
   // أدوار المؤسسات
-  org_owner: <ShieldAlert className="h-4 w-4 ml-2 text-orange-600" />,
-  org_admin: <ShieldAlert className="h-4 w-4 ml-2" />,
-  org_supervisor: <Shield className="h-4 w-4 ml-2" />,
-  org_engineer: <ShieldCheck className="h-4 w-4 ml-2" />,
-  org_technician: <ShieldQuestion className="h-4 w-4 ml-2" />,
-  org_assistant: <Shield className="h-4 w-4 ml-2 opacity-70" />
+  isOrgOwner: <ShieldAlert className="h-4 w-4 ml-2 text-orange-600" />,
+  isOrgAdmin: <ShieldAlert className="h-4 w-4 ml-2" />,
+  isOrgSupervisor: <Shield className="h-4 w-4 ml-2" />,
+  isOrgEngineer: <ShieldCheck className="h-4 w-4 ml-2" />,
+  isOrgTechnician: <ShieldQuestion className="h-4 w-4 ml-2" />,
+  isOrgAssistant: <Shield className="h-4 w-4 ml-2 opacity-70" />
 };
 
 export function RoleSelector({ value, onValueChange, disabled = false, className }: RoleSelectorProps) {

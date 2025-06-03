@@ -15,19 +15,19 @@ service cloud.firestore {
       return request.auth.token;
     }
 
-    // التحقق من مالك النظام (النظام الجديد الموحد)
+    // التحقق من مالك النظام (النظام الجديد الموحد is* فقط)
     function isSystemOwner() {
       return isAuthenticated() && (
         getUserToken().isSystemOwner == true ||
-        getUserToken().role == 'system_owner'
+        getUserToken().role == 'isSystemOwner'
       );
     }
 
-    // التحقق من أدمن النظام (النظام الجديد الموحد)
+    // التحقق من أدمن النظام (النظام الجديد الموحد is* فقط)
     function isSystemAdmin() {
       return isAuthenticated() && (
         getUserToken().isSystemAdmin == true ||
-        getUserToken().role == 'system_admin'
+        getUserToken().role == 'isSystemAdmin'
       );
     }
 
@@ -36,20 +36,20 @@ service cloud.firestore {
       return isSystemOwner() || isSystemAdmin();
     }
 
-    // التحقق من مالك المؤسسة (النظام الجديد)
+    // التحقق من مالك المؤسسة (النظام الجديد is* فقط)
     function isOrgOwner(orgId) {
       return isAuthenticated() && (
         getUserToken().isOrgOwner == true ||
         (getUserToken().organizationId == orgId && getUserToken().isOrgOwner == true) ||
-        getUserToken().role == 'org_owner'
+        getUserToken().role == 'isOrgOwner'
       );
     }
 
-    // التحقق من أدمن المؤسسة (النظام الجديد)
+    // التحقق من أدمن المؤسسة (النظام الجديد is* فقط)
     function isOrganizationAdmin(orgId) {
       return isAuthenticated() && (
         (getUserToken().organizationId == orgId && getUserToken().isOrgAdmin == true) ||
-        getUserToken().role == 'org_admin'
+        getUserToken().role == 'isOrgAdmin'
       );
     }
 
@@ -87,12 +87,11 @@ service cloud.firestore {
 
       // كتابة البيانات الشخصية (مع قيود على الأدوار الحساسة)
       allow write: if isAuthenticated() && getUserId() == userId && (
-        // منع تعديل الأدوار الحساسة بنفسه
-        !('system_owner' in request.resource.data) &&
-        !('system_admin' in request.resource.data) &&
-        !('org_owner' in request.resource.data) &&
+        // منع تعديل الأدوار الحساسة بنفسه (النمط الجديد is* فقط)
         !('isSystemOwner' in request.resource.data) &&
         !('isSystemAdmin' in request.resource.data) &&
+        !('isOrgOwner' in request.resource.data) &&
+        !('isOrgAdmin' in request.resource.data) &&
         !('role' in request.resource.data)
       );
 

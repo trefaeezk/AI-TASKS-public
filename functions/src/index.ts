@@ -53,7 +53,7 @@ const ensureAdmin = (context: LegacyCallableContext) => {
 
     // التحقق من الدور النصي
     const role = token.role;
-    const adminRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
+    const adminRoles = ['isSystemOwner', 'isSystemAdmin', 'isOrgOwner', 'isOrgAdmin', 'isOrgSupervisor', 'isOrgEngineer', 'isOrgTechnician', 'isOrgAssistant'];
     const isAdminByRole = role && adminRoles.includes(role);
 
     console.log(`🔍 Admin check results (النمط الجديد is* فقط):`);
@@ -147,17 +147,17 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
             console.error(`${functionName} error: Invalid name provided.`);
             throw new functions.https.HttpsError("invalid-argument", "Name must be a valid string if provided.");
         }
-        const validRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant', 'independent'];
+        const validRoles = ['isSystemOwner', 'isSystemAdmin', 'isOrgOwner', 'isOrgAdmin', 'isOrgEngineer', 'isOrgSupervisor', 'isOrgTechnician', 'isOrgAssistant', 'isIndependent'];
         if (!validRoles.includes(role)) { // Validate role input
             console.error(`${functionName} error: Invalid role provided. Must be one of: ${validRoles.join(', ')}.`);
             throw new functions.https.HttpsError("invalid-argument", `A valid role must be provided. Valid roles are: ${validRoles.join(', ')}`);
         }
 
-        // إذا كان نوع الحساب فردي، نتأكد من أن الدور هو 'independent'
-        if (accountType === 'individual' && role !== 'independent' && role !== 'system_owner' && role !== 'system_admin' && role !== 'independent') {
-            console.log(`${functionName}: Changing role from '${role}' to 'independent' for individual account type`);
-            role = 'independent';  // تحديث المتغير المحلي أيضاً
-            request.data.role = 'independent';
+        // إذا كان نوع الحساب فردي، نتأكد من أن الدور هو 'isIndependent'
+        if (accountType === 'individual' && role !== 'isIndependent' && role !== 'isSystemOwner' && role !== 'isSystemAdmin' && role !== 'isIndependent') {
+            console.log(`${functionName}: Changing role from '${role}' to 'isIndependent' for individual account type`);
+            role = 'isIndependent';  // تحديث المتغير المحلي أيضاً
+            request.data.role = 'isIndependent';
         }
 
         // التحقق من أن المستدعي مالك النظام إذا كان يحاول إنشاء مستخدم بدور مالك أو مسؤول
@@ -167,7 +167,7 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
         console.log(`${functionName} DEBUG: context.auth?.token.role = ${context.auth?.token.role}`);
         console.log(`${functionName} DEBUG: Full token:`, JSON.stringify(context.auth?.token, null, 2));
 
-        if ((role === 'system_owner' || role === 'system_admin') && !context.auth?.token.isSystemOwner) {
+        if ((role === 'isSystemOwner' || role === 'isSystemAdmin') && !context.auth?.token.isSystemOwner) {
             console.error(`${functionName} error: Only system owners can create system owner or admin users.`);
             console.error(`${functionName} error: Current user token:`, JSON.stringify(context.auth?.token, null, 2));
             throw new functions.https.HttpsError("permission-denied", "فقط مالك النظام يمكنه إنشاء مستخدمين بدور مالك أو مسؤول النظام.");
@@ -215,15 +215,15 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
         const customClaims: Record<string, any> = {
             role,
             accountType,
-            isSystemOwner: role === 'system_owner',
-            isSystemAdmin: role === 'system_admin',
-            isOrgOwner: role === 'org_owner',
-            isOrgAdmin: role === 'org_admin',
-            isOrgSupervisor: role === 'org_supervisor',
-            isOrgEngineer: role === 'org_engineer',
-            isOrgTechnician: role === 'org_technician',
-            isOrgAssistant: role === 'org_assistant',
-            isIndependent: role === 'independent'
+            isSystemOwner: role === 'isSystemOwner',
+            isSystemAdmin: role === 'isSystemAdmin',
+            isOrgOwner: role === 'isOrgOwner',
+            isOrgAdmin: role === 'isOrgAdmin',
+            isOrgSupervisor: role === 'isOrgSupervisor',
+            isOrgEngineer: role === 'isOrgEngineer',
+            isOrgTechnician: role === 'isOrgTechnician',
+            isOrgAssistant: role === 'isOrgAssistant',
+            isIndependent: role === 'isIndependent'
         };
 
         // إضافة معلومات المؤسسة إذا كان نوع الحساب مؤسسة
@@ -269,15 +269,15 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
             customPermissions: [],                   // ✅ إضافة customPermissions
 
             // الأدوار (النظام الموحد)
-            isSystemOwner: role === 'system_owner',
-            isSystemAdmin: role === 'system_admin',
-            isOrgOwner: role === 'org_owner',
-            isOrgAdmin: role === 'org_admin',
-            isOrgSupervisor: role === 'org_supervisor',
-            isOrgEngineer: role === 'org_engineer',
-            isOrgTechnician: role === 'org_technician',
-            isOrgAssistant: role === 'org_assistant',
-            isIndependent: role === 'independent'
+            isSystemOwner: role === 'isSystemOwner',
+            isSystemAdmin: role === 'isSystemAdmin',
+            isOrgOwner: role === 'isOrgOwner',
+            isOrgAdmin: role === 'isOrgAdmin',
+            isOrgSupervisor: role === 'isOrgSupervisor',
+            isOrgEngineer: role === 'isOrgEngineer',
+            isOrgTechnician: role === 'isOrgTechnician',
+            isOrgAssistant: role === 'isOrgAssistant',
+            isIndependent: role === 'isIndependent'
         };
 
         if (accountType === 'individual') {
@@ -363,17 +363,17 @@ export const createUserHttp = createHttpFunction<CreateUserRequest>(async (reque
             throw new functions.https.HttpsError("invalid-argument", "A valid password (at least 6 characters) must be provided.");
         }
 
-        const validRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant', 'independent'];
+        const validRoles = ['isSystemOwner', 'isSystemAdmin', 'isOrgOwner', 'isOrgAdmin', 'isOrgEngineer', 'isOrgSupervisor', 'isOrgTechnician', 'isOrgAssistant', 'isIndependent'];
         if (!validRoles.includes(role)) {
             console.error(`${functionName} error: Invalid role provided. Must be one of: ${validRoles.join(', ')}.`);
             throw new functions.https.HttpsError("invalid-argument", `A valid role must be provided. Valid roles are: ${validRoles.join(', ')}`);
         }
 
-        // إذا كان نوع الحساب فردي، نتأكد من أن الدور هو 'independent'
-        if (accountType === 'individual' && role !== 'independent' && role !== 'system_owner' && role !== 'system_admin') {
-            console.log(`${functionName}: Changing role from '${role}' to 'independent' for individual account type`);
-            role = 'independent';
-            request.data.role = 'independent';
+        // إذا كان نوع الحساب فردي، نتأكد من أن الدور هو 'isIndependent'
+        if (accountType === 'individual' && role !== 'isIndependent' && role !== 'isSystemOwner' && role !== 'isSystemAdmin') {
+            console.log(`${functionName}: Changing role from '${role}' to 'isIndependent' for individual account type`);
+            role = 'isIndependent';
+            request.data.role = 'isIndependent';
         }
 
         // Validate account type
@@ -410,15 +410,15 @@ export const createUserHttp = createHttpFunction<CreateUserRequest>(async (reque
             accountType,
             name: userName,
             // النمط الموحد is* فقط (بدون تكرار)
-            isSystemOwner: role === 'system_owner',
-            isSystemAdmin: role === 'system_admin',
-            isOrgOwner: role === 'org_owner',
-            isOrgAdmin: role === 'org_admin',
-            isOrgSupervisor: role === 'org_supervisor',
-            isOrgEngineer: role === 'org_engineer',
-            isOrgTechnician: role === 'org_technician',
-            isOrgAssistant: role === 'org_assistant',
-            isIndependent: role === 'independent',
+            isSystemOwner: role === 'isSystemOwner',
+            isSystemAdmin: role === 'isSystemAdmin',
+            isOrgOwner: role === 'isOrgOwner',
+            isOrgAdmin: role === 'isOrgAdmin',
+            isOrgSupervisor: role === 'isOrgSupervisor',
+            isOrgEngineer: role === 'isOrgEngineer',
+            isOrgTechnician: role === 'isOrgTechnician',
+            isOrgAssistant: role === 'isOrgAssistant',
+            isIndependent: role === 'isIndependent',
             disabled: false
         };
 
@@ -445,16 +445,16 @@ export const createUserHttp = createHttpFunction<CreateUserRequest>(async (reque
             disabled: false,
             customPermissions: [], // فارغة - المدير يخصصها
             // الأدوار المنطقية فقط (بدون تكرار الصلاحيات)
-            isSystemOwner: role === 'system_owner',
-            isSystemAdmin: role === 'system_admin',
-            isOrgOwner: role === 'org_owner',
-            isOrgAdmin: role === 'org_admin',
-            isOrgSupervisor: role === 'org_supervisor',
-            isOrgEngineer: role === 'org_engineer',
-            isOrgTechnician: role === 'org_technician',
-            isOrgAssistant: role === 'org_assistant',
-            isIndependent: role === 'independent',
-            isOrgMember: ['org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'].includes(role)
+            isSystemOwner: role === 'isSystemOwner',
+            isSystemAdmin: role === 'isSystemAdmin',
+            isOrgOwner: role === 'isOrgOwner',
+            isOrgAdmin: role === 'isOrgAdmin',
+            isOrgSupervisor: role === 'isOrgSupervisor',
+            isOrgEngineer: role === 'isOrgEngineer',
+            isOrgTechnician: role === 'isOrgTechnician',
+            isOrgAssistant: role === 'isOrgAssistant',
+            isIndependent: role === 'isIndependent',
+            isOrgMember: ['isOrgAdmin', 'isOrgSupervisor', 'isOrgEngineer', 'isOrgTechnician', 'isOrgAssistant'].includes(role)
             // تم حذف can* permissions - يتم حسابها ديناميكياً من الدور
         };
 
@@ -535,7 +535,7 @@ export const listFirebaseUsers = createCallableFunction<ListFirebaseUsersRequest
                 uid: user.uid,
                 email: user.email,
                 name: user.displayName || (firestoreData?.name as string | undefined),
-                role: customClaims.role || firestoreData?.role || 'independent',
+                role: customClaims.role || firestoreData?.role || 'isIndependent',
                 customPermissions: firestoreData?.customPermissions,
                 canManageSystem: !!customClaims.isSystemOwner,
                 canManageUsers: !!(customClaims.isSystemOwner || customClaims.isSystemAdmin),

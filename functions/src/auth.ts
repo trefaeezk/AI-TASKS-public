@@ -64,7 +64,7 @@ export const verifyAccountType = createCallableFunction<VerifyAccountTypeRequest
                     // تحديث custom claims للمستخدم
                     await admin.auth().setCustomUserClaims(uid, {
                         ...customClaims,
-                        role: 'independent',
+                        role: 'isIndependent',
                         accountType: 'individual'
                     });
 
@@ -72,7 +72,7 @@ export const verifyAccountType = createCallableFunction<VerifyAccountTypeRequest
                     await db.collection('individuals').doc(uid).set({
                         name: userRecord.displayName || '',
                         email: userRecord.email || '',
-                        role: 'independent',
+                        role: 'isIndependent',
                         accountType: 'individual',
                         createdAt: admin.firestore.FieldValue.serverTimestamp(),
                         updatedAt: admin.firestore.FieldValue.serverTimestamp()
@@ -91,7 +91,7 @@ export const verifyAccountType = createCallableFunction<VerifyAccountTypeRequest
             return {
                 success: true,
                 accountType: 'individual',
-                role: 'independent'
+                role: 'isIndependent'
             };
         } else {
             // التحقق مما إذا كان المستخدم عضوًا في المؤسسة المطلوبة
@@ -264,8 +264,8 @@ export const updateAccountType = createCallableFunction<UpdateAccountTypeRequest
             delete newClaims.organizationId;
             delete newClaims.departmentId;
 
-            // تعيين الدور إلى 'independent' للحسابات الفردية
-            newClaims.role = 'independent';
+            // تعيين الدور إلى 'isIndependent' للحسابات الفردية
+            newClaims.role = 'isIndependent';
 
             // التحقق من وجود وثيقة المستخدم في مجموعة users أولاً
             const userDoc = await db.collection('users').doc(uid).get();
@@ -282,7 +282,7 @@ export const updateAccountType = createCallableFunction<UpdateAccountTypeRequest
                     name: userName,
                     email: userRecord.email || '',
                     displayName: userName,
-                    role: 'independent',
+                    role: 'isIndependent',
                     accountType: 'individual',
                     createdAt: admin.firestore.FieldValue.serverTimestamp(),
                     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -302,7 +302,7 @@ export const updateAccountType = createCallableFunction<UpdateAccountTypeRequest
                 // تحديث البيانات الموجودة
                 await db.collection('users').doc(uid).update({
                     accountType: 'individual',
-                    role: 'independent',
+                    role: 'isIndependent',
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 });
             }

@@ -82,7 +82,7 @@ const DocumentationPage: React.FC<DocumentationPageProps> = ({
         description: 'شرح عام لنظام إدارة المهام',
         category: 'general',
         path: 'README.md',
-        requiredPermission: 'user',
+        requiredPermission: 'isIndependent',
       },
     ];
   const router = useRouter();
@@ -142,7 +142,7 @@ const DocumentationPage: React.FC<DocumentationPageProps> = ({
       console.log('Admin permission check:', hasAccess);
       return hasAccess;
     }
-    if (doc.requiredPermission === 'independent') {
+    if (doc.requiredPermission === 'isIndependent') {
       console.log('Independent user permission check: true');
       return true; // أي مستخدم مسجل الدخول
     }

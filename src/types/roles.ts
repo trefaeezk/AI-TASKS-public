@@ -2,20 +2,20 @@
  * تعريف الأدوار والصلاحيات في النظام
  */
 
-// الأدوار المتاحة في النظام
+// الأدوار المتاحة في النظام (النمط الجديد is* فقط)
 export type UserRole =
   // أدوار النظام العامة
-  | 'system_owner'    // مالك النظام (أعلى صلاحية)
-  | 'system_admin'    // أدمن النظام العام
-  | 'independent'     // مستخدم مستقل (فردي)
+  | 'isSystemOwner'    // مالك النظام (أعلى صلاحية)
+  | 'isSystemAdmin'    // أدمن النظام العام
+  | 'isIndependent'    // مستخدم مستقل (فردي)
 
   // أدوار المؤسسات
-  | 'org_owner' // مالك المؤسسة
-  | 'org_admin'       // أدمن المؤسسة
-  | 'org_supervisor'  // مشرف
-  | 'org_engineer'    // مهندس
-  | 'org_technician'  // فني
-  | 'org_assistant';  // مساعد فني
+  | 'isOrgOwner'       // مالك المؤسسة
+  | 'isOrgAdmin'       // أدمن المؤسسة
+  | 'isOrgSupervisor'  // مشرف
+  | 'isOrgEngineer'    // مهندس
+  | 'isOrgTechnician'  // فني
+  | 'isOrgAssistant';  // مساعد فني
 
 // تعريف مجموعات الصلاحيات
 export type PermissionArea =
@@ -62,10 +62,10 @@ export type RolePermissions = {
   description?: string;
 };
 
-// الصلاحيات الافتراضية لكل دور
+// الصلاحيات الافتراضية لكل دور (النمط الجديد is* فقط)
 export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   // مالك النظام - أعلى صلاحية في النظام بالكامل
-  system_owner: [
+  isSystemOwner: [
     'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
@@ -76,7 +76,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // أدمن النظام العام - صلاحيات واسعة لإدارة النظام
-  system_admin: [
+  isSystemAdmin: [
     'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
@@ -87,7 +87,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // مالك المؤسسة - صلاحيات كاملة داخل المؤسسة
-  org_owner: [
+  isOrgOwner: [
     'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
@@ -98,7 +98,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // أدمن المؤسسة - صلاحيات إدارية واسعة داخل المؤسسة
-  org_admin: [
+  isOrgAdmin: [
     'users:view', 'users:create', 'users:edit', 'users:delete', 'users:approve', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve', 'reports:assign',
@@ -109,7 +109,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // المهندس لديه صلاحيات واسعة ولكن أقل من المسؤول
-  org_engineer: [
+  isOrgEngineer: [
     'users:view', 'users:assign',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit', 'reports:approve',
@@ -119,7 +119,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // المشرف يركز على إدارة المهام والتقارير
-  org_supervisor: [
+  isOrgSupervisor: [
     'users:view',
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:approve', 'tasks:assign',
     'reports:view', 'reports:create', 'reports:edit',
@@ -129,7 +129,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // الفني يركز على تنفيذ المهام
-  org_technician: [
+  isOrgTechnician: [
     'tasks:view', 'tasks:edit',
     'reports:view', 'reports:create',
     'tools:view', 'tools:edit',
@@ -137,17 +137,15 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
 
   // مساعد الفني لديه صلاحيات محدودة
-  org_assistant: [
+  isOrgAssistant: [
     'tasks:view',
     'reports:view', 'reports:create',
     'tools:view',
     'dashboard:view'
   ],
 
-
-
   // المستخدم المستقل (الفردي) لديه صلاحيات محددة على المحتوى الخاص به فقط
-  independent: [
+  isIndependent: [
     // المهام - صلاحيات كاملة على المهام الخاصة به فقط
     'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete',
 
@@ -171,38 +169,38 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ]
 };
 
-// مفاتيح ترجمة وصف الأدوار
+// مفاتيح ترجمة وصف الأدوار (النمط الجديد is* فقط)
 export const ROLE_DESCRIPTION_KEYS: Record<UserRole, string> = {
   // أدوار النظام العامة
-  system_owner: 'roleDescriptions.system_owner',
-  system_admin: 'roleDescriptions.system_admin',
-  independent: 'roleDescriptions.independent',
+  isSystemOwner: 'roleDescriptions.isSystemOwner',
+  isSystemAdmin: 'roleDescriptions.isSystemAdmin',
+  isIndependent: 'roleDescriptions.isIndependent',
 
   // أدوار المؤسسات
-  org_owner: 'roleDescriptions.org_owner',
-  org_admin: 'roleDescriptions.org_admin',
-  org_supervisor: 'roleDescriptions.org_supervisor',
-  org_engineer: 'roleDescriptions.org_engineer',
-  org_technician: 'roleDescriptions.org_technician',
-  org_assistant: 'roleDescriptions.org_assistant'
+  isOrgOwner: 'roleDescriptions.isOrgOwner',
+  isOrgAdmin: 'roleDescriptions.isOrgAdmin',
+  isOrgSupervisor: 'roleDescriptions.isOrgSupervisor',
+  isOrgEngineer: 'roleDescriptions.isOrgEngineer',
+  isOrgTechnician: 'roleDescriptions.isOrgTechnician',
+  isOrgAssistant: 'roleDescriptions.isOrgAssistant'
 };
 
-// ترتيب الأدوار حسب المستوى (للعرض والمقارنة)
+// ترتيب الأدوار حسب المستوى (للعرض والمقارنة) - النمط الجديد is* فقط
 export const ROLE_HIERARCHY: UserRole[] = [
   // أدوار النظام العامة (أعلى مستوى)
-  'system_owner',
-  'system_admin',
+  'isSystemOwner',
+  'isSystemAdmin',
 
   // أدوار المؤسسات (حسب المستوى)
-  'org_owner',
-  'org_admin',
-  'org_supervisor',
-  'org_engineer',
-  'org_technician',
-  'org_assistant',
+  'isOrgOwner',
+  'isOrgAdmin',
+  'isOrgSupervisor',
+  'isOrgEngineer',
+  'isOrgTechnician',
+  'isOrgAssistant',
 
   // المستخدمين المستقلين
-  'independent'
+  'isIndependent'
 ];
 
 // التحقق مما إذا كان الدور أعلى من أو يساوي دور آخر

@@ -23,8 +23,8 @@ export const canInviteToOrganization = async (userId: string, organizationId: st
         const memberData = memberDoc.data();
         const role = memberData?.role;
 
-        // الأدوار التي يمكنها إضافة أعضاء (النمط الجديد - مالك المؤسسة أولاً)
-        const rolesWithInvitePermission = ['org_owner', 'org_admin', 'org_supervisor', 'org_engineer'];
+        // الأدوار التي يمكنها إضافة أعضاء (النمط الجديد is* فقط)
+        const rolesWithInvitePermission = ['isOrgOwner', 'isOrgAdmin', 'isOrgSupervisor', 'isOrgEngineer'];
 
         return rolesWithInvitePermission.includes(role);
     } catch (error) {
@@ -56,8 +56,8 @@ export const hasOrganizationRole = async (
         const memberData = memberDoc.data();
         const userRole = memberData?.role;
 
-        // ترتيب الأدوار من الأعلى إلى الأدنى (النظام الموحد)
-        const roleHierarchy = ['org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
+        // ترتيب الأدوار من الأعلى إلى الأدنى (النمط الجديد is* فقط)
+        const roleHierarchy = ['isOrgOwner', 'isOrgAdmin', 'isOrgSupervisor', 'isOrgEngineer', 'isOrgTechnician', 'isOrgAssistant'];
 
         // التحقق من أن دور المستخدم أعلى من أو يساوي الدور المطلوب
         const userRoleIndex = roleHierarchy.indexOf(userRole);
@@ -133,7 +133,7 @@ export const ensureOrgAdmin = async (context: LegacyCallableContext, orgId: stri
         .collection('members').doc(uid).get();
 
     const memberData = memberDoc.data();
-    const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+    const isOrgAdmin = memberData?.role === 'isOrgOwner' || memberData?.role === 'isOrgAdmin';
 
     if (!memberDoc.exists || !isOrgAdmin) {
         throw new functions.https.HttpsError(
@@ -194,7 +194,7 @@ export const ensureOrgAdminHttp = async (req: functions.https.Request, orgId: st
         .collection('members').doc(decodedToken.uid).get();
 
     const memberData = memberDoc.data();
-    const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+    const isOrgAdmin = memberData?.role === 'isOrgOwner' || memberData?.role === 'isOrgAdmin';
 
     if (!memberDoc.exists || !isOrgAdmin) {
         throw new functions.https.HttpsError(

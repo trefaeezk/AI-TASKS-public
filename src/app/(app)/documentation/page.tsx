@@ -37,7 +37,7 @@ export default function DocumentationPageApp() {
             description: 'دليل شامل لنظام المستخدمين والصلاحيات',
             category: 'system',
             path: 'USER_SYSTEM_DOCUMENTATION.md',
-            requiredPermission: 'user',
+            requiredPermission: 'isIndependent',
           },
           {
             id: 'permissions-guide',
@@ -45,7 +45,7 @@ export default function DocumentationPageApp() {
             description: 'شرح تفصيلي لنظام الصلاحيات والأمان',
             category: 'security',
             path: 'USER_PERMISSIONS_GUIDE.md',
-            requiredPermission: 'user',
+            requiredPermission: 'isIndependent',
           },
           {
             id: 'organization-management',
@@ -53,7 +53,7 @@ export default function DocumentationPageApp() {
             description: 'دليل إدارة المؤسسات والأعضاء',
             category: 'organization',
             path: 'ORGANIZATION_MANAGEMENT.md',
-            requiredPermission: 'user',
+            requiredPermission: 'isIndependent',
           },
           {
             id: 'api-reference',
@@ -61,7 +61,7 @@ export default function DocumentationPageApp() {
             description: 'توثيق شامل لجميع APIs المتاحة',
             category: 'development',
             path: 'API_REFERENCE.md',
-            requiredPermission: 'user',
+            requiredPermission: 'isIndependent',
           }
         ];
 

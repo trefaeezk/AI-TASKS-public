@@ -182,7 +182,7 @@ export const exportIndividualData = createCallableFunction(async (request) => {
         const userRecord = await admin.auth().getUser(uid);
         const customClaims = userRecord.customClaims || {};
 
-        if (customClaims.role !== 'independent') {
+        if (customClaims.role !== 'isIndependent') {
             throw new functions.https.HttpsError(
                 'permission-denied',
                 'هذه الوظيفة متاحة فقط للمستخدمين الفرديين.'
@@ -265,7 +265,7 @@ export const importIndividualData = createCallableFunction<ImportIndividualDataR
         const userRecord = await admin.auth().getUser(uid);
         const customClaims = userRecord.customClaims || {};
 
-        if (customClaims.role !== 'independent') {
+        if (customClaims.role !== 'isIndependent') {
             throw new functions.https.HttpsError(
                 'permission-denied',
                 'هذه الوظيفة متاحة فقط للمستخدمين الفرديين.'
