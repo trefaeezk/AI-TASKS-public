@@ -296,7 +296,6 @@ const SidebarTrigger = React.forwardRef<
     return React.cloneElement(triggerChildren, childProps);
   }
 
-
   return (
     <Button
       ref={ref}

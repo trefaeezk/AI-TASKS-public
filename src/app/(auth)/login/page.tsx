@@ -38,7 +38,6 @@ export default function LoginPage() {
   });
   const [formError, setFormError] = useState<string | null>(null);
 
-
   const onSubmit = async (data: LoginFormValues) => {
     setFormError(null); // Clear previous form errors
     const success = await signIn(data.email, data.password);

@@ -141,7 +141,7 @@ export const setupSystem = createCallableFunction<SetupSystemRequest>(async (req
 
         // تعيين المستخدم الحالي كمالك النظام
         await admin.auth().setCustomUserClaims(context.auth.uid, {
-            system_owner: true,
+            isSystemOwner: true,
             role: 'system_owner'
         });
 

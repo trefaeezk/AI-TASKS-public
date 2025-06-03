@@ -107,8 +107,8 @@ export default function ObjectiveDetailPage() {
   });
 
   const organizationId = userClaims?.organizationId;
-  const isOwner = userClaims?.owner === true;
-  const isAdmin = userClaims?.admin === true;
+  const isOwner = userClaims?.isOrgOwner === true;
+  const isAdmin = userClaims?.isOrgAdmin === true;
   const isEngineer = userClaims?.engineer === true;
   const isSupervisor = userClaims?.supervisor === true;
   const canManageOkrs = isOwner || isAdmin || isEngineer || isSupervisor;

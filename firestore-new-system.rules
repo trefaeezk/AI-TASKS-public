@@ -40,7 +40,7 @@ service cloud.firestore {
     function isOrgOwner(orgId) {
       return isAuthenticated() && (
         getUserToken().isOrgOwner == true ||
-        (getUserToken().organizationId == orgId && getUserToken().isOwner == true) ||
+        (getUserToken().organizationId == orgId && getUserToken().isOrgOwner == true) ||
         getUserToken().role == 'org_owner'
       );
     }
@@ -48,8 +48,8 @@ service cloud.firestore {
     // التحقق من أدمن المؤسسة (النظام الجديد)
     function isOrganizationAdmin(orgId) {
       return isAuthenticated() && (
-        (getUserToken().organizationId == orgId && getUserToken().isAdmin == true) ||
-        getUserToken().role == 'organization_admin'
+        (getUserToken().organizationId == orgId && getUserToken().isOrgAdmin == true) ||
+        getUserToken().role == 'org_admin'
       );
     }
 
@@ -57,7 +57,7 @@ service cloud.firestore {
     function isIndividualAdmin() {
       return isAuthenticated() && (
         getUserToken().isIndividualAdmin == true ||
-        (getUserToken().accountType == 'individual' && getUserToken().isAdmin == true)
+        (getUserToken().accountType == 'individual' && getUserToken().isOrgAdmin == true)
       );
     }
 
@@ -88,9 +88,9 @@ service cloud.firestore {
       // كتابة البيانات الشخصية (مع قيود على الأدوار الحساسة)
       allow write: if isAuthenticated() && getUserId() == userId && (
         // منع تعديل الأدوار الحساسة بنفسه
-        !('isSystemOwner' in request.resource.data) &&
-        !('isSystemAdmin' in request.resource.data) &&
-        !('isOrgOwner' in request.resource.data) &&
+        !('system_owner' in request.resource.data) &&
+        !('system_admin' in request.resource.data) &&
+        !('org_owner' in request.resource.data) &&
         !('isOwner' in request.resource.data) &&
         !('isAdmin' in request.resource.data) &&
         !('role' in request.resource.data)

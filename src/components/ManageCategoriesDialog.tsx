@@ -46,7 +46,6 @@ const ColorPicker = ({ value, onChange }: { value: string; onChange: (color: str
     );
 };
 
-
 export function ManageCategoriesDialog({ userId, children, onCategoriesUpdated }: ManageCategoriesDialogProps) {
     const { categories, loading, addCategory, deleteCategory, editCategory } = useTaskCategories(userId);
     const { toast } = useToast();
@@ -57,7 +56,6 @@ export function ManageCategoriesDialog({ userId, children, onCategoriesUpdated }
     const [editingCategory, setEditingCategory] = useState<TaskCategoryDefinition | null>(null);
     const [editedName, setEditedName] = useState('');
     const [editedColor, setEditedColor] = useState('');
-
 
     useEffect(() => {
         // Reset fields when dialog closes or editing state changes

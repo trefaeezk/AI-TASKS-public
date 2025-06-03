@@ -227,9 +227,9 @@ export function CreateObjectiveDialog({ open, onOpenChange, onSubmit, periodId }
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="owner">مالك الهدف</Label>
+              <Label htmlFor="org_owner">مالك الهدف</Label>
               <Select value={ownerId} onValueChange={setOwnerId} required>
-                <SelectTrigger id="owner">
+                <SelectTrigger id="org_owner">
                   <SelectValue placeholder="اختر مالك الهدف" />
                 </SelectTrigger>
                 <SelectContent>

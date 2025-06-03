@@ -104,7 +104,7 @@ export const createOrganization = createCallableFunction<CreateOrganizationReque
 
         // إضافة المستخدم الحالي كمسؤول في المؤسسة
         await db.collection('organizations').doc(orgId).collection('members').doc(uid).set({
-            role: 'admin',
+            role: 'org_admin',
             joinedAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
@@ -254,8 +254,6 @@ export const updateOrganization = createCallableFunction<UpdateOrganizationReque
     }
 });
 
-
-
 /**
  * نوع بيانات طلب إزالة عضو من المؤسسة
  */
@@ -303,7 +301,7 @@ export const removeOrganizationMember = createCallableFunction<RemoveOrganizatio
         // التحقق من أن المستخدم ليس المدير الوحيد في المؤسسة
         if (context.auth?.uid === userId) {
             const adminsSnapshot = await db.collection('organizations').doc(orgId).collection('members')
-                .where('role', '==', 'admin').get();
+                .where('role', '==', 'org_admin').get();
 
             if (adminsSnapshot.size <= 1) {
                 throw new functions.https.HttpsError(
@@ -330,7 +328,6 @@ export const removeOrganizationMember = createCallableFunction<RemoveOrganizatio
         );
     }
 });
-
 
 interface UpdateOrganizationMemberRequest {
     orgId: string;

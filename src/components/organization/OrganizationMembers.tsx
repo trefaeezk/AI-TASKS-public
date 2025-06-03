@@ -333,8 +333,8 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
                 <div>
                   <h3 className="font-medium">{member.name} ({member.email})</h3>
                   <p className="text-sm text-muted-foreground">
-                    {member.role === org_owner  ? 'مالك' :
-                     member.role === 'admin' ? 'مسؤول' :
+                    {member.role === 'org_owner'  ? 'مالك' :
+                     member.role === 'org_admin' ? 'مسؤول' :
                      member.role === 'engineer' ? 'مهندس' :
                      member.role === 'supervisor' ? 'مشرف' :
                      member.role === 'technician' ? 'فني' :
@@ -367,7 +367,7 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
                         setSelectedMember(member);
                         setIsDeleteDialogOpen(true);
                       }}
-                      disabled={(member.role === org_owner  || member.uid === user?.uid) && !isOwner} // Owner can't remove self unless they are the only owner
+                      disabled={(member.role === 'org_owner'  || member.uid === user?.uid) && !isOwner} // Owner can't remove self unless they are the only owner
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -479,14 +479,14 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
               <Select
                 value={formData.role}
                 onValueChange={(value) => setFormData({ ...formData, role: value })}
-                disabled={(selectedMember?.role === org_owner  && !isOwner) || selectedMember?.uid === user?.uid}
+                disabled={(selectedMember?.role === 'org_owner'  && !isOwner) || selectedMember?.uid === user?.uid}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="اختر الدور" />
                 </SelectTrigger>
                 <SelectContent>
-                  {isOwner && <SelectItem value="owner">مالك</SelectItem>}
-                  <SelectItem value="admin">مسؤول</SelectItem>
+                  {isOwner && <SelectItem value="org_owner">مالك</SelectItem>}
+                  <SelectItem value="org_admin">مسؤول</SelectItem>
                   <SelectItem value="engineer">مهندس</SelectItem>
                   <SelectItem value="supervisor">مشرف</SelectItem>
                   <SelectItem value="technician">فني</SelectItem>

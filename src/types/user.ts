@@ -9,9 +9,8 @@ import { User as FirebaseUser } from 'firebase/auth';
 export interface ExtendedUser extends FirebaseUser {
   customClaims?: {
     role?: UserRole;
-    admin?: boolean;
-    owner?: boolean;
-    individual_admin?: boolean;
+
+    individual_
     accountType?: SystemType;
     organizationId?: string;
     departmentId?: string;
@@ -73,7 +72,7 @@ export interface UserData {
  * Represents user claims stored in Firebase Auth
  */
 export interface UserClaims {
-  admin?: boolean;
+  
   role?: UserRole;
   accountType?: SystemType; // نوع الحساب (فرد/مؤسسة)
   organizationId?: string; // معرف المؤسسة (إذا كان نوع الحساب مؤسسة)

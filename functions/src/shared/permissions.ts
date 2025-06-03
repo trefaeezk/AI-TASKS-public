@@ -170,22 +170,22 @@ export const hasPermission = async (
     // التحقق من الأدوار عالية المستوى في النظام الجديد
 
     // مالك النظام - أعلى صلاحية
-    if (customClaims.system_owner === true || userRole === 'system_owner') {
+    if (customClaims.isSystemOwner === true || userRole === 'system_owner') {
       return true;
     }
 
     // أدمن النظام العام - صلاحيات واسعة
-    if (customClaims.system_admin === true || userRole === 'system_admin') {
+    if (customClaims.isSystemAdmin === true || userRole === 'system_admin') {
       return true;
     }
 
     // مالك المؤسسة - صلاحيات كاملة داخل المؤسسة
-    if (customClaims.org_owner === true || userRole === 'org_owner') {
+    if (customClaims.isOrgOwner === true || userRole === 'org_owner') {
       return true;
     }
 
     // أدمن المؤسسة - صلاحيات إدارية واسعة داخل المؤسسة
-    if (customClaims.org_admin === true || userRole === 'org_admin') {
+    if (customClaims.isOrgAdmin === true || userRole === 'org_admin') {
       return true;
     }
 
@@ -241,22 +241,22 @@ export const getUserPermissions = async (userId: string): Promise<PermissionKey[
     // التحقق من الأدوار عالية المستوى في النظام الجديد
 
     // مالك النظام - جميع الصلاحيات
-    if (customClaims.system_owner === true || userRole === 'system_owner') {
+    if (customClaims.isSystemOwner === true || userRole === 'system_owner') {
       return Object.values(DEFAULT_ROLE_PERMISSIONS).flat();
     }
 
     // أدمن النظام العام - صلاحيات واسعة
-    if (customClaims.system_admin === true || userRole === 'system_admin') {
+    if (customClaims.isSystemAdmin === true || userRole === 'system_admin') {
       return DEFAULT_ROLE_PERMISSIONS.system_admin;
     }
 
     // مالك المؤسسة - صلاحيات كاملة داخل المؤسسة
-    if (customClaims.org_owner === true || userRole === 'org_owner') {
+    if (customClaims.isOrgOwner === true || userRole === 'org_owner') {
       return DEFAULT_ROLE_PERMISSIONS.org_owner;
     }
 
     // أدمن المؤسسة - صلاحيات إدارية واسعة داخل المؤسسة
-    if (customClaims.org_admin === true || userRole === 'org_admin') {
+    if (customClaims.isOrgAdmin === true || userRole === 'org_admin') {
       return DEFAULT_ROLE_PERMISSIONS.org_admin;
     }
 

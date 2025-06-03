@@ -16,24 +16,27 @@ import { UserRole, PermissionKey } from '@/types/roles';
 import { firestoreListenerManager, handleFirestoreError } from '@/utils/firestoreListenerManager';
 
 interface UserClaims {
-  // الأدوار المتاحة في النظام الجديد:
-  // - أدوار النظام العامة: 'system_owner', 'system_admin', 'independent'
-  // - أدوار المؤسسات: 'org_owner', 'admin', 'supervisor', 'engineer', 'technician', 'assistant'
+  // الأدوار المتاحة في النظام الجديد فقط
   role?: UserRole;
 
-  // الصلاحيات الخاصة (للتوافق مع النظام الجديد)
-  system_owner?: boolean;       // مالك النظام (أعلى صلاحية)
-  system_admin?: boolean;       // أدمن النظام العام
-  org_owner?: boolean; // مالك المؤسسة
-  admin?: boolean;              // أدمن المؤسسة
+  // النمط الجديد is* فقط - بدون أي توافق قديم
+  isSystemOwner?: boolean;       // مالك النظام
+  isSystemAdmin?: boolean;       // أدمن النظام
+  isOrgOwner?: boolean;          // مالك المؤسسة
+  isOrgAdmin?: boolean;          // أدمن المؤسسة
+  isOrgSupervisor?: boolean;     // مشرف المؤسسة
+  isOrgEngineer?: boolean;       // مهندس المؤسسة
+  isOrgTechnician?: boolean;     // فني المؤسسة
+  isOrgAssistant?: boolean;      // مساعد المؤسسة
+  isIndependent?: boolean;       // مستخدم مستقل
 
   // معلومات الحساب
-  accountType?: SystemType;     // 'individual' | 'organization'
-  organizationId?: string;      // معرف المؤسسة (للمؤسسات فقط)
-  organizationName?: string;    // اسم المؤسسة (للمؤسسات فقط)
-  departmentId?: string;        // معرف القسم (اختياري)
+  accountType?: SystemType;
+  organizationId?: string;
+  organizationName?: string;
+  departmentId?: string;
 
-  // صلاحيات مخصصة (للنظام الجديد)
+  // صلاحيات مخصصة
   customPermissions?: PermissionKey[];
 
   [key: string]: any;
@@ -78,7 +81,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userName = currentUser.displayName || currentUser.email?.split('@')[0] || 'مستخدم';
 
         const newUserData = {
-          uid: currentUser.uid,                    // ✅ إضافة uid
+          uid: currentUser.uid,
           name: userName,
           email: currentUser.email,
           displayName: userName,
@@ -87,20 +90,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           disabled: false,
-          // الأدوار الجديدة
+          // النمط الجديد is* فقط
           isSystemOwner: false,
           isSystemAdmin: false,
           isOrgOwner: false,
-          isAdmin: false,
-          isOwner: false,
-          isIndividualAdmin: false,
-          // معلومات المؤسسة (null للأفراد)
-          organizationId: null,                    // ✅ إضافة organizationId
-          departmentId: null,                      // ✅ إضافة departmentId
-          // الصلاحيات المخصصة
-          customPermissions: [],                   // ✅ إضافة customPermissions
+          isOrgAdmin: false,
+          isOrgSupervisor: false,
+          isOrgEngineer: false,
+          isOrgTechnician: false,
+          isOrgAssistant: false,
+          isIndependent: true,
+          // معلومات المؤسسة
+          organizationId: null,
+          departmentId: null,
+          // صلاحيات مخصصة
+          customPermissions: [],
           // من أنشأ المستخدم
-          createdBy: currentUser.uid               // ✅ إضافة createdBy (المستخدم أنشأ نفسه)
+          createdBy: currentUser.uid
         };
 
         await setDoc(userDocRef, newUserData);
@@ -123,37 +129,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log("  - نوع الحساب المحدد:", accountType);
 
       if (accountType === 'individual') {
-        // 🧑 حساب فردي
-        console.log("[AuthContext] 👤 الخطوة 2: معالجة حساب فردي");
-
-        // تحديد الدور بناءً على البيانات المحفوظة
-        let individualRole: UserRole = userData.role || 'independent';
-        const isSystemOwner = userData.isSystemOwner || false;
-        const isSystemAdmin = userData.isSystemAdmin || false;
-
-        // تحديد الدور بناءً على الصلاحيات
-        if (isSystemOwner) {
-          individualRole = 'system_owner';
-        } else if (isSystemAdmin) {
-          individualRole = 'system_admin';
-        } else {
-          // التأكد من أن الدور صحيح
-          const validIndividualRoles: UserRole[] = ['system_owner', 'system_admin', 'independent'];
-          if (!validIndividualRoles.includes(individualRole as UserRole)) {
-            individualRole = 'independent';
-          }
-        }
-
-        console.log("  - userData.role:", userData.role);
-        console.log("  - الدور المحدد:", individualRole);
-        console.log("  - system_owner:", isSystemOwner);
-        console.log("  - system_admin:", isSystemAdmin);
+        // حساب فردي - النمط الجديد فقط
+        console.log("[AuthContext] 👤 معالجة حساب فردي");
 
         const individualClaims = {
           accountType: 'individual' as SystemType,
-          role: individualRole,
-          system_owner: isSystemOwner,
-          system_admin: isSystemAdmin,
+          role: userData.role || 'independent',
+          isSystemOwner: userData.isSystemOwner || false,
+          isSystemAdmin: userData.isSystemAdmin || false,
+          isOrgOwner: false,
+          isOrgAdmin: false,
+          isOrgSupervisor: false,
+          isOrgEngineer: false,
+          isOrgTechnician: false,
+          isOrgAssistant: false,
+          isIndependent: (userData.role || 'independent') === 'independent',
           customPermissions: userData.customPermissions || [],
           departmentId: userData.departmentId
         };
@@ -223,10 +213,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             userRole = memberData.role || userData.role || 'assistant';
 
             // تحديد الأدوار بناءً على الدور المحفوظ
-            isAdmin = userRole === 'admin';
+            isAdmin = userRole === 'org_admin';
 
             // التأكد من أن الدور صحيح للمؤسسات
-            const validOrgRoles: UserRole[] = ['org_owner', 'admin', 'supervisor', 'engineer', 'technician', 'assistant'];
+            const validOrgRoles: UserRole[] = ['org_owner', 'org_admin', 'supervisor', 'engineer', 'technician', 'assistant'];
             if (!validOrgRoles.includes(userRole as UserRole)) {
               userRole = 'assistant'; // الدور الافتراضي للمؤسسات
             }
@@ -239,14 +229,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             // تطبيق نفس منطق التوافق مع النظام القديم
             userRole = userData.role || 'assistant';
-            if (userData.role === org_owner  && !isOwner) {
-              userRole = 'admin';
-            } else if (userData.role === 'individual_admin') {
-              userRole = 'admin';
+            if (userData.role === 'org_owner'  && !isOwner) {
+              userRole = 'org_admin';
+            } else if (userData.role === 'independent') {
+              userRole = 'org_admin';
             }
 
             // التأكد من أن الدور صحيح
-            const validOrgRoles: UserRole[] = ['org_owner', 'admin', 'supervisor', 'engineer', 'technician', 'assistant'];
+            const validOrgRoles: UserRole[] = ['org_owner', 'org_admin', 'supervisor', 'engineer', 'technician', 'assistant'];
             if (!validOrgRoles.includes(userRole as UserRole)) {
               userRole = 'assistant';
             }
@@ -258,24 +248,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           role: userRole,
           organizationId: organizationId,
           organizationName: orgData.name || 'مؤسسة',
-          org_owner: isOwner,
-          admin: isAdmin,
-          system_owner: userData.system_owner || false,
-          system_admin: userData.system_admin || false,
+          isSystemOwner: userData.isSystemOwner || false,
+          isSystemAdmin: userData.isSystemAdmin || false,
+          isOrgOwner: isOwner,
+          isOrgAdmin: isAdmin,
+          isOrgSupervisor: userRole === 'org_supervisor',
+          isOrgEngineer: userRole === 'org_engineer',
+          isOrgTechnician: userRole === 'org_technician',
+          isOrgAssistant: userRole === 'org_assistant',
+          isIndependent: false,
           customPermissions: userData.customPermissions || [],
           departmentId: userData.departmentId
         };
 
-        console.log("[AuthContext] 🎯 الخطوة 7: النتيجة النهائية");
         console.log("[AuthContext] ✅ البيانات النهائية للمؤسسة:");
         console.log("  - نوع الحساب:", finalClaims.accountType);
         console.log("  - الدور:", finalClaims.role);
         console.log("  - معرف المؤسسة:", finalClaims.organizationId);
         console.log("  - اسم المؤسسة:", finalClaims.organizationName);
-        console.log("  - مالك المؤسسة:", finalClaims.org_owner);
-        console.log("  - أدمن المؤسسة:", finalClaims.admin);
-        console.log("  - مالك النظام:", finalClaims.system_owner);
-        console.log("  - أدمن النظام:", finalClaims.system_admin);
+        console.log("  - مالك النظام:", finalClaims.isSystemOwner);
+        console.log("  - أدمن النظام:", finalClaims.isSystemAdmin);
+        console.log("  - مالك المؤسسة:", finalClaims.isOrgOwner);
+        console.log("  - أدمن المؤسسة:", finalClaims.isOrgAdmin);
+        console.log("  - مشرف المؤسسة:", finalClaims.isOrgSupervisor);
+        console.log("  - مهندس المؤسسة:", finalClaims.isOrgEngineer);
+        console.log("  - فني المؤسسة:", finalClaims.isOrgTechnician);
+        console.log("  - مساعد المؤسسة:", finalClaims.isOrgAssistant);
 
         // ملخص التدفق
         console.log("[AuthContext] 📊 ملخص التدفق:");
@@ -343,7 +341,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [getUserDataFromFirestore]);
 
-
   useEffect(() => {
     console.log("[AuthContext] Setting up auth state listener.");
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -366,7 +363,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // This ensures that if a user logs out and then logs in quickly,
       // the loading state is correctly managed.
       if(!loading) setLoading(true);
-
 
       if (currentUser) {
         try {
@@ -466,7 +462,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         docPath = `users/${user.uid}`;
       }
 
-
       if (docPath) {
         console.log("[AuthContext] Setting up Firestore listener for path:", docPath);
         const userDocRef = doc(db, docPath);
@@ -520,7 +515,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, userClaims?.accountType, userClaims?.organizationId, userClaims?.role]); // Role is important here if it changes
 
-
   // Render loading spinner only if truly loading initial auth state.
   // The children (layouts/pages) should handle their own loading states for subsequent data fetching.
   if (loading && !user && pathname !== '/login' && pathname !== '/signup' && pathname !== '/reset-password') {
@@ -532,7 +526,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
   }
   console.log("[AuthContext] Rendering children. Loading:", loading, "User:", !!user, "Claims:", userClaims);
-
 
   return (
     <AuthContext.Provider value={{ user, loading, userClaims, refreshUserData }}>

@@ -229,9 +229,9 @@ export function EditObjectiveDialog({ open, onOpenChange, onSubmit, objective }:
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="owner">مالك الهدف</Label>
+                <Label htmlFor="org_owner">مالك الهدف</Label>
                 <Select value={ownerId} onValueChange={setOwnerId} required>
-                  <SelectTrigger id="owner">
+                  <SelectTrigger id="org_owner">
                     <SelectValue placeholder="اختر مالك الهدف" />
                   </SelectTrigger>
                   <SelectContent>

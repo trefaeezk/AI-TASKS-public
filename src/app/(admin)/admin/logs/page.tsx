@@ -72,7 +72,6 @@ export default function LogsPage() {
     }
   };
 
-
   return (
     <div className="space-y-6" dir="rtl">
         <div className="flex justify-between items-center">
@@ -84,7 +83,6 @@ export default function LogsPage() {
                  تحديث
              </Button>
         </div>
-
 
       <Card className="shadow-md border border-border">
         <CardHeader>

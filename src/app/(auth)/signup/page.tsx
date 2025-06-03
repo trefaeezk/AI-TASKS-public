@@ -113,7 +113,6 @@ export default function SignupPage() {
         </div>
         {errors.email && <p id="email-error" className="text-sm font-medium text-destructive">{errors.email.message}</p>}
 
-
         <div className="relative">
           <Lock className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground`} />
           <Input
@@ -143,7 +142,6 @@ export default function SignupPage() {
           />
         </div>
          {errors.confirmPassword && <p id="confirmPassword-error" className="text-sm font-medium text-destructive">{errors.confirmPassword.message}</p>}
-
 
         <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={loading}>
           {loading ? <Loader2 className="animate-spin h-5 w-5" /> : <UserPlus className="h-5 w-5" />}

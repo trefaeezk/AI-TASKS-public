@@ -128,7 +128,7 @@ export const verifyAccountType = createCallableFunction<VerifyAccountTypeRequest
                 await admin.auth().setCustomUserClaims(uid, {
                     ...customClaims,
                     role: 'org_admin',
-                    org_admin: true,
+                    isOrgAdmin: true,
                     accountType: 'organization',
                     organizationId
                 });
@@ -235,7 +235,7 @@ export const updateAccountType = createCallableFunction<UpdateAccountTypeRequest
                     if (orgDoc.exists && orgDoc.data()?.createdBy === uid) {
                         console.log(`User ${uid} is the creator of organization ${effectiveOrgId}, setting as organization owner`);
                         newClaims.role = 'org_owner';
-                        newClaims.org_owner = true;
+                        newClaims.isOrgOwner = true;
 
                         // تحديث وثيقة المستخدم في مجموعة users
                         const userDocRef = db.collection('users').doc(uid);

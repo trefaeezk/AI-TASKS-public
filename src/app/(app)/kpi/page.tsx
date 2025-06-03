@@ -194,7 +194,6 @@ export default function KpiPage() {
     };
   }, [user]);
 
-
   // --- KPI Calculations ---
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter(t => t.status === 'completed').length;

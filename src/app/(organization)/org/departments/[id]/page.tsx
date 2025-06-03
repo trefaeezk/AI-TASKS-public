@@ -51,8 +51,8 @@ export default function DepartmentDetailsPage() {
 
   const organizationId = userClaims?.organizationId;
   // استخدام أسماء الحقول الصحيحة من قاعدة البيانات
-  const isOwner = userClaims?.org_owner === true || userClaims?.isOwner === true;
-  const isAdmin = userClaims?.admin === true || userClaims?.isAdmin === true;
+  const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOwner === true;
+  const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isAdmin === true;
   const isEngineer = userClaims?.engineer === true;
   const isSupervisor = userClaims?.supervisor === true;
 
@@ -345,8 +345,8 @@ export default function DepartmentDetailsPage() {
                       <div>
                         <h3 className="font-medium">{member.displayName || member.email}</h3>
                         <p className="text-sm text-muted-foreground">
-                          {member.role === org_owner  ? 'مالك' :
-                           member.role === 'admin' ? 'مسؤول' :
+                          {member.role === 'org_owner'  ? 'مالك' :
+                           member.role === 'org_admin' ? 'مسؤول' :
                            member.role === 'engineer' ? 'مهندس' :
                            member.role === 'supervisor' ? 'مشرف' :
                            member.role === 'technician' ? 'فني' :

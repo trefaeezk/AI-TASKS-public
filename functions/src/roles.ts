@@ -30,11 +30,11 @@ export const ensureAdmin = (context: LegacyCallableContext): void => {
     console.log('🔍 ensureAdmin: User role from token:', userRole);
 
     // أدوار النظام العامة (المستوى 1-2)
-    const isSystemOwner = userRole === 'system_owner' || context.auth.token.system_owner === true;
-    const isSystemAdmin = userRole === 'system_admin' || context.auth.token.system_admin === true;
+    const isSystemOwner = userRole === 'system_owner' || context.auth.token.isSystemOwner === true;
+    const isSystemAdmin = userRole === 'system_admin' || context.auth.token.isSystemAdmin === true;
 
     // أدوار المؤسسات (المستوى 3-8)
-    const isOrgOwner = userRole === 'org_owner' || context.auth.token.org_owner === true;
+    const isOrgOwner = userRole === 'org_owner' || context.auth.token.isOrgOwner === true;
     const isOrgAdmin = userRole === 'org_admin';
     const isOrgSupervisor = userRole === 'org_supervisor';
     const isOrgEngineer = userRole === 'org_engineer';

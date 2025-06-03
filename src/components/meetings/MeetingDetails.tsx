@@ -46,8 +46,8 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
   const [newTaskDescription, setNewTaskDescription] = useState('');
   const [newTaskAssignee, setNewTaskAssignee] = useState('');
 
-  const isOwner = userClaims?.owner === true;
-  const isAdmin = userClaims?.admin === true;
+  const isOwner = userClaims?.isOrgOwner === true;
+  const isAdmin = userClaims?.isOrgAdmin === true;
   const isEngineer = userClaims?.engineer === true;
   const isSupervisor = userClaims?.supervisor === true;
   const canEdit = isOwner || isAdmin || isEngineer || isSupervisor || meeting.createdBy === user?.uid;

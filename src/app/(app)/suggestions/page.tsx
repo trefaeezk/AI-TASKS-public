@@ -41,7 +41,7 @@ export default function SuggestionsPage() {
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [lastAiResponse, setLastAiResponse] = useState<SmartSuggestionServiceOutput | null>(null); // State for AI response
 
-  const isOwner = userClaims?.owner === true; // Check if user is owner
+  const isOwner = userClaims?.isOrgOwner === true; // Check if user is owner
 
   // Load suggestions
   const fetchSuggestions = async () => {

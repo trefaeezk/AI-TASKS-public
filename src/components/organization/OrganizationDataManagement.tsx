@@ -16,7 +16,7 @@ import { usePermissions } from '@/hooks/usePermissions';
  * يتيح للمستخدم تصدير واستيراد بيانات المؤسسة
  */
 export default function OrganizationDataManagement() {
-  const { user, userClaims } = useAuth();
+  const { user, userClaims, loading } = useAuth();
   const { hasPermission } = usePermissions();
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -24,8 +24,24 @@ export default function OrganizationDataManagement() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const organizationId = userClaims?.organizationId;
 
-  // التحقق من صلاحيات المستخدم
-  const canManageData = hasPermission('data:view');
+  // انتظار تحميل بيانات المستخدم
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>جاري التحقق من الصلاحيات...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // التحقق من صلاحيات المستخدم (النمط الجديد is* فقط)
+  const isSystemOwner = userClaims?.isSystemOwner === true;
+  const isSystemAdmin = userClaims?.isSystemAdmin === true;
+  const isOrgOwner = userClaims?.isOrgOwner === true;
+  const isOrgAdmin = userClaims?.isOrgAdmin === true;
+  const canManageData = hasPermission('data.view') || isSystemOwner || isSystemAdmin || isOrgOwner || isOrgAdmin;
 
   if (!canManageData) {
     return (
@@ -33,7 +49,7 @@ export default function OrganizationDataManagement() {
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>غير مصرح</AlertTitle>
         <AlertDescription>
-          ليس لديك صلاحية للوصول إلى هذه الصفحة.
+          ليس لديك صلاحية للوصول إلى هذه الصفحة. هذه الصفحة متاحة لمالك النظام وأدمن النظام ومالك المؤسسة وأدمن المؤسسة فقط.
         </AlertDescription>
       </Alert>
     );

@@ -40,10 +40,10 @@ export default function DepartmentsPage() {
 
   const organizationId = userClaims?.organizationId;
   // استخدام أسماء الحقول الصحيحة من قاعدة البيانات
-  const isSystemOwner = userClaims?.system_owner === true;
-  const isSystemAdmin = userClaims?.system_admin === true;
-  const isOwner = userClaims?.org_owner === true || userClaims?.isOwner === true;
-  const isAdmin = userClaims?.admin === true || userClaims?.isAdmin === true;
+  const isSystemOwner = userClaims?.isSystemOwner === true;
+  const isSystemAdmin = userClaims?.isSystemAdmin === true;
+  const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOwner === true;
+  const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isAdmin === true;
   // مالك النظام يملك صلاحيات كاملة على جميع المؤسسات
   const canCreateDepartment = isSystemOwner || isSystemAdmin || isOwner || isAdmin;
 

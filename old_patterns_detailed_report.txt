@@ -1,0 +1,1585 @@
+تقرير مفصل للأنماط القديمة المتبقية في المشروع
+==================================================
+
+الملف: check_patterns.py
+------------------------------
+النمط: system_org_owner: (1 مرة)
+  السطر 13: 'system_org_owner:',
+النمط: system_org_admin: (1 مرة)
+  السطر 14: 'system_org_admin:',
+النمط: org_org_owner: (1 مرة)
+  السطر 15: 'org_org_owner:',
+النمط: org_org_admin: (1 مرة)
+  السطر 16: 'org_org_admin:',
+النمط: org_supervisor: (1 مرة)
+  السطر 17: 'org_supervisor:',
+النمط: org_engineer: (1 مرة)
+  السطر 18: 'org_engineer:',
+النمط: org_technician: (1 مرة)
+  السطر 19: 'org_technician:',
+النمط: org_assistant: (1 مرة)
+  السطر 20: 'org_assistant:',
+النمط: independent: (1 مرة)
+  السطر 21: 'independent:',
+النمط: .isSystemOwner (3 مرة)
+  السطر 22: '.isSystemOwner',
+  السطر 31: 'userClaims?.isSystemOwner',
+  السطر 35: 'userData.isSystemOwner',
+النمط: .isSystemAdmin (3 مرة)
+  السطر 23: '.isSystemAdmin',
+  السطر 32: 'userClaims?.isSystemAdmin',
+  السطر 36: 'userData.isSystemAdmin',
+النمط: .isOrgOwner (3 مرة)
+  السطر 24: '.isOrgOwner',
+  السطر 33: 'userClaims?.isOrgOwner',
+  السطر 37: 'userData.isOrgOwner',
+النمط: .isOrgAdmin (3 مرة)
+  السطر 25: '.isOrgAdmin',
+  السطر 34: 'userClaims?.isOrgAdmin',
+  السطر 38: 'userData.isOrgAdmin',
+النمط: .isOrgSupervisor (1 مرة)
+  السطر 26: '.isOrgSupervisor',
+النمط: .isOrgEngineer (1 مرة)
+  السطر 27: '.isOrgEngineer',
+النمط: .isOrgTechnician (1 مرة)
+  السطر 28: '.isOrgTechnician',
+النمط: .isOrgAssistant (1 مرة)
+  السطر 29: '.isOrgAssistant',
+النمط: .isIndependent (1 مرة)
+  السطر 30: '.isIndependent',
+النمط: userClaims?.isSystemOwner (1 مرة)
+  السطر 31: 'userClaims?.isSystemOwner',
+النمط: userClaims?.isSystemAdmin (1 مرة)
+  السطر 32: 'userClaims?.isSystemAdmin',
+النمط: userClaims?.isOrgOwner (2 مرة)
+  السطر 33: 'userClaims?.isOrgOwner',
+  السطر 33: 'userClaims?.isOrgOwner',
+النمط: userClaims?.isOrgAdmin (2 مرة)
+  السطر 34: 'userClaims?.isOrgAdmin',
+  السطر 34: 'userClaims?.isOrgAdmin',
+النمط: userData.isSystemOwner (1 مرة)
+  السطر 35: 'userData.isSystemOwner',
+النمط: userData.isSystemAdmin (1 مرة)
+  السطر 36: 'userData.isSystemAdmin',
+النمط: userData.isOrgOwner (1 مرة)
+  السطر 37: 'userData.isOrgOwner',
+النمط: userData.isOrgAdmin (1 مرة)
+  السطر 38: 'userData.isOrgAdmin',
+
+الملف: comprehensive_cleanup.py
+------------------------------
+النمط: userClaims?.isOrgAdmin (4 مرة)
+  السطر 20: ('userClaims?.isOrgAdmin', 'userClaims?.isOrgAdmin'),
+  السطر 20: ('userClaims?.isOrgAdmin', 'userClaims?.isOrgAdmin'),
+  السطر 81: ('userClaims?.isOrgAdmin', 'userClaims?.isOrgAdmin'),
+  السطر 81: ('userClaims?.isOrgAdmin', 'userClaims?.isOrgAdmin'),
+النمط: .isOrgAdmin (5 مرة)
+  السطر 20: ('userClaims?.isOrgAdmin', 'userClaims?.isOrgAdmin'),
+  السطر 59: ('isOrgAdmin: customClaims.isOrgAdmin', 'isOrgAdmin: customClaims.isOrgAdmin'),
+  السطر 70: ('.isOrgAdmin', '.isOrgAdmin'),
+  السطر 81: ('userClaims?.isOrgAdmin', 'userClaims?.isOrgAdmin'),
+  السطر 92: ('userData.isOrgAdmin', 'userData.isOrgAdmin'),
+النمط: userClaims?.isOrgOwner (4 مرة)
+  السطر 21: ('userClaims?.isOrgOwner', 'userClaims?.isOrgOwner'),
+  السطر 21: ('userClaims?.isOrgOwner', 'userClaims?.isOrgOwner'),
+  السطر 80: ('userClaims?.isOrgOwner', 'userClaims?.isOrgOwner'),
+  السطر 80: ('userClaims?.isOrgOwner', 'userClaims?.isOrgOwner'),
+النمط: .isOrgOwner (5 مرة)
+  السطر 21: ('userClaims?.isOrgOwner', 'userClaims?.isOrgOwner'),
+  السطر 58: ('isOrgOwner: customClaims.isOrgOwner', 'isOrgOwner: customClaims.isOrgOwner'),
+  السطر 69: ('.isOrgOwner', '.isOrgOwner'),
+  السطر 80: ('userClaims?.isOrgOwner', 'userClaims?.isOrgOwner'),
+  السطر 91: ('userData.isOrgOwner', 'userData.isOrgOwner'),
+النمط: role === 'org_owner' (2 مرة)
+  السطر 47: ("isOrgOwner: role === 'org_owner'", "isOrgOwner: role === 'org_owner'"),
+  السطر 129: ("role === 'org_owner'", "role === 'org_owner'"),
+النمط: 'org_owner' (4 مرة)
+  السطر 47: ("isOrgOwner: role === 'org_owner'", "isOrgOwner: role === 'org_owner'"),
+  السطر 123: ("'org_owner'", "'org_owner'"),
+  السطر 129: ("role === 'org_owner'", "role === 'org_owner'"),
+  السطر 135: ("['org_owner',", "['org_owner',"),
+النمط: role === 'org_admin' (2 مرة)
+  السطر 48: ("isOrgAdmin: role === 'org_admin'", "isOrgAdmin: role === 'org_admin'"),
+  السطر 128: ("role === 'org_admin'", "role === 'org_admin'"),
+النمط: 'org_admin' (4 مرة)
+  السطر 48: ("isOrgAdmin: role === 'org_admin'", "isOrgAdmin: role === 'org_admin'"),
+  السطر 122: ("'org_admin'", "'org_admin'"),
+  السطر 128: ("role === 'org_admin'", "role === 'org_admin'"),
+  السطر 134: ("['org_admin',", "['org_admin',"),
+النمط: .isSystemOwner (4 مرة)
+  السطر 56: ('isSystemOwner: customClaims.isSystemOwner', 'isSystemOwner: customClaims.isSystemOwner'),
+  السطر 67: ('.isSystemOwner', '.isSystemOwner'),
+  السطر 78: ('userClaims?.isSystemOwner', 'userClaims?.isSystemOwner'),
+  السطر 89: ('userData.isSystemOwner', 'userData.isSystemOwner'),
+النمط: .isSystemAdmin (4 مرة)
+  السطر 57: ('isSystemAdmin: customClaims.isSystemAdmin', 'isSystemAdmin: customClaims.isSystemAdmin'),
+  السطر 68: ('.isSystemAdmin', '.isSystemAdmin'),
+  السطر 79: ('userClaims?.isSystemAdmin', 'userClaims?.isSystemAdmin'),
+  السطر 90: ('userData.isSystemAdmin', 'userData.isSystemAdmin'),
+النمط: .isOrgSupervisor (4 مرة)
+  السطر 60: ('isOrgSupervisor: customClaims.isOrgSupervisor', 'isOrgSupervisor: customClaims.isOrgSupervisor'),
+  السطر 71: ('.isOrgSupervisor', '.isOrgSupervisor'),
+  السطر 82: ('userClaims?.isOrgSupervisor', 'userClaims?.isOrgSupervisor'),
+  السطر 93: ('userData.isOrgSupervisor', 'userData.isOrgSupervisor'),
+النمط: .isOrgEngineer (4 مرة)
+  السطر 61: ('isOrgEngineer: customClaims.isOrgEngineer', 'isOrgEngineer: customClaims.isOrgEngineer'),
+  السطر 72: ('.isOrgEngineer', '.isOrgEngineer'),
+  السطر 83: ('userClaims?.isOrgEngineer', 'userClaims?.isOrgEngineer'),
+  السطر 94: ('userData.isOrgEngineer', 'userData.isOrgEngineer'),
+النمط: .isOrgTechnician (4 مرة)
+  السطر 62: ('isOrgTechnician: customClaims.isOrgTechnician', 'isOrgTechnician: customClaims.isOrgTechnician'),
+  السطر 73: ('.isOrgTechnician', '.isOrgTechnician'),
+  السطر 84: ('userClaims?.isOrgTechnician', 'userClaims?.isOrgTechnician'),
+  السطر 95: ('userData.isOrgTechnician', 'userData.isOrgTechnician'),
+النمط: .isOrgAssistant (4 مرة)
+  السطر 63: ('isOrgAssistant: customClaims.isOrgAssistant', 'isOrgAssistant: customClaims.isOrgAssistant'),
+  السطر 74: ('.isOrgAssistant', '.isOrgAssistant'),
+  السطر 85: ('userClaims?.isOrgAssistant', 'userClaims?.isOrgAssistant'),
+  السطر 96: ('userData.isOrgAssistant', 'userData.isOrgAssistant'),
+النمط: .isIndependent (4 مرة)
+  السطر 64: ('isIndependent: customClaims.isIndependent', 'isIndependent: customClaims.isIndependent'),
+  السطر 75: ('.isIndependent', '.isIndependent'),
+  السطر 86: ('userClaims?.isIndependent', 'userClaims?.isIndependent'),
+  السطر 97: ('userData.isIndependent', 'userData.isIndependent'),
+النمط: userClaims?.isSystemOwner (1 مرة)
+  السطر 78: ('userClaims?.isSystemOwner', 'userClaims?.isSystemOwner'),
+النمط: userClaims?.isSystemAdmin (1 مرة)
+  السطر 79: ('userClaims?.isSystemAdmin', 'userClaims?.isSystemAdmin'),
+النمط: userData.isSystemOwner (1 مرة)
+  السطر 89: ('userData.isSystemOwner', 'userData.isSystemOwner'),
+النمط: userData.isSystemAdmin (1 مرة)
+  السطر 90: ('userData.isSystemAdmin', 'userData.isSystemAdmin'),
+النمط: userData.isOrgOwner (1 مرة)
+  السطر 91: ('userData.isOrgOwner', 'userData.isOrgOwner'),
+النمط: userData.isOrgAdmin (1 مرة)
+  السطر 92: ('userData.isOrgAdmin', 'userData.isOrgAdmin'),
+النمط: isSystemOwner?: (1 مرة)
+  السطر 100: ('isSystemOwner?:', 'isSystemOwner?:'),
+النمط: isSystemAdmin?: (1 مرة)
+  السطر 101: ('isSystemAdmin?:', 'isSystemAdmin?:'),
+النمط: isOrgOwner?: (1 مرة)
+  السطر 102: ('isOrgOwner?:', 'isOrgOwner?:'),
+النمط: isOrgAdmin?: (1 مرة)
+  السطر 103: ('isOrgAdmin?:', 'isOrgAdmin?:'),
+النمط: "org_admin" (3 مرة)
+  السطر 124: ('"org_admin"', '"org_admin"'),
+  السطر 130: ('role == "org_admin"', 'role == "org_admin"'),
+  السطر 136: ('["org_admin",', '["org_admin",'),
+النمط: "org_owner" (3 مرة)
+  السطر 125: ('"org_owner"', '"org_owner"'),
+  السطر 131: ('role == "org_owner"', 'role == "org_owner"'),
+  السطر 137: ('["org_owner",', '["org_owner",'),
+النمط: role == "org_admin" (1 مرة)
+  السطر 130: ('role == "org_admin"', 'role == "org_admin"'),
+النمط: role == "org_owner" (1 مرة)
+  السطر 131: ('role == "org_owner"', 'role == "org_owner"'),
+النمط: org_org_admin: (1 مرة)
+  السطر 140: ("org_admin:", "org_org_admin:"),
+النمط: org_org_owner: (1 مرة)
+  السطر 141: ("org_owner:", "org_org_owner:"),
+
+الملف: find_old_patterns.py
+------------------------------
+النمط: userClaims?.isOrgAdmin (6 مرة)
+  السطر 14: 'userClaims?.isOrgAdmin',
+  السطر 14: 'userClaims?.isOrgAdmin',
+  السطر 51: 'userClaims?.isOrgAdmin',
+  السطر 51: 'userClaims?.isOrgAdmin',
+  السطر 62: '|| userClaims?.isOrgAdmin',
+  السطر 62: '|| userClaims?.isOrgAdmin',
+النمط: .isOrgAdmin (5 مرة)
+  السطر 14: 'userClaims?.isOrgAdmin',
+  السطر 42: '.isOrgAdmin',
+  السطر 51: 'userClaims?.isOrgAdmin',
+  السطر 55: 'userData.isOrgAdmin',
+  السطر 62: '|| userClaims?.isOrgAdmin',
+النمط: userClaims?.isOrgOwner (6 مرة)
+  السطر 15: 'userClaims?.isOrgOwner',
+  السطر 15: 'userClaims?.isOrgOwner',
+  السطر 50: 'userClaims?.isOrgOwner',
+  السطر 50: 'userClaims?.isOrgOwner',
+  السطر 63: '|| userClaims?.isOrgOwner',
+  السطر 63: '|| userClaims?.isOrgOwner',
+النمط: .isOrgOwner (5 مرة)
+  السطر 15: 'userClaims?.isOrgOwner',
+  السطر 41: '.isOrgOwner',
+  السطر 50: 'userClaims?.isOrgOwner',
+  السطر 54: 'userData.isOrgOwner',
+  السطر 63: '|| userClaims?.isOrgOwner',
+النمط: userData.admin (1 مرة)
+  السطر 16: 'userData.admin',
+النمط: .admin (2 مرة)
+  السطر 16: 'userData.admin',
+  السطر 18: '.admin',
+النمط: userData.owner (1 مرة)
+  السطر 17: 'userData.owner',
+النمط: .owner (2 مرة)
+  السطر 17: 'userData.owner',
+  السطر 19: '.owner',
+النمط: role === 'org_admin' (1 مرة)
+  السطر 20: "role === 'org_admin'",
+النمط: 'org_admin' (2 مرة)
+  السطر 20: "role === 'org_admin'",
+  السطر 24: "'org_admin'",
+النمط: role === 'org_owner' (1 مرة)
+  السطر 21: "role === 'org_owner'",
+النمط: 'org_owner' (2 مرة)
+  السطر 21: "role === 'org_owner'",
+  السطر 25: "'org_owner'",
+النمط: role == "org_admin" (1 مرة)
+  السطر 22: 'role == "org_admin"',
+النمط: "org_admin" (2 مرة)
+  السطر 22: 'role == "org_admin"',
+  السطر 26: '"org_admin"',
+النمط: role == "org_owner" (1 مرة)
+  السطر 23: 'role == "org_owner"',
+النمط: "org_owner" (2 مرة)
+  السطر 23: 'role == "org_owner"',
+  السطر 27: '"org_owner"',
+النمط: system_org_owner: (1 مرة)
+  السطر 30: 'system_org_owner:',
+النمط: system_org_admin: (1 مرة)
+  السطر 31: 'system_org_admin:',
+النمط: org_org_owner: (1 مرة)
+  السطر 32: 'org_org_owner:',
+النمط: org_org_admin: (1 مرة)
+  السطر 33: 'org_org_admin:',
+النمط: org_supervisor: (1 مرة)
+  السطر 34: 'org_supervisor:',
+النمط: org_engineer: (1 مرة)
+  السطر 35: 'org_engineer:',
+النمط: org_technician: (1 مرة)
+  السطر 36: 'org_technician:',
+النمط: org_assistant: (1 مرة)
+  السطر 37: 'org_assistant:',
+النمط: independent: (1 مرة)
+  السطر 38: 'independent:',
+النمط: .isSystemOwner (3 مرة)
+  السطر 39: '.isSystemOwner',
+  السطر 48: 'userClaims?.isSystemOwner',
+  السطر 52: 'userData.isSystemOwner',
+النمط: .isSystemAdmin (3 مرة)
+  السطر 40: '.isSystemAdmin',
+  السطر 49: 'userClaims?.isSystemAdmin',
+  السطر 53: 'userData.isSystemAdmin',
+النمط: .isOrgSupervisor (1 مرة)
+  السطر 43: '.isOrgSupervisor',
+النمط: .isOrgEngineer (1 مرة)
+  السطر 44: '.isOrgEngineer',
+النمط: .isOrgTechnician (1 مرة)
+  السطر 45: '.isOrgTechnician',
+النمط: .isOrgAssistant (1 مرة)
+  السطر 46: '.isOrgAssistant',
+النمط: .isIndependent (1 مرة)
+  السطر 47: '.isIndependent',
+النمط: userClaims?.isSystemOwner (1 مرة)
+  السطر 48: 'userClaims?.isSystemOwner',
+النمط: userClaims?.isSystemAdmin (1 مرة)
+  السطر 49: 'userClaims?.isSystemAdmin',
+النمط: userData.isSystemOwner (1 مرة)
+  السطر 52: 'userData.isSystemOwner',
+النمط: userData.isSystemAdmin (1 مرة)
+  السطر 53: 'userData.isSystemAdmin',
+النمط: userData.isOrgOwner (1 مرة)
+  السطر 54: 'userData.isOrgOwner',
+النمط: userData.isOrgAdmin (1 مرة)
+  السطر 55: 'userData.isOrgAdmin',
+النمط: || userClaims?.isOrgAdmin (1 مرة)
+  السطر 62: '|| userClaims?.isOrgAdmin',
+النمط: || userClaims?.isOrgOwner (1 مرة)
+  السطر 63: '|| userClaims?.isOrgOwner',
+النمط: admin?: boolean (1 مرة)
+  السطر 66: 'admin?: boolean',
+النمط: owner?: boolean (1 مرة)
+  السطر 67: 'owner?: boolean',
+النمط: org_admin: boolean (1 مرة)
+  السطر 68: 'org_admin: boolean',
+النمط: org_owner: boolean (1 مرة)
+  السطر 69: 'org_owner: boolean',
+النمط: isSystemOwner?: (1 مرة)
+  السطر 70: 'isSystemOwner?:',
+النمط: isSystemAdmin?: (1 مرة)
+  السطر 71: 'isSystemAdmin?:',
+النمط: isOrgOwner?: (1 مرة)
+  السطر 72: 'isOrgOwner?:',
+النمط: isOrgAdmin?: (1 مرة)
+  السطر 73: 'isOrgAdmin?:',
+
+الملف: replace_old_patterns.py
+------------------------------
+النمط: role === 'org_owner' (1 مرة)
+  السطر 35: ("isOrgOwner: role === 'org_owner'", "isOrgOwner: role === 'org_owner'"),
+النمط: 'org_owner' (1 مرة)
+  السطر 35: ("isOrgOwner: role === 'org_owner'", "isOrgOwner: role === 'org_owner'"),
+النمط: role === 'org_admin' (1 مرة)
+  السطر 36: ("isOrgAdmin: role === 'org_admin'", "isOrgAdmin: role === 'org_admin'"),
+النمط: 'org_admin' (1 مرة)
+  السطر 36: ("isOrgAdmin: role === 'org_admin'", "isOrgAdmin: role === 'org_admin'"),
+النمط: .isSystemOwner (4 مرة)
+  السطر 44: ('isSystemOwner: customClaims.isSystemOwner', 'isSystemOwner: customClaims.isSystemOwner'),
+  السطر 55: ('.isSystemOwner', '.isSystemOwner'),
+  السطر 66: ('userClaims?.isSystemOwner', 'userClaims?.isSystemOwner'),
+  السطر 77: ('userData.isSystemOwner', 'userData.isSystemOwner'),
+النمط: .isSystemAdmin (4 مرة)
+  السطر 45: ('isSystemAdmin: customClaims.isSystemAdmin', 'isSystemAdmin: customClaims.isSystemAdmin'),
+  السطر 56: ('.isSystemAdmin', '.isSystemAdmin'),
+  السطر 67: ('userClaims?.isSystemAdmin', 'userClaims?.isSystemAdmin'),
+  السطر 78: ('userData.isSystemAdmin', 'userData.isSystemAdmin'),
+النمط: .isOrgOwner (4 مرة)
+  السطر 46: ('isOrgOwner: customClaims.isOrgOwner', 'isOrgOwner: customClaims.isOrgOwner'),
+  السطر 57: ('.isOrgOwner', '.isOrgOwner'),
+  السطر 68: ('userClaims?.isOrgOwner', 'userClaims?.isOrgOwner'),
+  السطر 79: ('userData.isOrgOwner', 'userData.isOrgOwner'),
+النمط: .isOrgAdmin (4 مرة)
+  السطر 47: ('isOrgAdmin: customClaims.isOrgAdmin', 'isOrgAdmin: customClaims.isOrgAdmin'),
+  السطر 58: ('.isOrgAdmin', '.isOrgAdmin'),
+  السطر 69: ('userClaims?.isOrgAdmin', 'userClaims?.isOrgAdmin'),
+  السطر 80: ('userData.isOrgAdmin', 'userData.isOrgAdmin'),
+النمط: .isOrgSupervisor (4 مرة)
+  السطر 48: ('isOrgSupervisor: customClaims.isOrgSupervisor', 'isOrgSupervisor: customClaims.isOrgSupervisor'),
+  السطر 59: ('.isOrgSupervisor', '.isOrgSupervisor'),
+  السطر 70: ('userClaims?.isOrgSupervisor', 'userClaims?.isOrgSupervisor'),
+  السطر 81: ('userData.isOrgSupervisor', 'userData.isOrgSupervisor'),
+النمط: .isOrgEngineer (4 مرة)
+  السطر 49: ('isOrgEngineer: customClaims.isOrgEngineer', 'isOrgEngineer: customClaims.isOrgEngineer'),
+  السطر 60: ('.isOrgEngineer', '.isOrgEngineer'),
+  السطر 71: ('userClaims?.isOrgEngineer', 'userClaims?.isOrgEngineer'),
+  السطر 82: ('userData.isOrgEngineer', 'userData.isOrgEngineer'),
+النمط: .isOrgTechnician (4 مرة)
+  السطر 50: ('isOrgTechnician: customClaims.isOrgTechnician', 'isOrgTechnician: customClaims.isOrgTechnician'),
+  السطر 61: ('.isOrgTechnician', '.isOrgTechnician'),
+  السطر 72: ('userClaims?.isOrgTechnician', 'userClaims?.isOrgTechnician'),
+  السطر 83: ('userData.isOrgTechnician', 'userData.isOrgTechnician'),
+النمط: .isOrgAssistant (4 مرة)
+  السطر 51: ('isOrgAssistant: customClaims.isOrgAssistant', 'isOrgAssistant: customClaims.isOrgAssistant'),
+  السطر 62: ('.isOrgAssistant', '.isOrgAssistant'),
+  السطر 73: ('userClaims?.isOrgAssistant', 'userClaims?.isOrgAssistant'),
+  السطر 84: ('userData.isOrgAssistant', 'userData.isOrgAssistant'),
+النمط: .isIndependent (4 مرة)
+  السطر 52: ('isIndependent: customClaims.isIndependent', 'isIndependent: customClaims.isIndependent'),
+  السطر 63: ('.isIndependent', '.isIndependent'),
+  السطر 74: ('userClaims?.isIndependent', 'userClaims?.isIndependent'),
+  السطر 85: ('userData.isIndependent', 'userData.isIndependent'),
+النمط: userClaims?.isSystemOwner (1 مرة)
+  السطر 66: ('userClaims?.isSystemOwner', 'userClaims?.isSystemOwner'),
+النمط: userClaims?.isSystemAdmin (1 مرة)
+  السطر 67: ('userClaims?.isSystemAdmin', 'userClaims?.isSystemAdmin'),
+النمط: userClaims?.isOrgOwner (2 مرة)
+  السطر 68: ('userClaims?.isOrgOwner', 'userClaims?.isOrgOwner'),
+  السطر 68: ('userClaims?.isOrgOwner', 'userClaims?.isOrgOwner'),
+النمط: userClaims?.isOrgAdmin (2 مرة)
+  السطر 69: ('userClaims?.isOrgAdmin', 'userClaims?.isOrgAdmin'),
+  السطر 69: ('userClaims?.isOrgAdmin', 'userClaims?.isOrgAdmin'),
+النمط: userData.isSystemOwner (1 مرة)
+  السطر 77: ('userData.isSystemOwner', 'userData.isSystemOwner'),
+النمط: userData.isSystemAdmin (1 مرة)
+  السطر 78: ('userData.isSystemAdmin', 'userData.isSystemAdmin'),
+النمط: userData.isOrgOwner (1 مرة)
+  السطر 79: ('userData.isOrgOwner', 'userData.isOrgOwner'),
+النمط: userData.isOrgAdmin (1 مرة)
+  السطر 80: ('userData.isOrgAdmin', 'userData.isOrgAdmin'),
+النمط: isSystemOwner?: (1 مرة)
+  السطر 88: ('isSystemOwner?:', 'isSystemOwner?:'),
+النمط: isSystemAdmin?: (1 مرة)
+  السطر 89: ('isSystemAdmin?:', 'isSystemAdmin?:'),
+النمط: isOrgOwner?: (1 مرة)
+  السطر 90: ('isOrgOwner?:', 'isOrgOwner?:'),
+النمط: isOrgAdmin?: (1 مرة)
+  السطر 91: ('isOrgAdmin?:', 'isOrgAdmin?:'),
+
+الملف: src\components\RoleSelector.tsx
+------------------------------
+النمط: system_org_owner: (1 مرة)
+  السطر 25: system_org_owner: <ShieldAlert className="h-4 w-4 ml-2 text-purple-600" />,
+النمط: system_org_admin: (1 مرة)
+  السطر 26: system_org_admin: <ShieldAlert className="h-4 w-4 ml-2 text-blue-600" />,
+النمط: independent: (1 مرة)
+  السطر 27: independent: <UserCog className="h-4 w-4 ml-2" />,
+النمط: org_org_owner: (1 مرة)
+  السطر 30: org_org_owner: <ShieldAlert className="h-4 w-4 ml-2 text-orange-600" />,
+النمط: org_org_admin: (1 مرة)
+  السطر 31: org_org_admin: <ShieldAlert className="h-4 w-4 ml-2" />,
+النمط: org_supervisor: (1 مرة)
+  السطر 32: org_supervisor: <Shield className="h-4 w-4 ml-2" />,
+النمط: org_engineer: (1 مرة)
+  السطر 33: org_engineer: <ShieldCheck className="h-4 w-4 ml-2" />,
+النمط: org_technician: (1 مرة)
+  السطر 34: org_technician: <ShieldQuestion className="h-4 w-4 ml-2" />,
+النمط: org_assistant: (1 مرة)
+  السطر 35: org_assistant: <Shield className="h-4 w-4 ml-2 opacity-70" />
+
+الملف: src\context\AuthContext.tsx
+------------------------------
+النمط: 'org_admin' (6 مرة)
+  السطر 21: // - أدوار المؤسسات: 'org_owner', 'org_admin', 'supervisor', 'engineer', 'technician', 'assistant'
+  السطر 226: isAdmin = userRole === 'org_admin';
+  السطر 229: const validOrgRoles: UserRole[] = ['org_owner', 'org_admin', 'supervisor', 'engineer', 'technician', 'assistant'];
+  السطر 243: userRole = 'org_admin';
+  السطر 245: userRole = 'org_admin';
+  السطر 249: const validOrgRoles: UserRole[] = ['org_owner', 'org_admin', 'supervisor', 'engineer', 'technician', 'assistant'];
+النمط: 'org_owner' (4 مرة)
+  السطر 21: // - أدوار المؤسسات: 'org_owner', 'org_admin', 'supervisor', 'engineer', 'technician', 'assistant'
+  السطر 210: userRole = 'org_owner';
+  السطر 229: const validOrgRoles: UserRole[] = ['org_owner', 'org_admin', 'supervisor', 'engineer', 'technician', 'assistant'];
+  السطر 249: const validOrgRoles: UserRole[] = ['org_owner', 'org_admin', 'supervisor', 'engineer', 'technician', 'assistant'];
+النمط: isSystemOwner?: (1 مرة)
+  السطر 25: isSystemOwner?: boolean;       // مالك النظام (أعلى صلاحية)
+النمط: isSystemAdmin?: (1 مرة)
+  السطر 26: isSystemAdmin?: boolean;       // أدمن النظام العام
+النمط: isOrgOwner?: (1 مرة)
+  السطر 27: isOrgOwner?: boolean; // مالك المؤسسة
+النمط: .isSystemOwner (3 مرة)
+  السطر 131: const isSystemOwner = userData.isSystemOwner || false;
+  السطر 263: system_org_owner: userData.isSystemOwner || false,
+  السطر 277: console.log("  - مالك النظام:", finalClaims.isSystemOwner);
+النمط: userData.isSystemOwner (2 مرة)
+  السطر 131: const isSystemOwner = userData.isSystemOwner || false;
+  السطر 263: system_org_owner: userData.isSystemOwner || false,
+النمط: .isSystemAdmin (3 مرة)
+  السطر 132: const isSystemAdmin = userData.isSystemAdmin || false;
+  السطر 264: system_org_admin: userData.isSystemAdmin || false,
+  السطر 278: console.log("  - أدمن النظام:", finalClaims.isSystemAdmin);
+النمط: userData.isSystemAdmin (2 مرة)
+  السطر 132: const isSystemAdmin = userData.isSystemAdmin || false;
+  السطر 264: system_org_admin: userData.isSystemAdmin || false,
+النمط: system_org_owner: (3 مرة)
+  السطر 149: console.log("  - system_org_owner:", isSystemOwner);
+  السطر 155: system_org_owner: isSystemOwner,
+  السطر 263: system_org_owner: userData.isSystemOwner || false,
+النمط: system_org_admin: (3 مرة)
+  السطر 150: console.log("  - system_org_admin:", isSystemAdmin);
+  السطر 156: system_org_admin: isSystemAdmin,
+  السطر 264: system_org_admin: userData.isSystemAdmin || false,
+النمط: .owner (3 مرة)
+  السطر 202: console.log("  - orgData.ownerId:", orgData.ownerId);
+  السطر 205: console.log("  - ownerId match:", orgData.ownerId === currentUser.uid);
+  السطر 208: if (orgData.ownerId === currentUser.uid || orgData.createdBy === currentUser.uid) {
+النمط: org_org_owner: (1 مرة)
+  السطر 261: org_org_owner: isOwner,
+النمط: .isOrgOwner (1 مرة)
+  السطر 275: console.log("  - مالك المؤسسة:", finalClaims.isOrgOwner);
+النمط: .admin (1 مرة)
+  السطر 276: console.log("  - أدمن المؤسسة:", finalClaims.admin);
+
+الملف: src\hooks\use-auth.ts
+------------------------------
+النمط: userClaims?.isOrgOwner (2 مرة)
+  السطر 22: if (auth.userClaims?.isOrgOwner) {
+  السطر 22: if (auth.userClaims?.isOrgOwner) {
+النمط: .isOrgOwner (1 مرة)
+  السطر 22: if (auth.userClaims?.isOrgOwner) {
+النمط: userClaims?.isOrgAdmin (2 مرة)
+  السطر 24: } else if (auth.userClaims?.isOrgAdmin) {
+  السطر 24: } else if (auth.userClaims?.isOrgAdmin) {
+النمط: .isOrgAdmin (1 مرة)
+  السطر 24: } else if (auth.userClaims?.isOrgAdmin) {
+النمط: 'org_admin' (1 مرة)
+  السطر 25: role = 'org_admin';
+
+الملف: src\hooks\usePermissions.tsx
+------------------------------
+النمط: .isSystemOwner (1 مرة)
+  السطر 50: if (userClaims.isSystemOwner) {
+النمط: .isSystemAdmin (1 مرة)
+  السطر 52: } else if (userClaims.isSystemAdmin) {
+النمط: .isOrgOwner (1 مرة)
+  السطر 54: } else if (userClaims.isOrgOwner) {
+النمط: 'org_owner' (2 مرة)
+  السطر 55: effectiveRole = 'org_owner';
+  السطر 92: const highLevelRoles = ['system_owner', 'system_admin', 'org_owner'];
+النمط: .isOrgAdmin (1 مرة)
+  السطر 56: } else if (userClaims.isOrgAdmin) {
+النمط: 'org_admin' (1 مرة)
+  السطر 57: effectiveRole = 'org_admin';
+
+الملف: src\locales\ar.ts
+------------------------------
+النمط: system_org_owner: (2 مرة)
+  السطر 148: system_org_owner: "مالك النظام",
+  السطر 163: system_org_owner: "مالك النظام - أعلى صلاحية في النظام بالكامل، يدير جميع الأنظمة والمؤسسات",
+النمط: system_org_admin: (2 مرة)
+  السطر 149: system_org_admin: "أدمن النظام العام",
+  السطر 164: system_org_admin: "أدمن النظام العام - صلاحيات واسعة لإدارة النظام والمؤسسات",
+النمط: independent: (2 مرة)
+  السطر 150: independent: "مستخدم مستقل",
+  السطر 165: independent: "مستخدم مستقل - يدير مهامه وبياناته الشخصية فقط",
+النمط: org_org_owner: (2 مرة)
+  السطر 153: org_org_owner: "مالك المؤسسة",
+  السطر 168: org_org_owner: "مالك المؤسسة - صلاحيات كاملة داخل المؤسسة",
+النمط: org_org_admin: (2 مرة)
+  السطر 154: org_org_admin: "أدمن المؤسسة",
+  السطر 169: org_org_admin: "أدمن المؤسسة - صلاحيات إدارية واسعة داخل المؤسسة",
+النمط: org_supervisor: (2 مرة)
+  السطر 155: org_supervisor: "مشرف",
+  السطر 170: org_supervisor: "مشرف - يشرف على الفرق والمهام ويدير العمليات",
+النمط: org_engineer: (2 مرة)
+  السطر 156: org_engineer: "مهندس",
+  السطر 171: org_engineer: "مهندس - يصمم ويخطط المشاريع والحلول التقنية",
+النمط: org_technician: (2 مرة)
+  السطر 157: org_technician: "فني",
+  السطر 172: org_technician: "فني - ينفذ المهام التقنية والصيانة",
+النمط: org_assistant: (2 مرة)
+  السطر 158: org_assistant: "مساعد فني"
+  السطر 173: org_assistant: "مساعد فني - يساعد في تنفيذ المهام البسيطة"
+
+الملف: src\locales\en.ts
+------------------------------
+النمط: system_org_owner: (2 مرة)
+  السطر 146: system_org_owner: "System Owner",
+  السطر 161: system_org_owner: "System Owner - Highest authority in the entire system, manages all systems and organizations",
+النمط: system_org_admin: (2 مرة)
+  السطر 147: system_org_admin: "System Admin",
+  السطر 162: system_org_admin: "System Admin - Broad permissions to manage the system and organizations",
+النمط: independent: (2 مرة)
+  السطر 148: independent: "Independent User",
+  السطر 163: independent: "Independent User - Manages only their personal tasks and data",
+النمط: org_org_owner: (2 مرة)
+  السطر 151: org_org_owner: "Organization Owner",
+  السطر 166: org_org_owner: "Organization Owner - Full permissions within the organization",
+النمط: org_org_admin: (2 مرة)
+  السطر 152: org_org_admin: "Organization Admin",
+  السطر 167: org_org_admin: "Organization Admin - Broad administrative permissions within the organization",
+النمط: org_supervisor: (2 مرة)
+  السطر 153: org_supervisor: "Supervisor",
+  السطر 168: org_supervisor: "Supervisor - Supervises teams and tasks, manages operations",
+النمط: org_engineer: (2 مرة)
+  السطر 154: org_engineer: "Engineer",
+  السطر 169: org_engineer: "Engineer - Designs and plans projects and technical solutions",
+النمط: org_technician: (2 مرة)
+  السطر 155: org_technician: "Technician",
+  السطر 170: org_technician: "Technician - Executes technical tasks and maintenance",
+النمط: org_assistant: (2 مرة)
+  السطر 156: org_assistant: "Assistant"
+  السطر 171: org_assistant: "Assistant - Helps with simple tasks execution"
+
+الملف: src\types\roles.ts
+------------------------------
+النمط: 'org_owner' (2 مرة)
+  السطر 13: | 'org_owner' // مالك المؤسسة
+  السطر 203: 'org_owner',
+النمط: 'org_admin' (2 مرة)
+  السطر 14: | 'org_admin'       // أدمن المؤسسة
+  السطر 204: 'org_admin',
+النمط: system_org_owner: (2 مرة)
+  السطر 68: system_org_owner: [
+  السطر 183: system_org_owner: 'roleDescriptions.isSystemOwner',
+النمط: system_org_admin: (2 مرة)
+  السطر 79: system_org_admin: [
+  السطر 184: system_org_admin: 'roleDescriptions.isSystemAdmin',
+النمط: org_org_owner: (2 مرة)
+  السطر 90: org_org_owner: [
+  السطر 188: org_org_owner: 'roleDescriptions.isOrgOwner',
+النمط: org_org_admin: (2 مرة)
+  السطر 101: org_org_admin: [
+  السطر 189: org_org_admin: 'roleDescriptions.isOrgAdmin',
+النمط: org_engineer: (2 مرة)
+  السطر 112: org_engineer: [
+  السطر 191: org_engineer: 'roleDescriptions.isOrgEngineer',
+النمط: org_supervisor: (2 مرة)
+  السطر 122: org_supervisor: [
+  السطر 190: org_supervisor: 'roleDescriptions.isOrgSupervisor',
+النمط: org_technician: (2 مرة)
+  السطر 132: org_technician: [
+  السطر 192: org_technician: 'roleDescriptions.isOrgTechnician',
+النمط: org_assistant: (2 مرة)
+  السطر 140: org_assistant: [
+  السطر 193: org_assistant: 'roleDescriptions.isOrgAssistant'
+النمط: independent: (2 مرة)
+  السطر 156: independent: [
+  السطر 185: independent: 'roleDescriptions.isIndependent',
+النمط: .isSystemOwner (1 مرة)
+  السطر 183: system_org_owner: 'roleDescriptions.isSystemOwner',
+النمط: .isSystemAdmin (1 مرة)
+  السطر 184: system_org_admin: 'roleDescriptions.isSystemAdmin',
+النمط: .isIndependent (1 مرة)
+  السطر 185: independent: 'roleDescriptions.isIndependent',
+النمط: .isOrgOwner (1 مرة)
+  السطر 188: org_org_owner: 'roleDescriptions.isOrgOwner',
+النمط: .isOrgAdmin (1 مرة)
+  السطر 189: org_org_admin: 'roleDescriptions.isOrgAdmin',
+النمط: .isOrgSupervisor (1 مرة)
+  السطر 190: org_supervisor: 'roleDescriptions.isOrgSupervisor',
+النمط: .isOrgEngineer (1 مرة)
+  السطر 191: org_engineer: 'roleDescriptions.isOrgEngineer',
+النمط: .isOrgTechnician (1 مرة)
+  السطر 192: org_technician: 'roleDescriptions.isOrgTechnician',
+النمط: .isOrgAssistant (1 مرة)
+  السطر 193: org_assistant: 'roleDescriptions.isOrgAssistant'
+
+الملف: src\components\admin\CreateUserDialog.tsx
+------------------------------
+النمط: 'org_admin' (1 مرة)
+  السطر 23: role: z.enum(['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant', 'independent'], {
+النمط: 'org_owner' (1 مرة)
+  السطر 23: role: z.enum(['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant', 'independent'], {
+النمط: "org_owner" (1 مرة)
+  السطر 160: <SelectItem value="org_owner">مالك المؤسسة</SelectItem>
+النمط: "org_admin" (1 مرة)
+  السطر 161: <SelectItem value="org_admin">أدمن المؤسسة</SelectItem>
+
+الملف: src\components\admin\UserDetailsDialog.tsx
+------------------------------
+النمط: 'org_owner' (1 مرة)
+  السطر 26: 'org_owner': 'مالك المؤسسة',
+النمط: 'org_admin' (1 مرة)
+  السطر 27: 'org_admin': 'أدمن المؤسسة',
+النمط: "org_owner" (1 مرة)
+  السطر 195: <SelectItem value="org_owner">مالك المؤسسة</SelectItem>
+النمط: "org_admin" (1 مرة)
+  السطر 196: <SelectItem value="org_admin">أدمن المؤسسة</SelectItem>
+
+الملف: src\components\auth\AdminProtectedRoute.tsx
+------------------------------
+النمط: .isSystemOwner (1 مرة)
+  السطر 60: const userIsSystemOwner = userRole === 'system_owner' || idTokenResult.claims.isSystemOwner === true;
+النمط: .isSystemAdmin (1 مرة)
+  السطر 61: const userIsSystemAdmin = userRole === 'system_admin' || idTokenResult.claims.isSystemAdmin === true;
+النمط: 'org_owner' (1 مرة)
+  السطر 64: const userisOrgOwner = userRole === 'org_owner' || idTokenResult.claims.isOrgOwner === true;
+النمط: .isOrgOwner (1 مرة)
+  السطر 64: const userisOrgOwner = userRole === 'org_owner' || idTokenResult.claims.isOrgOwner === true;
+النمط: 'org_admin' (1 مرة)
+  السطر 65: const userIsOrgAdmin = userRole === 'org_admin' || idTokenResult.claims.isOrgAdmin === true;
+النمط: .isOrgAdmin (1 مرة)
+  السطر 65: const userIsOrgAdmin = userRole === 'org_admin' || idTokenResult.claims.isOrgAdmin === true;
+النمط: .isOrgSupervisor (1 مرة)
+  السطر 66: const userIsOrgSupervisor = userRole === 'org_supervisor' || idTokenResult.claims.isOrgSupervisor === true;
+النمط: .isOrgEngineer (1 مرة)
+  السطر 67: const userIsOrgEngineer = userRole === 'org_engineer' || idTokenResult.claims.isOrgEngineer === true;
+النمط: .isOrgTechnician (1 مرة)
+  السطر 68: const userIsOrgTechnician = userRole === 'org_technician' || idTokenResult.claims.isOrgTechnician === true;
+النمط: .isOrgAssistant (1 مرة)
+  السطر 69: const userIsOrgAssistant = userRole === 'org_assistant' || idTokenResult.claims.isOrgAssistant === true;
+
+الملف: src\components\documentation\DocumentationPage.tsx
+------------------------------
+النمط: .isSystemOwner (2 مرة)
+  السطر 135: const hasAccess = userClaims?.isSystemOwner === true;
+  السطر 140: const hasAccess = userClaims?.isSystemAdmin === true || userClaims?.isSystemOwner === true ||
+النمط: userClaims?.isSystemOwner (2 مرة)
+  السطر 135: const hasAccess = userClaims?.isSystemOwner === true;
+  السطر 140: const hasAccess = userClaims?.isSystemAdmin === true || userClaims?.isSystemOwner === true ||
+النمط: 'org_admin' (1 مرة)
+  السطر 139: if (doc.requiredPermission === 'org_admin') {
+النمط: .isSystemAdmin (1 مرة)
+  السطر 140: const hasAccess = userClaims?.isSystemAdmin === true || userClaims?.isSystemOwner === true ||
+النمط: userClaims?.isSystemAdmin (1 مرة)
+  السطر 140: const hasAccess = userClaims?.isSystemAdmin === true || userClaims?.isSystemOwner === true ||
+النمط: userClaims?.isOrgOwner (2 مرة)
+  السطر 141: userClaims?.isOrgOwner === true || userClaims?.individual_admin === true;
+  السطر 141: userClaims?.isOrgOwner === true || userClaims?.individual_admin === true;
+النمط: .isOrgOwner (1 مرة)
+  السطر 141: userClaims?.isOrgOwner === true || userClaims?.individual_admin === true;
+
+الملف: src\components\meetings\DailyMeetingGenerator.tsx
+------------------------------
+النمط: userClaims?.isOrgOwner (2 مرة)
+  السطر 44: const isOwner = userClaims?.isOrgOwner === true;
+  السطر 44: const isOwner = userClaims?.isOrgOwner === true;
+النمط: .isOrgOwner (1 مرة)
+  السطر 44: const isOwner = userClaims?.isOrgOwner === true;
+النمط: userClaims?.isOrgAdmin (2 مرة)
+  السطر 45: const isAdmin = userClaims?.isOrgAdmin === true;
+  السطر 45: const isAdmin = userClaims?.isOrgAdmin === true;
+النمط: .isOrgAdmin (1 مرة)
+  السطر 45: const isAdmin = userClaims?.isOrgAdmin === true;
+
+الملف: src\components\meetings\MeetingDetails.tsx
+------------------------------
+النمط: userClaims?.isOrgOwner (2 مرة)
+  السطر 49: const isOwner = userClaims?.isOrgOwner === true;
+  السطر 49: const isOwner = userClaims?.isOrgOwner === true;
+النمط: .isOrgOwner (1 مرة)
+  السطر 49: const isOwner = userClaims?.isOrgOwner === true;
+النمط: userClaims?.isOrgAdmin (2 مرة)
+  السطر 50: const isAdmin = userClaims?.isOrgAdmin === true;
+  السطر 50: const isAdmin = userClaims?.isOrgAdmin === true;
+النمط: .isOrgAdmin (1 مرة)
+  السطر 50: const isAdmin = userClaims?.isOrgAdmin === true;
+
+الملف: src\components\okr\CreateKeyResultDialog.tsx
+------------------------------
+النمط: "org_owner" (2 مرة)
+  السطر 235: <Label htmlFor="org_owner">المسؤول</Label>
+  السطر 237: <SelectTrigger id="org_owner">
+
+الملف: src\components\okr\CreateObjectiveDialog.tsx
+------------------------------
+النمط: "org_owner" (2 مرة)
+  السطر 230: <Label htmlFor="org_owner">مالك الهدف</Label>
+  السطر 232: <SelectTrigger id="org_owner">
+
+الملف: src\components\okr\EditKeyResultDialog.tsx
+------------------------------
+النمط: .owner (2 مرة)
+  السطر 72: const [ownerId, setOwnerId] = useState(keyResult.ownerId);
+  السطر 85: setOwnerId(keyResult.ownerId);
+النمط: "org_owner" (2 مرة)
+  السطر 260: <Label htmlFor="org_owner">المسؤول</Label>
+  السطر 262: <SelectTrigger id="org_owner">
+
+الملف: src\components\okr\EditObjectiveDialog.tsx
+------------------------------
+النمط: .owner (2 مرة)
+  السطر 65: const [ownerId, setOwnerId] = useState(objective.ownerId);
+  السطر 78: setOwnerId(objective.ownerId);
+النمط: "org_owner" (2 مرة)
+  السطر 232: <Label htmlFor="org_owner">مالك الهدف</Label>
+  السطر 234: <SelectTrigger id="org_owner">
+
+الملف: src\components\okr\KeyResultCard.tsx
+------------------------------
+النمط: .owner (1 مرة)
+  السطر 100: <span>{keyResult.ownerName}</span>
+
+الملف: src\components\organization\OrganizationMembers.tsx
+------------------------------
+النمط: role === 'org_admin' (1 مرة)
+  السطر 337: member.role === 'org_admin' ? 'مسؤول' :
+النمط: 'org_admin' (1 مرة)
+  السطر 337: member.role === 'org_admin' ? 'مسؤول' :
+النمط: "org_owner" (2 مرة)
+  السطر 412: {isOwner && <SelectItem value="org_owner">مالك المؤسسة</SelectItem>}
+  السطر 488: {isOwner && <SelectItem value="org_owner">مالك</SelectItem>}
+النمط: "org_admin" (2 مرة)
+  السطر 413: <SelectItem value="org_admin">أدمن المؤسسة</SelectItem>
+  السطر 489: <SelectItem value="org_admin">مسؤول</SelectItem>
+
+الملف: src\app\(app)\AppLayoutContent.tsx
+------------------------------
+النمط: role === 'org_admin' (3 مرة)
+  السطر 303: const isAdmin = role === 'org_admin';
+  السطر 389: {(role === 'system_owner' || role === 'system_admin' || role === 'org_owner' || role === 'org_admin') && (
+  السطر 468: variant={role === 'org_admin' || role === 'system_owner' || role === 'org_owner' ? "default" : role === 'assistant' ? "secondary" : "outline"}
+النمط: 'org_admin' (3 مرة)
+  السطر 303: const isAdmin = role === 'org_admin';
+  السطر 389: {(role === 'system_owner' || role === 'system_admin' || role === 'org_owner' || role === 'org_admin') && (
+  السطر 468: variant={role === 'org_admin' || role === 'system_owner' || role === 'org_owner' ? "default" : role === 'assistant' ? "secondary" : "outline"}
+النمط: .admin (2 مرة)
+  السطر 378: label={t('sidebar.adminPanel')}
+  السطر 379: tooltip={t('sidebar.adminPanelTooltip')}
+النمط: role === 'org_owner' (2 مرة)
+  السطر 389: {(role === 'system_owner' || role === 'system_admin' || role === 'org_owner' || role === 'org_admin') && (
+  السطر 468: variant={role === 'org_admin' || role === 'system_owner' || role === 'org_owner' ? "default" : role === 'assistant' ? "secondary" : "outline"}
+النمط: 'org_owner' (2 مرة)
+  السطر 389: {(role === 'system_owner' || role === 'system_admin' || role === 'org_owner' || role === 'org_admin') && (
+  السطر 468: variant={role === 'org_admin' || role === 'system_owner' || role === 'org_owner' ? "default" : role === 'assistant' ? "secondary" : "outline"}
+النمط: .isSystemOwner (3 مرة)
+  السطر 410: const shouldShow = userClaims?.isSystemOwner === true || userClaims?.role === 'system_owner';
+  السطر 414: system_org_owner: userClaims?.isSystemOwner,
+  السطر 417: condition1: userClaims?.isSystemOwner === true,
+النمط: userClaims?.isSystemOwner (3 مرة)
+  السطر 410: const shouldShow = userClaims?.isSystemOwner === true || userClaims?.role === 'system_owner';
+  السطر 414: system_org_owner: userClaims?.isSystemOwner,
+  السطر 417: condition1: userClaims?.isSystemOwner === true,
+النمط: system_org_owner: (1 مرة)
+  السطر 414: system_org_owner: userClaims?.isSystemOwner,
+
+الملف: src\app\(organization)\OrganizationLayoutContent.tsx
+------------------------------
+النمط: userClaims?.isOrgOwner (2 مرة)
+  السطر 54: const isOwner = userClaims?.isOrgOwner === true;
+  السطر 54: const isOwner = userClaims?.isOrgOwner === true;
+النمط: .isOrgOwner (1 مرة)
+  السطر 54: const isOwner = userClaims?.isOrgOwner === true;
+النمط: userClaims?.isOrgAdmin (2 مرة)
+  السطر 55: const isAdmin = userClaims?.isOrgAdmin === true;
+  السطر 55: const isAdmin = userClaims?.isOrgAdmin === true;
+النمط: .isOrgAdmin (1 مرة)
+  السطر 55: const isAdmin = userClaims?.isOrgAdmin === true;
+
+الملف: src\app\api\debug\generate-otp\route.ts
+------------------------------
+النمط: .owner (1 مرة)
+  السطر 27: const isOwner = idTokenResult.claims.owner === true;
+
+الملف: src\app\api\debug\verify-otp\route.ts
+------------------------------
+النمط: .owner (1 مرة)
+  السطر 32: const isOwner = idTokenResult.claims.owner === true;
+
+الملف: src\app\(organization)\org\page.tsx
+------------------------------
+النمط: userClaims?.isOrgOwner (2 مرة)
+  السطر 34: const isOwner = userClaims?.isOrgOwner === true;
+  السطر 34: const isOwner = userClaims?.isOrgOwner === true;
+النمط: .isOrgOwner (1 مرة)
+  السطر 34: const isOwner = userClaims?.isOrgOwner === true;
+النمط: userClaims?.isOrgAdmin (2 مرة)
+  السطر 35: const isAdmin = userClaims?.isOrgAdmin === true;
+  السطر 35: const isAdmin = userClaims?.isOrgAdmin === true;
+النمط: .isOrgAdmin (1 مرة)
+  السطر 35: const isAdmin = userClaims?.isOrgAdmin === true;
+النمط: .owner (1 مرة)
+  السطر 54: console.log('Organization owner ID:', orgData.ownerId);
+
+الملف: src\app\(organization)\org\departments\page.tsx
+------------------------------
+النمط: .isSystemOwner (1 مرة)
+  السطر 43: const isSystemOwner = userClaims?.isSystemOwner === true;
+النمط: userClaims?.isSystemOwner (1 مرة)
+  السطر 43: const isSystemOwner = userClaims?.isSystemOwner === true;
+النمط: .isSystemAdmin (1 مرة)
+  السطر 44: const isSystemAdmin = userClaims?.isSystemAdmin === true;
+النمط: userClaims?.isSystemAdmin (1 مرة)
+  السطر 44: const isSystemAdmin = userClaims?.isSystemAdmin === true;
+النمط: userClaims?.isOrgOwner (2 مرة)
+  السطر 45: const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOwner === true;
+  السطر 45: const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOwner === true;
+النمط: .isOrgOwner (1 مرة)
+  السطر 45: const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOwner === true;
+النمط: userClaims?.isOrgAdmin (2 مرة)
+  السطر 46: const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isAdmin === true;
+  السطر 46: const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isAdmin === true;
+النمط: .isOrgAdmin (1 مرة)
+  السطر 46: const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isAdmin === true;
+
+الملف: src\app\(organization)\org\meetings\page.tsx
+------------------------------
+النمط: userClaims?.isOrgOwner (2 مرة)
+  السطر 39: const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOwner === true;
+  السطر 39: const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOwner === true;
+النمط: .isOrgOwner (1 مرة)
+  السطر 39: const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOwner === true;
+النمط: userClaims?.isOrgAdmin (2 مرة)
+  السطر 40: const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isAdmin === true;
+  السطر 40: const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isAdmin === true;
+النمط: .isOrgAdmin (1 مرة)
+  السطر 40: const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isAdmin === true;
+
+الملف: src\app\(organization)\org\members\page.tsx
+------------------------------
+النمط: userClaims?.isOrgOwner (2 مرة)
+  السطر 79: const isOwner = userClaims?.isOrgOwner === true;
+  السطر 79: const isOwner = userClaims?.isOrgOwner === true;
+النمط: .isOrgOwner (3 مرة)
+  السطر 79: const isOwner = userClaims?.isOrgOwner === true;
+  السطر 646: {isOwner && <SelectItem value="org_owner"><Translate text="roles.isOrgOwner" /></SelectItem>}
+  السطر 732: {isOwner && <SelectItem value="org_owner"><Translate text="roles.isOrgOwner" /></SelectItem>}
+النمط: userClaims?.isOrgAdmin (2 مرة)
+  السطر 80: const isAdmin = userClaims?.isOrgAdmin === true;
+  السطر 80: const isAdmin = userClaims?.isOrgAdmin === true;
+النمط: .isOrgAdmin (3 مرة)
+  السطر 80: const isAdmin = userClaims?.isOrgAdmin === true;
+  السطر 647: <SelectItem value="org_admin"><Translate text="roles.isOrgAdmin" /></SelectItem>
+  السطر 733: <SelectItem value="org_admin"><Translate text="roles.isOrgAdmin" /></SelectItem>
+النمط: role === 'org_owner' (2 مرة)
+  السطر 442: disabled={member.role === 'org_owner' && !isOwner}
+  السطر 726: disabled={selectedMember?.role === 'org_owner' && !isOwner}
+النمط: 'org_owner' (2 مرة)
+  السطر 442: disabled={member.role === 'org_owner' && !isOwner}
+  السطر 726: disabled={selectedMember?.role === 'org_owner' && !isOwner}
+النمط: "org_owner" (2 مرة)
+  السطر 646: {isOwner && <SelectItem value="org_owner"><Translate text="roles.isOrgOwner" /></SelectItem>}
+  السطر 732: {isOwner && <SelectItem value="org_owner"><Translate text="roles.isOrgOwner" /></SelectItem>}
+النمط: "org_admin" (2 مرة)
+  السطر 647: <SelectItem value="org_admin"><Translate text="roles.isOrgAdmin" /></SelectItem>
+  السطر 733: <SelectItem value="org_admin"><Translate text="roles.isOrgAdmin" /></SelectItem>
+النمط: .isOrgEngineer (2 مرة)
+  السطر 648: <SelectItem value="org_engineer"><Translate text="roles.isOrgEngineer" /></SelectItem>
+  السطر 734: <SelectItem value="org_engineer"><Translate text="roles.isOrgEngineer" /></SelectItem>
+النمط: .isOrgSupervisor (2 مرة)
+  السطر 649: <SelectItem value="org_supervisor"><Translate text="roles.isOrgSupervisor" /></SelectItem>
+  السطر 735: <SelectItem value="org_supervisor"><Translate text="roles.isOrgSupervisor" /></SelectItem>
+النمط: .isOrgTechnician (2 مرة)
+  السطر 650: <SelectItem value="org_technician"><Translate text="roles.isOrgTechnician" /></SelectItem>
+  السطر 736: <SelectItem value="org_technician"><Translate text="roles.isOrgTechnician" /></SelectItem>
+النمط: .isOrgAssistant (2 مرة)
+  السطر 651: <SelectItem value="org_assistant"><Translate text="roles.isOrgAssistant" /></SelectItem>
+  السطر 737: <SelectItem value="org_assistant"><Translate text="roles.isOrgAssistant" /></SelectItem>
+
+الملف: src\app\(organization)\org\okr\page.tsx
+------------------------------
+النمط: userClaims?.isOrgOwner (2 مرة)
+  السطر 79: const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOrgOwner === true;
+  السطر 79: const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOrgOwner === true;
+النمط: .isOrgOwner (1 مرة)
+  السطر 79: const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOrgOwner === true;
+النمط: || userClaims?.isOrgOwner (1 مرة)
+  السطر 79: const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOrgOwner === true;
+النمط: userClaims?.isOrgAdmin (2 مرة)
+  السطر 80: const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isOrgAdmin === true;
+  السطر 80: const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isOrgAdmin === true;
+النمط: .isOrgAdmin (1 مرة)
+  السطر 80: const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isOrgAdmin === true;
+النمط: || userClaims?.isOrgAdmin (1 مرة)
+  السطر 80: const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isOrgAdmin === true;
+النمط: .isOrgEngineer (1 مرة)
+  السطر 81: const isEngineer = userClaims?.isOrgEngineer === true || userClaims?.isOrgEngineer === true;
+النمط: .isOrgSupervisor (1 مرة)
+  السطر 82: const isSupervisor = userClaims?.isOrgSupervisor === true || userClaims?.isOrgSupervisor === true;
+
+الملف: src\app\(organization)\org\settings\page.tsx
+------------------------------
+النمط: role === 'org_admin' (1 مرة)
+  السطر 68: const canEdit = role === org_owner  || role === 'org_admin' || hasPermission('organization.edit');
+النمط: 'org_admin' (1 مرة)
+  السطر 68: const canEdit = role === org_owner  || role === 'org_admin' || hasPermission('organization.edit');
+
+الملف: src\app\(organization)\org\okr\reports\page.tsx
+------------------------------
+النمط: role === 'org_admin' (1 مرة)
+  السطر 136: const canViewReports = role === org_owner  || role === 'org_admin' || hasPermission('reports.view');
+النمط: 'org_admin' (1 مرة)
+  السطر 136: const canViewReports = role === org_owner  || role === 'org_admin' || hasPermission('reports.view');
+
+الملف: src\app\(organization)\org\okr\objective\[id]\page.tsx
+------------------------------
+النمط: userClaims?.isOrgOwner (2 مرة)
+  السطر 110: const isOwner = userClaims?.isOrgOwner === true;
+  السطر 110: const isOwner = userClaims?.isOrgOwner === true;
+النمط: .isOrgOwner (1 مرة)
+  السطر 110: const isOwner = userClaims?.isOrgOwner === true;
+النمط: userClaims?.isOrgAdmin (2 مرة)
+  السطر 111: const isAdmin = userClaims?.isOrgAdmin === true;
+  السطر 111: const isAdmin = userClaims?.isOrgAdmin === true;
+النمط: .isOrgAdmin (1 مرة)
+  السطر 111: const isAdmin = userClaims?.isOrgAdmin === true;
+
+الملف: src\app\(organization)\org\departments\[id]\page.tsx
+------------------------------
+النمط: userClaims?.isOrgOwner (2 مرة)
+  السطر 54: const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOwner === true;
+  السطر 54: const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOwner === true;
+النمط: .isOrgOwner (1 مرة)
+  السطر 54: const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOwner === true;
+النمط: userClaims?.isOrgAdmin (2 مرة)
+  السطر 55: const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isAdmin === true;
+  السطر 55: const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isAdmin === true;
+النمط: .isOrgAdmin (1 مرة)
+  السطر 55: const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isAdmin === true;
+النمط: role === 'org_admin' (1 مرة)
+  السطر 349: member.role === 'org_admin' ? 'مسؤول' :
+النمط: 'org_admin' (1 مرة)
+  السطر 349: member.role === 'org_admin' ? 'مسؤول' :
+
+الملف: src\app\(organization)\org\departments\[id]\meetings\page.tsx
+------------------------------
+النمط: userClaims?.isOrgOwner (2 مرة)
+  السطر 38: const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOwner === true;
+  السطر 38: const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOwner === true;
+النمط: .isOrgOwner (1 مرة)
+  السطر 38: const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOwner === true;
+النمط: userClaims?.isOrgAdmin (2 مرة)
+  السطر 39: const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isAdmin === true;
+  السطر 39: const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isAdmin === true;
+النمط: .isOrgAdmin (1 مرة)
+  السطر 39: const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isAdmin === true;
+
+الملف: src\app\(app)\suggestions\page.tsx
+------------------------------
+النمط: userClaims?.isOrgOwner (2 مرة)
+  السطر 44: const isOwner = userClaims?.isOrgOwner === true; // Check if user is owner
+  السطر 44: const isOwner = userClaims?.isOrgOwner === true; // Check if user is owner
+النمط: .isOrgOwner (1 مرة)
+  السطر 44: const isOwner = userClaims?.isOrgOwner === true; // Check if user is owner
+
+الملف: src\app\(admin)\admin\page.tsx
+------------------------------
+النمط: .isSystemOwner (1 مرة)
+  السطر 49: const isSystemOwner = userClaims?.isSystemOwner === true;
+النمط: userClaims?.isSystemOwner (1 مرة)
+  السطر 49: const isSystemOwner = userClaims?.isSystemOwner === true;
+النمط: .isSystemAdmin (1 مرة)
+  السطر 50: const isSystemAdmin = userClaims?.isSystemAdmin === true;
+النمط: userClaims?.isSystemAdmin (1 مرة)
+  السطر 50: const isSystemAdmin = userClaims?.isSystemAdmin === true;
+النمط: userClaims?.isOrgOwner (2 مرة)
+  السطر 51: const isOrgOwner = userClaims?.isOrgOwner === true;
+  السطر 51: const isOrgOwner = userClaims?.isOrgOwner === true;
+النمط: .isOrgOwner (1 مرة)
+  السطر 51: const isOrgOwner = userClaims?.isOrgOwner === true;
+النمط: userClaims?.isOrgAdmin (2 مرة)
+  السطر 52: const isOrgAdmin = userClaims?.isOrgAdmin === true;
+  السطر 52: const isOrgAdmin = userClaims?.isOrgAdmin === true;
+النمط: .isOrgAdmin (1 مرة)
+  السطر 52: const isOrgAdmin = userClaims?.isOrgAdmin === true;
+
+الملف: src\app\(admin)\admin\organization\page.tsx
+------------------------------
+النمط: .isSystemOwner (1 مرة)
+  السطر 38: const isSystemOwner = userClaims?.isSystemOwner === true;
+النمط: userClaims?.isSystemOwner (1 مرة)
+  السطر 38: const isSystemOwner = userClaims?.isSystemOwner === true;
+النمط: .isSystemAdmin (1 مرة)
+  السطر 39: const isSystemAdmin = userClaims?.isSystemAdmin === true;
+النمط: userClaims?.isSystemAdmin (1 مرة)
+  السطر 39: const isSystemAdmin = userClaims?.isSystemAdmin === true;
+النمط: userClaims?.isOrgOwner (2 مرة)
+  السطر 40: const isOrgOwner = userClaims?.isOrgOwner === true;
+  السطر 40: const isOrgOwner = userClaims?.isOrgOwner === true;
+النمط: .isOrgOwner (1 مرة)
+  السطر 40: const isOrgOwner = userClaims?.isOrgOwner === true;
+
+الملف: src\app\(admin)\admin\organization-requests\page-client.tsx
+------------------------------
+النمط: .isSystemOwner (1 مرة)
+  السطر 47: const isSystemOwner = userClaims?.isSystemOwner === true;
+النمط: userClaims?.isSystemOwner (1 مرة)
+  السطر 47: const isSystemOwner = userClaims?.isSystemOwner === true;
+النمط: .isSystemAdmin (1 مرة)
+  السطر 48: const isSystemAdmin = userClaims?.isSystemAdmin === true;
+النمط: userClaims?.isSystemAdmin (1 مرة)
+  السطر 48: const isSystemAdmin = userClaims?.isSystemAdmin === true;
+النمط: .owner (1 مرة)
+  السطر 228: <li><strong>مالك النظام:</strong> {(user as ExtendedUser)?.customClaims?.owner ? 'نعم' : 'لا'}</li>
+النمط: .admin (1 مرة)
+  السطر 229: <li><strong>مسؤول:</strong> {(user as ExtendedUser)?.customClaims?.admin ? 'نعم' : 'لا'}</li>
+النمط: 'org_owner' (1 مرة)
+  السطر 246: role: 'org_owner',
+
+الملف: src\app\(admin)\admin\users\page.tsx
+------------------------------
+النمط: 'org_owner' (3 مرة)
+  السطر 31: 'org_owner': 'مالك المؤسسة',
+  السطر 95: member.role === 'org_owner' || member.role === 'org_admin',
+  السطر 139: userRole = 'org_owner';
+النمط: 'org_admin' (3 مرة)
+  السطر 32: 'org_admin': 'أدمن المؤسسة',
+  السطر 95: member.role === 'org_owner' || member.role === 'org_admin',
+  السطر 141: userRole = 'org_admin';
+النمط: .isSystemOwner (3 مرة)
+  السطر 66: const isSystemOwner = userClaims?.isSystemOwner === true;
+  السطر 134: } else if (user.customClaims?.isSystemOwner) {
+  السطر 152: isAdmin: user.customClaims?.isSystemAdmin === true || user.customClaims?.isSystemOwner === true ||
+النمط: userClaims?.isSystemOwner (1 مرة)
+  السطر 66: const isSystemOwner = userClaims?.isSystemOwner === true;
+النمط: .isSystemAdmin (3 مرة)
+  السطر 67: const isSystemAdmin = userClaims?.isSystemAdmin === true;
+  السطر 136: } else if (user.customClaims?.isSystemAdmin) {
+  السطر 152: isAdmin: user.customClaims?.isSystemAdmin === true || user.customClaims?.isSystemOwner === true ||
+النمط: userClaims?.isSystemAdmin (1 مرة)
+  السطر 67: const isSystemAdmin = userClaims?.isSystemAdmin === true;
+النمط: userClaims?.isOrgOwner (2 مرة)
+  السطر 68: const isOrgOwner = userClaims?.isOrgOwner === true;
+  السطر 68: const isOrgOwner = userClaims?.isOrgOwner === true;
+النمط: .isOrgOwner (3 مرة)
+  السطر 68: const isOrgOwner = userClaims?.isOrgOwner === true;
+  السطر 138: } else if (user.customClaims?.isOrgOwner) {
+  السطر 153: user.customClaims?.isOrgOwner === true || user.customClaims?.isOrgAdmin === true,
+النمط: role === 'org_admin' (1 مرة)
+  السطر 95: member.role === 'org_owner' || member.role === 'org_admin',
+النمط: role === 'org_owner' (1 مرة)
+  السطر 95: member.role === 'org_owner' || member.role === 'org_admin',
+النمط: .isOrgAdmin (2 مرة)
+  السطر 140: } else if (user.customClaims?.isOrgAdmin) {
+  السطر 153: user.customClaims?.isOrgOwner === true || user.customClaims?.isOrgAdmin === true,
+
+الملف: functions\lib\auth.js
+------------------------------
+النمط: 'org_admin' (2 مرة)
+  السطر 119: role: 'org_admin',
+  السطر 125: role: 'org_admin',
+النمط: 'org_owner' (3 مرة)
+  السطر 199: newClaims.role = 'org_owner';
+  السطر 204: role: 'org_owner',
+  السطر 213: role: 'org_owner',
+النمط: .isOrgOwner (1 مرة)
+  السطر 200: newClaims.isOrgOwner = true;
+
+الملف: functions\lib\index.js
+------------------------------
+النمط: .isSystemOwner (7 مرة)
+  السطر 76: const isSystemOwner = token.isSystemOwner === true;
+  السطر 155: console.log(`${functionName} DEBUG: context.auth?.token.isSystemOwner = ${context.auth?.token.isSystemOwner}`);
+  السطر 158: if ((role === 'system_owner' || role === 'system_admin') && !context.auth?.token.isSystemOwner) {
+  السطر 225: isSystemOwner: customClaims.isSystemOwner,
+  السطر 490: canManageSystem: !!customClaims.isSystemOwner,
+  السطر 491: canManageUsers: !!(customClaims.isSystemOwner || customClaims.isSystemAdmin),
+  السطر 492: canManageOrganization: !!(customClaims.isSystemOwner || customClaims.isSystemAdmin || customClaims.isOrgOwner),
+النمط: .isSystemAdmin (4 مرة)
+  السطر 77: const isSystemAdmin = token.isSystemAdmin === true;
+  السطر 226: isSystemAdmin: customClaims.isSystemAdmin,
+  السطر 491: canManageUsers: !!(customClaims.isSystemOwner || customClaims.isSystemAdmin),
+  السطر 492: canManageOrganization: !!(customClaims.isSystemOwner || customClaims.isSystemAdmin || customClaims.isOrgOwner),
+النمط: .isOrgOwner (3 مرة)
+  السطر 78: const isOrgOwner = token.isOrgOwner === true;
+  السطر 227: isOrgOwner: customClaims.isOrgOwner,
+  السطر 492: canManageOrganization: !!(customClaims.isSystemOwner || customClaims.isSystemAdmin || customClaims.isOrgOwner),
+النمط: .isOrgAdmin (2 مرة)
+  السطر 79: const isOrgAdmin = token.isOrgAdmin === true;
+  السطر 228: isOrgAdmin: customClaims.isOrgAdmin,
+النمط: 'org_admin' (8 مرة)
+  السطر 82: const adminRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
+  السطر 141: const validRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant', 'independent'];
+  السطر 207: isOrgAdmin: role === 'org_admin',
+  السطر 255: isOrgAdmin: role === 'org_admin',
+  السطر 337: const validRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant', 'independent'];
+  السطر 385: isOrgAdmin: role === 'org_admin',
+  السطر 416: isOrgAdmin: role === 'org_admin',
+  السطر 422: isOrgMember: ['org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'].includes(role)
+النمط: 'org_owner' (7 مرة)
+  السطر 82: const adminRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
+  السطر 141: const validRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant', 'independent'];
+  السطر 206: isOrgOwner: role === 'org_owner',
+  السطر 254: isOrgOwner: role === 'org_owner',
+  السطر 337: const validRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant', 'independent'];
+  السطر 384: isOrgOwner: role === 'org_owner',
+  السطر 415: isOrgOwner: role === 'org_owner',
+النمط: role === 'org_owner' (4 مرة)
+  السطر 206: isOrgOwner: role === 'org_owner',
+  السطر 254: isOrgOwner: role === 'org_owner',
+  السطر 384: isOrgOwner: role === 'org_owner',
+  السطر 415: isOrgOwner: role === 'org_owner',
+النمط: role === 'org_admin' (4 مرة)
+  السطر 207: isOrgAdmin: role === 'org_admin',
+  السطر 255: isOrgAdmin: role === 'org_admin',
+  السطر 385: isOrgAdmin: role === 'org_admin',
+  السطر 416: isOrgAdmin: role === 'org_admin',
+النمط: .isOrgSupervisor (1 مرة)
+  السطر 229: isOrgSupervisor: customClaims.isOrgSupervisor,
+النمط: .isOrgEngineer (1 مرة)
+  السطر 230: isOrgEngineer: customClaims.isOrgEngineer,
+النمط: .isOrgTechnician (1 مرة)
+  السطر 231: isOrgTechnician: customClaims.isOrgTechnician,
+النمط: .isOrgAssistant (1 مرة)
+  السطر 232: isOrgAssistant: customClaims.isOrgAssistant,
+النمط: .isIndependent (1 مرة)
+  السطر 233: isIndependent: customClaims.isIndependent
+
+الملف: functions\lib\roles.js
+------------------------------
+النمط: .isSystemOwner (2 مرة)
+  السطر 60: const isSystemOwner = userRole === 'system_owner' || context.auth.token.isSystemOwner === true;
+  السطر 105: const isSystemOwner = decodedToken.isSystemOwner === true;
+النمط: .isSystemAdmin (2 مرة)
+  السطر 61: const isSystemAdmin = userRole === 'system_admin' || context.auth.token.isSystemAdmin === true;
+  السطر 106: const isSystemAdmin = decodedToken.isSystemAdmin === true;
+النمط: 'org_owner' (3 مرة)
+  السطر 63: const isOrgOwner = userRole === 'org_owner' || context.auth.token.isOrgOwner === true;
+  السطر 155: isOrgOwner: role === 'org_owner',
+  السطر 173: isOrgOwner: role === 'org_owner',
+النمط: .isOrgOwner (2 مرة)
+  السطر 63: const isOrgOwner = userRole === 'org_owner' || context.auth.token.isOrgOwner === true;
+  السطر 107: const isOrgOwner = decodedToken.isOrgOwner === true;
+النمط: 'org_admin' (4 مرة)
+  السطر 64: const isOrgAdmin = userRole === 'org_admin';
+  السطر 156: isOrgAdmin: role === 'org_admin',
+  السطر 174: isOrgAdmin: role === 'org_admin',
+  السطر 180: isOrgMember: ['org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'].includes(role)
+النمط: .isOrgAdmin (1 مرة)
+  السطر 108: const isOrgAdmin = decodedToken.isOrgAdmin === true;
+النمط: .isOrgSupervisor (1 مرة)
+  السطر 109: const isOrgSupervisor = decodedToken.isOrgSupervisor === true;
+النمط: .isOrgEngineer (1 مرة)
+  السطر 110: const isOrgEngineer = decodedToken.isOrgEngineer === true;
+النمط: .isOrgTechnician (1 مرة)
+  السطر 111: const isOrgTechnician = decodedToken.isOrgTechnician === true;
+النمط: .isOrgAssistant (1 مرة)
+  السطر 112: const isOrgAssistant = decodedToken.isOrgAssistant === true;
+النمط: role === 'org_owner' (2 مرة)
+  السطر 155: isOrgOwner: role === 'org_owner',
+  السطر 173: isOrgOwner: role === 'org_owner',
+النمط: role === 'org_admin' (2 مرة)
+  السطر 156: isOrgAdmin: role === 'org_admin',
+  السطر 174: isOrgAdmin: role === 'org_admin',
+
+الملف: functions\src\auth.ts
+------------------------------
+النمط: 'org_admin' (2 مرة)
+  السطر 123: role: 'org_admin',
+  السطر 130: role: 'org_admin',
+النمط: 'org_owner' (3 مرة)
+  السطر 237: newClaims.role = 'org_owner';
+  السطر 243: role: 'org_owner',
+  السطر 253: role: 'org_owner',
+النمط: .isOrgOwner (1 مرة)
+  السطر 238: newClaims.isOrgOwner = true;
+
+الملف: functions\src\index.ts
+------------------------------
+النمط: .isSystemOwner (7 مرة)
+  السطر 49: const isSystemOwner = token.isSystemOwner === true;
+  السطر 166: console.log(`${functionName} DEBUG: context.auth?.token.isSystemOwner = ${context.auth?.token.isSystemOwner}`);
+  السطر 170: if ((role === 'system_owner' || role === 'system_admin') && !context.auth?.token.isSystemOwner) {
+  السطر 241: isSystemOwner: customClaims.isSystemOwner,
+  السطر 540: canManageSystem: !!customClaims.isSystemOwner,
+  السطر 541: canManageUsers: !!(customClaims.isSystemOwner || customClaims.isSystemAdmin),
+  السطر 542: canManageOrganization: !!(customClaims.isSystemOwner || customClaims.isSystemAdmin || customClaims.isOrgOwner),
+النمط: .isSystemAdmin (4 مرة)
+  السطر 50: const isSystemAdmin = token.isSystemAdmin === true;
+  السطر 242: isSystemAdmin: customClaims.isSystemAdmin,
+  السطر 541: canManageUsers: !!(customClaims.isSystemOwner || customClaims.isSystemAdmin),
+  السطر 542: canManageOrganization: !!(customClaims.isSystemOwner || customClaims.isSystemAdmin || customClaims.isOrgOwner),
+النمط: .isOrgOwner (3 مرة)
+  السطر 51: const isOrgOwner = token.isOrgOwner === true;
+  السطر 243: isOrgOwner: customClaims.isOrgOwner,
+  السطر 542: canManageOrganization: !!(customClaims.isSystemOwner || customClaims.isSystemAdmin || customClaims.isOrgOwner),
+النمط: .isOrgAdmin (2 مرة)
+  السطر 52: const isOrgAdmin = token.isOrgAdmin === true;
+  السطر 244: isOrgAdmin: customClaims.isOrgAdmin,
+النمط: 'org_admin' (8 مرة)
+  السطر 56: const adminRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
+  السطر 150: const validRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant', 'independent'];
+  السطر 221: isOrgAdmin: role === 'org_admin',
+  السطر 275: isOrgAdmin: role === 'org_admin',
+  السطر 366: const validRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant', 'independent'];
+  السطر 416: isOrgAdmin: role === 'org_admin',
+  السطر 451: isOrgAdmin: role === 'org_admin',
+  السطر 457: isOrgMember: ['org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'].includes(role)
+النمط: 'org_owner' (7 مرة)
+  السطر 56: const adminRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
+  السطر 150: const validRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant', 'independent'];
+  السطر 220: isOrgOwner: role === 'org_owner',
+  السطر 274: isOrgOwner: role === 'org_owner',
+  السطر 366: const validRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant', 'independent'];
+  السطر 415: isOrgOwner: role === 'org_owner',
+  السطر 450: isOrgOwner: role === 'org_owner',
+النمط: role === 'org_owner' (4 مرة)
+  السطر 220: isOrgOwner: role === 'org_owner',
+  السطر 274: isOrgOwner: role === 'org_owner',
+  السطر 415: isOrgOwner: role === 'org_owner',
+  السطر 450: isOrgOwner: role === 'org_owner',
+النمط: role === 'org_admin' (4 مرة)
+  السطر 221: isOrgAdmin: role === 'org_admin',
+  السطر 275: isOrgAdmin: role === 'org_admin',
+  السطر 416: isOrgAdmin: role === 'org_admin',
+  السطر 451: isOrgAdmin: role === 'org_admin',
+النمط: .isOrgSupervisor (1 مرة)
+  السطر 245: isOrgSupervisor: customClaims.isOrgSupervisor,
+النمط: .isOrgEngineer (1 مرة)
+  السطر 246: isOrgEngineer: customClaims.isOrgEngineer,
+النمط: .isOrgTechnician (1 مرة)
+  السطر 247: isOrgTechnician: customClaims.isOrgTechnician,
+النمط: .isOrgAssistant (1 مرة)
+  السطر 248: isOrgAssistant: customClaims.isOrgAssistant,
+النمط: .isIndependent (1 مرة)
+  السطر 249: isIndependent: customClaims.isIndependent
+
+الملف: functions\src\roles.ts
+------------------------------
+النمط: .isSystemOwner (2 مرة)
+  السطر 33: const isSystemOwner = userRole === 'system_owner' || context.auth.token.isSystemOwner === true;
+  السطر 93: const isSystemOwner = decodedToken.isSystemOwner === true;
+النمط: .isSystemAdmin (2 مرة)
+  السطر 34: const isSystemAdmin = userRole === 'system_admin' || context.auth.token.isSystemAdmin === true;
+  السطر 94: const isSystemAdmin = decodedToken.isSystemAdmin === true;
+النمط: 'org_owner' (3 مرة)
+  السطر 37: const isOrgOwner = userRole === 'org_owner' || context.auth.token.isOrgOwner === true;
+  السطر 162: isOrgOwner: role === 'org_owner',
+  السطر 183: isOrgOwner: role === 'org_owner',
+النمط: .isOrgOwner (2 مرة)
+  السطر 37: const isOrgOwner = userRole === 'org_owner' || context.auth.token.isOrgOwner === true;
+  السطر 95: const isOrgOwner = decodedToken.isOrgOwner === true;
+النمط: 'org_admin' (4 مرة)
+  السطر 38: const isOrgAdmin = userRole === 'org_admin';
+  السطر 163: isOrgAdmin: role === 'org_admin',
+  السطر 184: isOrgAdmin: role === 'org_admin',
+  السطر 190: isOrgMember: ['org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'].includes(role)
+النمط: .isOrgAdmin (1 مرة)
+  السطر 96: const isOrgAdmin = decodedToken.isOrgAdmin === true;
+النمط: .isOrgSupervisor (1 مرة)
+  السطر 97: const isOrgSupervisor = decodedToken.isOrgSupervisor === true;
+النمط: .isOrgEngineer (1 مرة)
+  السطر 98: const isOrgEngineer = decodedToken.isOrgEngineer === true;
+النمط: .isOrgTechnician (1 مرة)
+  السطر 99: const isOrgTechnician = decodedToken.isOrgTechnician === true;
+النمط: .isOrgAssistant (1 مرة)
+  السطر 100: const isOrgAssistant = decodedToken.isOrgAssistant === true;
+النمط: role === 'org_owner' (2 مرة)
+  السطر 162: isOrgOwner: role === 'org_owner',
+  السطر 183: isOrgOwner: role === 'org_owner',
+النمط: role === 'org_admin' (2 مرة)
+  السطر 163: isOrgAdmin: role === 'org_admin',
+  السطر 184: isOrgAdmin: role === 'org_admin',
+
+الملف: functions\src\email\index.ts
+------------------------------
+النمط: .owner (2 مرة)
+  السطر 227: const isOwner = context.auth.token.owner === true;
+  السطر 341: const isOwner = context.auth.token.owner === true;
+
+الملف: functions\src\organization\account.ts
+------------------------------
+النمط: .admin (2 مرة)
+  السطر 66: isAdmin: customClaims.admin || false,
+  السطر 171: delete newClaims.admin;
+النمط: .owner (2 مرة)
+  السطر 67: isOwner: customClaims.owner || false
+  السطر 172: delete newClaims.owner;
+النمط: role === 'org_owner' (1 مرة)
+  السطر 160: isOrgOwner: role === 'org_owner',
+النمط: 'org_owner' (1 مرة)
+  السطر 160: isOrgOwner: role === 'org_owner',
+النمط: role === 'org_admin' (1 مرة)
+  السطر 161: isOrgAdmin: role === 'org_admin',
+النمط: 'org_admin' (1 مرة)
+  السطر 161: isOrgAdmin: role === 'org_admin',
+
+الملف: functions\src\organization\index.ts
+------------------------------
+النمط: 'org_admin' (3 مرة)
+  السطر 107: role: 'org_admin',
+  السطر 304: .where('role', '==', 'org_admin').get();
+  السطر 390: const validRoles = ['org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant'];
+
+الملف: functions\src\organization\invitations.ts
+------------------------------
+النمط: 'org_admin' (1 مرة)
+  السطر 57: const validRoles = ['org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant'];
+
+الملف: functions\src\organization\requests.ts
+------------------------------
+النمط: .isSystemOwner (2 مرة)
+  السطر 133: const isSystemOwner = customClaims.isSystemOwner === true;
+  السطر 330: const isSystemOwner = customClaims.isSystemOwner === true;
+النمط: 'org_owner' (4 مرة)
+  السطر 185: role: 'org_owner',
+  السطر 203: role: 'org_owner',
+  السطر 229: role: 'org_owner',
+  السطر 252: role: 'org_owner',
+
+الملف: functions\src\organization\utils.ts
+------------------------------
+النمط: 'org_admin' (4 مرة)
+  السطر 27: const rolesWithInvitePermission = ['org_admin', 'org_engineer', 'org_supervisor'];
+  السطر 60: const roleHierarchy = ['org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
+  السطر 136: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+  السطر 197: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+النمط: 'org_owner' (3 مرة)
+  السطر 60: const roleHierarchy = ['org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
+  السطر 136: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+  السطر 197: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+النمط: role === 'org_admin' (2 مرة)
+  السطر 136: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+  السطر 197: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+النمط: role === 'org_owner' (2 مرة)
+  السطر 136: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+  السطر 197: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+
+الملف: functions\src\shared\organization-utils.ts
+------------------------------
+النمط: role === 'org_admin' (1 مرة)
+  السطر 37: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+النمط: role === 'org_owner' (1 مرة)
+  السطر 37: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+النمط: 'org_admin' (3 مرة)
+  السطر 37: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+  السطر 62: const rolesWithInvitePermission = ['org_admin', 'org_engineer', 'org_supervisor'];
+  السطر 95: const roleHierarchy = ['org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
+النمط: 'org_owner' (2 مرة)
+  السطر 37: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+  السطر 95: const roleHierarchy = ['org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
+
+الملف: functions\src\shared\permissions.ts
+------------------------------
+النمط: 'org_owner' (6 مرة)
+  السطر 17: | 'org_owner' // مالك المؤسسة
+  السطر 183: if (customClaims.isOrgOwner === true || userRole === 'org_owner') {
+  السطر 254: if (customClaims.isOrgOwner === true || userRole === 'org_owner') {
+  السطر 297: canManageOrganization: ['system_owner', 'system_admin', 'org_owner'].includes(role),
+  السطر 298: canManageProjects: ['system_owner', 'system_admin', 'org_owner', 'org_admin'].includes(role),
+  السطر 299: canViewReports: ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer'].includes(role),
+النمط: 'org_admin' (5 مرة)
+  السطر 18: | 'org_admin'       // أدمن المؤسسة
+  السطر 188: if (customClaims.isOrgAdmin === true || userRole === 'org_admin') {
+  السطر 259: if (customClaims.isOrgAdmin === true || userRole === 'org_admin') {
+  السطر 298: canManageProjects: ['system_owner', 'system_admin', 'org_owner', 'org_admin'].includes(role),
+  السطر 299: canViewReports: ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer'].includes(role),
+النمط: system_org_owner: (1 مرة)
+  السطر 61: system_org_owner: [
+النمط: system_org_admin: (1 مرة)
+  السطر 72: system_org_admin: [
+النمط: org_org_owner: (1 مرة)
+  السطر 83: org_org_owner: [
+النمط: org_org_admin: (1 مرة)
+  السطر 94: org_org_admin: [
+النمط: org_engineer: (1 مرة)
+  السطر 105: org_engineer: [
+النمط: org_supervisor: (1 مرة)
+  السطر 115: org_supervisor: [
+النمط: org_technician: (1 مرة)
+  السطر 125: org_technician: [
+النمط: org_assistant: (1 مرة)
+  السطر 133: org_assistant: [
+النمط: independent: (1 مرة)
+  السطر 141: independent: [
+النمط: .isSystemOwner (2 مرة)
+  السطر 173: if (customClaims.isSystemOwner === true || userRole === 'system_owner') {
+  السطر 244: if (customClaims.isSystemOwner === true || userRole === 'system_owner') {
+النمط: .isSystemAdmin (3 مرة)
+  السطر 178: if (customClaims.isSystemAdmin === true || userRole === 'system_admin') {
+  السطر 249: if (customClaims.isSystemAdmin === true || userRole === 'system_admin') {
+  السطر 250: return DEFAULT_ROLE_PERMISSIONS.isSystemAdmin;
+النمط: .isOrgOwner (3 مرة)
+  السطر 183: if (customClaims.isOrgOwner === true || userRole === 'org_owner') {
+  السطر 254: if (customClaims.isOrgOwner === true || userRole === 'org_owner') {
+  السطر 255: return DEFAULT_ROLE_PERMISSIONS.isOrgOwner;
+النمط: .isOrgAdmin (3 مرة)
+  السطر 188: if (customClaims.isOrgAdmin === true || userRole === 'org_admin') {
+  السطر 259: if (customClaims.isOrgAdmin === true || userRole === 'org_admin') {
+  السطر 260: return DEFAULT_ROLE_PERMISSIONS.isOrgAdmin;
+
+الملف: functions\src\shared\utils.ts
+------------------------------
+النمط: role === 'org_admin' (1 مرة)
+  السطر 86: const isOrgAdmin = data?.role === 'org_owner' || data?.role === 'org_admin';
+النمط: role === 'org_owner' (1 مرة)
+  السطر 86: const isOrgAdmin = data?.role === 'org_owner' || data?.role === 'org_admin';
+النمط: 'org_admin' (1 مرة)
+  السطر 86: const isOrgAdmin = data?.role === 'org_owner' || data?.role === 'org_admin';
+النمط: 'org_owner' (1 مرة)
+  السطر 86: const isOrgAdmin = data?.role === 'org_owner' || data?.role === 'org_admin';
+
+الملف: functions\lib\email\index.js
+------------------------------
+النمط: .owner (2 مرة)
+  السطر 219: const isOwner = context.auth.token.owner === true;
+  السطر 304: const isOwner = context.auth.token.owner === true;
+
+الملف: functions\lib\email\invitations.js
+------------------------------
+النمط: 'org_owner' (2 مرة)
+  السطر 19: 'org_owner': 'مالك المؤسسة',
+  السطر 138: 'org_owner': 'مالك المؤسسة',
+النمط: 'org_admin' (2 مرة)
+  السطر 20: 'org_admin': 'مدير المؤسسة',
+  السطر 139: 'org_admin': 'مدير المؤسسة',
+
+الملف: functions\lib\organization\account.js
+------------------------------
+النمط: .admin (2 مرة)
+  السطر 83: isAdmin: customClaims.admin || false,
+  السطر 153: delete newClaims.admin;
+النمط: .owner (2 مرة)
+  السطر 84: isOwner: customClaims.owner || false
+  السطر 154: delete newClaims.owner;
+النمط: role === 'org_owner' (1 مرة)
+  السطر 141: isOrgOwner: role === 'org_owner',
+النمط: 'org_owner' (1 مرة)
+  السطر 141: isOrgOwner: role === 'org_owner',
+النمط: role === 'org_admin' (1 مرة)
+  السطر 142: isOrgAdmin: role === 'org_admin',
+النمط: 'org_admin' (1 مرة)
+  السطر 142: isOrgAdmin: role === 'org_admin',
+
+الملف: functions\lib\organization\index.js
+------------------------------
+النمط: 'org_admin' (3 مرة)
+  السطر 106: role: 'org_admin',
+  السطر 233: .where('role', '==', 'org_admin').get();
+  السطر 286: const validRoles = ['org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant'];
+
+الملف: functions\lib\organization\invitations.js
+------------------------------
+النمط: 'org_admin' (1 مرة)
+  السطر 67: const validRoles = ['org_admin', 'org_engineer', 'org_supervisor', 'org_technician', 'org_assistant'];
+
+الملف: functions\lib\organization\requests.js
+------------------------------
+النمط: .isSystemOwner (2 مرة)
+  السطر 120: const isSystemOwner = customClaims.isSystemOwner === true;
+  السطر 271: const isSystemOwner = customClaims.isSystemOwner === true;
+النمط: 'org_owner' (4 مرة)
+  السطر 150: role: 'org_owner',
+  السطر 165: role: 'org_owner',
+  السطر 188: role: 'org_owner',
+  السطر 212: role: 'org_owner',
+
+الملف: functions\lib\organization\utils.js
+------------------------------
+النمط: 'org_admin' (4 مرة)
+  السطر 57: const rolesWithInvitePermission = ['org_admin', 'org_engineer', 'org_supervisor'];
+  السطر 83: const roleHierarchy = ['org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
+  السطر 136: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+  السطر 176: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+النمط: 'org_owner' (3 مرة)
+  السطر 83: const roleHierarchy = ['org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
+  السطر 136: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+  السطر 176: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+النمط: role === 'org_admin' (2 مرة)
+  السطر 136: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+  السطر 176: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+النمط: role === 'org_owner' (2 مرة)
+  السطر 136: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+  السطر 176: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+
+الملف: functions\lib\shared\organization-utils.js
+------------------------------
+النمط: role === 'org_admin' (1 مرة)
+  السطر 68: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+النمط: role === 'org_owner' (1 مرة)
+  السطر 68: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+النمط: 'org_admin' (3 مرة)
+  السطر 68: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+  السطر 91: const rolesWithInvitePermission = ['org_admin', 'org_engineer', 'org_supervisor'];
+  السطر 117: const roleHierarchy = ['org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
+النمط: 'org_owner' (2 مرة)
+  السطر 68: const isOrgAdmin = memberData?.role === 'org_owner' || memberData?.role === 'org_admin';
+  السطر 117: const roleHierarchy = ['org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
+
+الملف: functions\lib\shared\permissions.js
+------------------------------
+النمط: system_org_owner: (1 مرة)
+  السطر 55: system_org_owner: [
+النمط: system_org_admin: (1 مرة)
+  السطر 65: system_org_admin: [
+النمط: org_org_owner: (1 مرة)
+  السطر 75: org_org_owner: [
+النمط: org_org_admin: (1 مرة)
+  السطر 85: org_org_admin: [
+النمط: org_engineer: (1 مرة)
+  السطر 95: org_engineer: [
+النمط: org_supervisor: (1 مرة)
+  السطر 104: org_supervisor: [
+النمط: org_technician: (1 مرة)
+  السطر 113: org_technician: [
+النمط: org_assistant: (1 مرة)
+  السطر 120: org_assistant: [
+النمط: independent: (1 مرة)
+  السطر 127: independent: [
+النمط: .isSystemOwner (2 مرة)
+  السطر 151: if (customClaims.isSystemOwner === true || userRole === 'system_owner') {
+  السطر 211: if (customClaims.isSystemOwner === true || userRole === 'system_owner') {
+النمط: .isSystemAdmin (3 مرة)
+  السطر 155: if (customClaims.isSystemAdmin === true || userRole === 'system_admin') {
+  السطر 215: if (customClaims.isSystemAdmin === true || userRole === 'system_admin') {
+  السطر 216: return exports.DEFAULT_ROLE_PERMISSIONS.isSystemAdmin;
+النمط: 'org_owner' (5 مرة)
+  السطر 159: if (customClaims.isOrgOwner === true || userRole === 'org_owner') {
+  السطر 219: if (customClaims.isOrgOwner === true || userRole === 'org_owner') {
+  السطر 258: canManageOrganization: ['system_owner', 'system_admin', 'org_owner'].includes(role),
+  السطر 259: canManageProjects: ['system_owner', 'system_admin', 'org_owner', 'org_admin'].includes(role),
+  السطر 260: canViewReports: ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer'].includes(role),
+النمط: .isOrgOwner (3 مرة)
+  السطر 159: if (customClaims.isOrgOwner === true || userRole === 'org_owner') {
+  السطر 219: if (customClaims.isOrgOwner === true || userRole === 'org_owner') {
+  السطر 220: return exports.DEFAULT_ROLE_PERMISSIONS.isOrgOwner;
+النمط: 'org_admin' (4 مرة)
+  السطر 163: if (customClaims.isOrgAdmin === true || userRole === 'org_admin') {
+  السطر 223: if (customClaims.isOrgAdmin === true || userRole === 'org_admin') {
+  السطر 259: canManageProjects: ['system_owner', 'system_admin', 'org_owner', 'org_admin'].includes(role),
+  السطر 260: canViewReports: ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer'].includes(role),
+النمط: .isOrgAdmin (3 مرة)
+  السطر 163: if (customClaims.isOrgAdmin === true || userRole === 'org_admin') {
+  السطر 223: if (customClaims.isOrgAdmin === true || userRole === 'org_admin') {
+  السطر 224: return exports.DEFAULT_ROLE_PERMISSIONS.isOrgAdmin;
+
+الملف: functions\lib\shared\utils.js
+------------------------------
+النمط: role === 'org_admin' (1 مرة)
+  السطر 108: const isOrgAdmin = data?.role === 'org_owner' || data?.role === 'org_admin';
+النمط: role === 'org_owner' (1 مرة)
+  السطر 108: const isOrgAdmin = data?.role === 'org_owner' || data?.role === 'org_admin';
+النمط: 'org_admin' (1 مرة)
+  السطر 108: const isOrgAdmin = data?.role === 'org_owner' || data?.role === 'org_admin';
+النمط: 'org_owner' (1 مرة)
+  السطر 108: const isOrgAdmin = data?.role === 'org_owner' || data?.role === 'org_admin';
+
+الملف: client\src\app\admin\page.tsx
+------------------------------
+النمط: 'org_admin' (4 مرة)
+  السطر 26: role: string; // e.g., 'org_admin', 'user'
+  السطر 166: const setActionLoadingState = (userId: string, actionType: 'org_admin' | 'disable' | 'create', isLoading: boolean) => {
+  السطر 187: setActionLoadingState(userId, 'org_admin', true);
+  السطر 225: setActionLoadingState(userId, 'org_admin', false);
+النمط: .isSystemOwner (1 مرة)
+  السطر 102: isAdmin: !!(u.customClaims?.isSystemOwner || u.customClaims?.isSystemAdmin || u.customClaims?.isOrgOwner),
+النمط: .isSystemAdmin (1 مرة)
+  السطر 102: isAdmin: !!(u.customClaims?.isSystemOwner || u.customClaims?.isSystemAdmin || u.customClaims?.isOrgOwner),
+النمط: .isOrgOwner (1 مرة)
+  السطر 102: isAdmin: !!(u.customClaims?.isSystemOwner || u.customClaims?.isSystemAdmin || u.customClaims?.isOrgOwner),
+النمط: .admin (2 مرة)
+  السطر 414: disabled={actionLoading[u.uid]?.admin || loading || u.uid === user?.uid}
+  السطر 418: {actionLoading[u.uid]?.admin ? (
+

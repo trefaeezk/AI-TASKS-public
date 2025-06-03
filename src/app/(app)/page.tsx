@@ -37,7 +37,6 @@ import { Button } from '@/components/ui/button';
 // import { DateRangePicker } from '@/components/DateRangePicker';
 // import { CategoryFilter } from '@/components/CategoryFilter';
 
-
 // --- Main Page Content Component ---
  function HomePageContent() {
   const { user, userClaims } = useAuth(); // Added userClaims
@@ -86,7 +85,6 @@ import { Button } from '@/components/ui/button';
       setCategoryFilter: () => {},
   };
 
-
   // DND Sensors
   const sensors = useSensors(
       useSensor(PointerSensor),
@@ -94,7 +92,6 @@ import { Button } from '@/components/ui/button';
           coordinateGetter: sortableKeyboardCoordinates,
       })
   );
-
 
   // --- Handle Task Status Change (Using Optimistic Update) ---
   const handleStatusChange = useCallback(async (taskId: string, newStatus: TaskStatus) => {
@@ -146,7 +143,6 @@ import { Button } from '@/components/ui/button';
           setSelectedCategory(currentSelectedCategory); // Revert category if needed
       }
   }, [user, tasks, updateTaskOptimistic, revertTaskOptimistic, toast, categoryInfo, selectedCategory, setSelectedCategory, t]);
-
 
   // --- Handle Edit Task ---
   const handleEditTask = useCallback((task: TaskType) => {
@@ -209,7 +205,6 @@ import { Button } from '@/components/ui/button';
            setSelectedCategory(currentSelectedCategory); // Revert category if needed
       }
   }, [user, deletingTaskId, tasks, removeTaskOptimistic, revertTaskOptimistic, toast, selectedCategory, setSelectedCategory, t]);
-
 
    // --- Handle Drag and Drop End ---
    const handleDragEnd = useCallback(async (event: DragEndEvent) => {
@@ -312,14 +307,12 @@ import { Button } from '@/components/ui/button';
         }
     }, [user, tasks, moveTaskOptimistic, toast, categoryInfo, setTasksDirectly, revertTaskOptimistic, categorizedTasks, updateTaskOptimistic, selectedCategory, setSelectedCategory, t]);
 
-
   // --- Render Logic ---
   if (!taskPageContext || !user) {
      return <div className="text-center p-4">{t('general.errorLoadingPageContextOrUser')}</div>;
   }
 
   const currentCategoryTasks = categorizedTasks[selectedCategory] ?? [];
-
 
   return (
     <div dir={direction} className="flex flex-col h-full">
@@ -425,7 +418,6 @@ import { Button } from '@/components/ui/button';
     </div>
   );
 }
-
 
 export default function HomePage() {
     return <HomePageContent />;

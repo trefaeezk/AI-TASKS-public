@@ -40,7 +40,6 @@ import { TaskContext } from '@/types/task';
 import { useAuth } from '@/context/AuthContext'; // Import useAuth
 import { TaskKeyResultsSection } from '@/components/okr/TaskKeyResultsSection';
 
-
 interface EditTaskSheetProps {
     user: User;
     task: TaskType | null;
@@ -89,7 +88,6 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
   // It's used to fetch members for assignment IF the task is an org task.
   const [editingUserOrganizationId, setEditingUserOrganizationId] = useState<string | undefined>(undefined);
 
-
   // OKR fields
   const [objectives, setObjectives] = useState<{id: string, title: string, keyResults: {id: string, title: string}[]}[]>([]);
   const [selectedObjectiveId, setSelectedObjectiveId] = useState<string | undefined>(undefined);
@@ -108,7 +106,6 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
       setEditingUserOrganizationId(undefined);
     }
   }, [userClaims]);
-
 
   // جلب أعضاء المؤسسة (إذا كانت المهمة تنتمي لمؤسسة)
   useEffect(() => {
@@ -144,7 +141,6 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
       setOrganizationMembers([]); // Clear members if not an org task or sheet is closed
     }
   }, [isOpen, user, task?.organizationId]);
-
 
   // جلب الأهداف والنتائج الرئيسية (إذا كانت المهمة تنتمي لمؤسسة)
   useEffect(() => {
@@ -185,7 +181,6 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
       setSelectedKeyResultId(undefined);
     }
   }, [isOpen, user, task?.organizationId, task?.objectiveId, task?.keyResultId]);
-
 
   useEffect(() => {
     if (task && isOpen) {
@@ -238,7 +233,6 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
           return null;
       }
   };
-
 
   const handleSuggestDueDate = useCallback(async () => {
     const trimmedDescription = description.trim();
@@ -313,7 +307,6 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
     const handleMilestonesChange = useCallback((updatedMilestones: Milestone[]) => {
         setCurrentMilestones(updatedMilestones);
     }, []);
-
 
   const handleUpdateTask = async (e: FormEvent) => {
     e.preventDefault();
@@ -396,7 +389,6 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
         updatedData.objectiveId = null;
         updatedData.keyResultId = null;
     }
-
 
     try {
         await updateDoc(taskDocRef, updatedData);

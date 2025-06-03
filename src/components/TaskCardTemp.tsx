@@ -93,7 +93,6 @@ const calculateTaskProgress = (milestones?: Milestone[]): number => {
     return Math.round((completedWeight / totalWeight) * 100);
 };
 
-
 export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCategoryColor, aiReasoning }: TaskCardTempProps) {
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   const [isMilestonesExpanded, setIsMilestonesExpanded] = useState(false);
@@ -165,7 +164,6 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
     'low': 'منخفضة'
   };
   const priorityText = priority ? priorityTextMap[priority] : 'غير محددة';
-
 
   const getBorderColor = (): string => {
     if (isCompleted) return 'border-status-completed';
@@ -252,7 +250,6 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
   useEffect(() => {
     console.log(`[TaskCardTemp ${task?.id}] Rendering task, Description: ${task?.description}`);
   }, [task]);
-
 
   if (!task) {
       console.warn("TaskCardTemp rendered without a task object.");

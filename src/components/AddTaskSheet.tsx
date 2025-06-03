@@ -286,7 +286,6 @@ export function AddTaskSheet({ user, isOpen, onOpenChange, showTrigger = true }:
         setCurrentMilestones([]);
         setTaskContext({ taskContext: 'individual', departmentId: undefined, assignedToUserId: undefined });
 
-
         toast({
             title: 'تمت إضافة المهمة',
             description: `تمت إضافة "${newTaskData.description}" بنجاح.`,
@@ -411,7 +410,6 @@ export function AddTaskSheet({ user, isOpen, onOpenChange, showTrigger = true }:
               </div>
             </>
           )}
-
 
           <Separator />
           <div className="space-y-4">

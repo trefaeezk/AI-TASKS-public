@@ -51,7 +51,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { NotificationsPopover } from '@/components/notifications/NotificationsPopover';
 import { OkrTaskFilter } from '@/components/okr/OkrTaskFilter';
 
-
 // --- Task Tabs Header Component (Moved from page.tsx, only visible on '/') ---
 function TaskTabsHeader() {
     const pathname = usePathname();
@@ -286,7 +285,6 @@ function FilterPopover() {
     );
 }
 
-
 export function AppLayoutContent({ children }: { children: ReactNode }) {
     const pathname = usePathname();
     const { user, userClaims } = useAuth();
@@ -302,7 +300,7 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
         // Context not available.
     }
 
-    const isAdmin = role === 'admin';
+    const isAdmin = role === 'org_admin';
 
     const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href));
 
@@ -409,14 +407,14 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                 )}
                 {(() => {
                   console.log('🚨 [ORGANIZATION REQUESTS DEBUG] Starting check...');
-                  const shouldShow = userClaims?.system_owner === true || userClaims?.role === 'system_owner';
+                  const shouldShow = userClaims?.isSystemOwner === true || userClaims?.role === 'system_owner';
                   console.log('🚨 [ORGANIZATION REQUESTS DEBUG] Results:', {
                     userClaims,
                     userClaimsStringified: JSON.stringify(userClaims),
-                    system_owner: userClaims?.system_owner,
+                    system_owner: userClaims?.isSystemOwner,
                     role: userClaims?.role,
                     shouldShow,
-                    condition1: userClaims?.system_owner === true,
+                    condition1: userClaims?.isSystemOwner === true,
                     condition2: userClaims?.role === 'system_owner'
                   });
 
@@ -467,7 +465,7 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                     </div>
                     <div className="flex items-center justify-between w-full">
                       <Badge
-                        variant={role === 'admin' || role === 'system_owner' || role === 'org_owner' ? "default" : role === 'assistant' ? "secondary" : "outline"}
+                        variant={role === 'org_admin' || role === 'system_owner' || role === 'org_owner' ? "default" : role === 'assistant' ? "secondary" : "outline"}
                         className="text-[10px] px-1.5 py-0 h-auto"
                       >
                         {loadingPermissions ? t('sidebar.userRoleLoading') : t(`roles.${role}`, role) }

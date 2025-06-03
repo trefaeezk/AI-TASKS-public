@@ -82,7 +82,6 @@ export const useTaskCategories = (userId?: string) => {
 
     }, [userId, toast]); // Re-run effect when userId or toast changes
 
-
     // Functions to add/edit/delete categories
     const addCategory = useCallback(async (newCategoryData: Omit<TaskCategoryDefinition, 'id' | 'userId'>) => {
         if (!userId) {
@@ -177,7 +176,6 @@ export const useTaskCategories = (userId?: string) => {
         }
     }, [categories, toast]); // Added categories dependency for checks and potential revert
 
-
     // --- Category Color Map ---
      const categoryColorMap = useMemo(() => {
         const map = new Map<string, string>();
@@ -194,9 +192,7 @@ export const useTaskCategories = (userId?: string) => {
         return categoryName ? categoryColorMap.get(categoryName) : undefined;
     }, [categoryColorMap]);
 
-
     // Return values from the hook
     return { categories, loading, addCategory, deleteCategory, editCategory, getCategoryColor };
 };
-
 

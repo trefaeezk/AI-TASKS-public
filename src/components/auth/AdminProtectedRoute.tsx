@@ -48,7 +48,6 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
           return;
       }
 
-
       try {
         console.log('[AdminProtectedRoute] Forcing token refresh for user:', user.uid);
         // Force refresh to get the latest claims
@@ -58,16 +57,16 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
         const userRole = idTokenResult.claims.role;
 
         // أدوار النظام العامة (المستوى 1-2)
-        const userIsSystemOwner = userRole === 'system_owner' || idTokenResult.claims.system_owner === true;
-        const userIsSystemAdmin = userRole === 'system_admin' || idTokenResult.claims.system_admin === true;
+        const userIsSystemOwner = userRole === 'system_owner' || idTokenResult.claims.isSystemOwner === true;
+        const userIsSystemAdmin = userRole === 'system_admin' || idTokenResult.claims.isSystemAdmin === true;
 
         // أدوار المؤسسات (المستوى 3-8)
-        const userisOrgOwner = userRole === 'org_owner' || idTokenResult.claims.org_owner === true;
-        const userIsOrgAdmin = userRole === 'org_admin' || idTokenResult.claims.org_admin === true;
-        const userIsOrgSupervisor = userRole === 'org_supervisor' || idTokenResult.claims.org_supervisor === true;
-        const userIsOrgEngineer = userRole === 'org_engineer' || idTokenResult.claims.org_engineer === true;
-        const userIsOrgTechnician = userRole === 'org_technician' || idTokenResult.claims.org_technician === true;
-        const userIsOrgAssistant = userRole === 'org_assistant' || idTokenResult.claims.org_assistant === true;
+        const userisOrgOwner = userRole === 'org_owner' || idTokenResult.claims.isOrgOwner === true;
+        const userIsOrgAdmin = userRole === 'org_admin' || idTokenResult.claims.isOrgAdmin === true;
+        const userIsOrgSupervisor = userRole === 'org_supervisor' || idTokenResult.claims.isOrgSupervisor === true;
+        const userIsOrgEngineer = userRole === 'org_engineer' || idTokenResult.claims.isOrgEngineer === true;
+        const userIsOrgTechnician = userRole === 'org_technician' || idTokenResult.claims.isOrgTechnician === true;
+        const userIsOrgAssistant = userRole === 'org_assistant' || idTokenResult.claims.isOrgAssistant === true;
 
         // النظام الموحد - تحديد مستويات الوصول
         const hasOwnerAccess = userIsSystemOwner;

@@ -29,7 +29,6 @@ export interface SmartSuggestionServiceOutput {
   };
 }
 
-
 // توليد اقتراحات ذكية للمستخدم
 export async function generateUserSuggestions(
   userId: string,
@@ -245,7 +244,6 @@ async function createNotificationFromSuggestion(
   const notificationId = await createNotification(notificationData);
   console.log(`[SmartSuggestions] Created suggestion notification with ID: ${notificationId}`);
 }
-
 
 function calculatePerformanceMetrics(tasks: TaskType[]) {
   const completedTasks = tasks.filter(task => task.status === 'completed');

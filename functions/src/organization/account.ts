@@ -157,12 +157,12 @@ export const updateAccountType = createCallableFunction<UpdateAccountTypeRequest
         ...newClaims,
         organizationId,
         role,
-        org_owner: role === 'org_owner',
-        org_admin: role === 'org_admin',
-        org_supervisor: role === 'org_supervisor',
-        org_engineer: role === 'org_engineer',
-        org_technician: role === 'org_technician',
-        org_assistant: role === 'org_assistant'
+        isOrgOwner: role === 'org_owner',
+        isOrgAdmin: role === 'org_admin',
+        isOrgSupervisor: role === 'org_supervisor',
+        isOrgEngineer: role === 'org_engineer',
+        isOrgTechnician: role === 'org_technician',
+        isOrgAssistant: role === 'org_assistant'
       };
     } else {
       // إذا كان نوع الحساب فردي، نزيل معلومات المؤسسة

@@ -31,8 +31,8 @@ export default function OrganizationDashboard() {
 
   const organizationId = userClaims?.organizationId;
   const organizationName = userClaims?.organizationName || 'المؤسسة';
-  const isOwner = userClaims?.owner === true;
-  const isAdmin = userClaims?.admin === true;
+  const isOwner = userClaims?.isOrgOwner === true;
+  const isAdmin = userClaims?.isOrgAdmin === true;
 
   useEffect(() => {
     const fetchOrganizationData = async () => {

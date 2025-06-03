@@ -42,7 +42,6 @@ export default function WeeklyReportsPage() {
   return (
     <div className="container mx-auto p-4" dir="rtl">
 
-
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-lg flex items-center">

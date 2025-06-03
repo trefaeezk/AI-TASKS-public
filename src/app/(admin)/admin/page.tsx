@@ -46,10 +46,10 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   // التحقق من صلاحيات المستخدم (النظام الجديد فقط)
-  const isSystemOwner = userClaims?.system_owner === true;
-  const isSystemAdmin = userClaims?.system_admin === true;
-  const isOrgOwner = userClaims?.org_owner === true;
-  const isOrgAdmin = userClaims?.org_admin === true;
+  const isSystemOwner = userClaims?.isSystemOwner === true;
+  const isSystemAdmin = userClaims?.isSystemAdmin === true;
+  const isOrgOwner = userClaims?.isOrgOwner === true;
+  const isOrgAdmin = userClaims?.isOrgAdmin === true;
   const canViewUsers = hasPermission('users.view') || isSystemOwner || isSystemAdmin || isOrgOwner || isOrgAdmin;
   const canManageData = hasPermission('data.view') || isSystemOwner || isSystemAdmin;
 

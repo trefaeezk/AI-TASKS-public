@@ -39,7 +39,6 @@ export function usePermissions() {
         return;
     }
 
-
     console.log("[usePermissions] Starting determinePermissions for user:", user.uid, "Claims:", userClaims);
     if(!internalLoading) setInternalLoading(true);
     setError(null);
@@ -47,19 +46,27 @@ export function usePermissions() {
     try {
       let effectiveRole: UserRole;
 
-      // تحديد الدور بناءً على النظام الجديد
-      if (userClaims.system_owner) {
+      // تحديد الدور بناءً على النمط الجديد is* فقط
+      if (userClaims.isSystemOwner) {
         effectiveRole = 'system_owner';
-      } else if (userClaims.system_admin) {
+      } else if (userClaims.isSystemAdmin) {
         effectiveRole = 'system_admin';
-      } else if (userClaims.org_owner) {
+      } else if (userClaims.isOrgOwner) {
         effectiveRole = 'org_owner';
-      } else if (userClaims.org_admin) {
+      } else if (userClaims.isOrgAdmin) {
         effectiveRole = 'org_admin';
-      } else if (userClaims.role) {
-        effectiveRole = userClaims.role as UserRole;
+      } else if (userClaims.isOrgSupervisor) {
+        effectiveRole = 'org_supervisor';
+      } else if (userClaims.isOrgEngineer) {
+        effectiveRole = 'org_engineer';
+      } else if (userClaims.isOrgTechnician) {
+        effectiveRole = 'org_technician';
+      } else if (userClaims.isOrgAssistant) {
+        effectiveRole = 'org_assistant';
+      } else if (userClaims.isIndependent) {
+        effectiveRole = 'independent';
       } else {
-        // الدور الافتراضي بناءً على نوع الحساب
+        // الدور الافتراضي
         effectiveRole = userClaims.accountType === 'individual' ? 'independent' : 'org_assistant';
       }
 
@@ -132,7 +139,6 @@ export function usePermissions() {
        if(!internalLoading) setInternalLoading(true);
     }
   }, [authContextLoading, user?.uid, userClaims?.role]); // Remove determinePermissions from dependencies
-
 
   const getAllPermissions = useCallback((): PermissionKey[] => {
     if (authContextLoading || internalLoading) {

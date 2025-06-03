@@ -51,8 +51,8 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
   }, []);
 
   const organizationName = userClaims?.organizationName || t('organization.organization');
-  const isOwner = userClaims?.owner === true;
-  const isAdmin = userClaims?.admin === true;
+  const isOwner = userClaims?.isOrgOwner === true;
+  const isAdmin = userClaims?.isOrgAdmin === true;
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">

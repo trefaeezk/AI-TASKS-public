@@ -65,7 +65,6 @@ export default function OkrPage() {
   const [activeTab, setActiveTab] = useState('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
-
   // بيانات الهدف الجديد
   const [newObjective, setNewObjective] = useState({
     title: '',
@@ -77,10 +76,10 @@ export default function OkrPage() {
 
   const organizationId = userClaims?.organizationId;
   // استخدام النظام الجديد الموحد
-  const isOwner = userClaims?.org_owner === true || userClaims?.isOrgOwner === true;
-  const isAdmin = userClaims?.org_admin === true || userClaims?.isOrgAdmin === true;
-  const isEngineer = userClaims?.org_engineer === true || userClaims?.isOrgEngineer === true;
-  const isSupervisor = userClaims?.org_supervisor === true || userClaims?.isOrgSupervisor === true;
+  const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOrgOwner === true;
+  const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isOrgAdmin === true;
+  const isEngineer = userClaims?.isOrgEngineer === true || userClaims?.isOrgEngineer === true;
+  const isSupervisor = userClaims?.isOrgSupervisor === true || userClaims?.isOrgSupervisor === true;
   const canManageOkrs = isOwner || isAdmin || isEngineer || isSupervisor;
 
   // تحميل الأهداف والأقسام

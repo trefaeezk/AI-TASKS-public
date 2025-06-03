@@ -23,9 +23,8 @@ interface CreateUserInput {
     email: string;
     password: string;
     name: string;
-    role: string; // e.g., 'admin', 'user'
+    role: string; // e.g., 'org_admin', 'user'
 }
-
 
 // Initialize Firebase App if it hasn't been already
 let app;
@@ -48,7 +47,6 @@ if (app && !functionsInstance) { // Check if already initialized
     }
 }
 
-
 export default function AdminDashboardPage() {
   const { user } = useAuth(); // Get current authenticated user
   const { toast } = useToast();
@@ -57,7 +55,6 @@ export default function AdminDashboardPage() {
   const [actionLoading, setActionLoading] = useState<Record<string, Record<string, boolean>>>({});
   const [error, setError] = useState<string | null>(null);
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
-
 
   // --- Fetch Users using Cloud Function ---
   const fetchUsers = useCallback(async () => {
@@ -95,7 +92,7 @@ export default function AdminDashboardPage() {
          const fetchedUsers: ManagedUser[] = usersData.map((u: any) => ({
             uid: u.uid,
             email: u.email ?? `مستخدم (${u.uid.substring(0, 6)}...)`,
-            // Check customClaims for admin role (assuming claim is { admin: true })
+            // Check customClaims for admin role (assuming claim is { org_admin: true })
              // Important: Also include name if available from Firestore/Auth
             name: u.displayName ?? u.name ?? 'غير متوفر', // Prioritize displayName, fallback to 'name' if stored
             role: u.role || u.customClaims?.role || 'independent', // النظام الجديد الموحد
@@ -166,7 +163,7 @@ export default function AdminDashboardPage() {
   }, [user, fetchUsers]); // Depend only on user and the stable fetchUsers callback
 
   // Helper to update loading state
-  const setActionLoadingState = (userId: string, actionType: 'admin' | 'disable' | 'create', isLoading: boolean) => {
+  const setActionLoadingState = (userId: string, actionType: 'org_admin' | 'disable' | 'create', isLoading: boolean) => {
     setActionLoading(prev => ({
       ...prev,
       [userId === 'createUser' ? 'createUserAction' : userId]: {
@@ -187,7 +184,7 @@ export default function AdminDashboardPage() {
       return;
     }
 
-    setActionLoadingState(userId, 'admin', true);
+    setActionLoadingState(userId, 'org_admin', true);
     const functionName = 'setAdminRole';
     console.log(`[AdminPage Client] Calling Cloud Function '${functionName}' for user ${userId} to ${!currentIsAdmin}...`);
 
@@ -225,7 +222,7 @@ export default function AdminDashboardPage() {
        // Optionally refetch users on error to revert optimistic UI if needed
        // fetchUsers();
     } finally {
-      setActionLoadingState(userId, 'admin', false);
+      setActionLoadingState(userId, 'org_admin', false);
     }
   };
 
@@ -340,7 +337,6 @@ export default function AdminDashboardPage() {
        setActionLoadingState('createUser', 'create', false);
     }
   };
-
 
   return (
     <div className="space-y-6" dir="rtl">

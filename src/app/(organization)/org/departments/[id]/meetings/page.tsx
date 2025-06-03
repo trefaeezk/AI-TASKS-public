@@ -35,8 +35,8 @@ export default function DepartmentMeetingsPage() {
 
   const organizationId = userClaims?.organizationId;
   // استخدام أسماء الحقول الصحيحة من قاعدة البيانات
-  const isOwner = userClaims?.org_owner === true || userClaims?.isOwner === true;
-  const isAdmin = userClaims?.admin === true || userClaims?.isAdmin === true;
+  const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOwner === true;
+  const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isAdmin === true;
   const isEngineer = userClaims?.engineer === true;
   const isSupervisor = userClaims?.supervisor === true;
   const canManageMeetings = isOwner || isAdmin || isEngineer || isSupervisor;

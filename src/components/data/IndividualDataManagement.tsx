@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, Download, Upload, AlertTriangle, CheckCircle } from 'lucide-react';
-import { db } from '@/config/firebase';
+import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, setDoc, writeBatch, orderBy } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
  * يتيح للمستخدم المستقل تصدير واستيراد مهامه الخاصة فقط
  */
 export default function IndividualDataManagement() {
-  const { user, userClaims } = useAuth();
+  const { user, userClaims, loading } = useAuth();
   const { hasPermission } = usePermissions();
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
@@ -25,8 +25,23 @@ export default function IndividualDataManagement() {
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  // التحقق من صلاحيات المستخدم
-  const canManageData = userClaims?.role === 'independent' || hasPermission('data.view');
+  // انتظار تحميل بيانات المستخدم
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>جاري التحقق من الصلاحيات...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // التحقق من صلاحيات المستخدم (النمط الجديد is* فقط)
+  const isIndependent = userClaims?.isIndependent === true;
+  const isSystemOwner = userClaims?.isSystemOwner === true;
+  const isSystemAdmin = userClaims?.isSystemAdmin === true;
+  const canManageData = isIndependent || hasPermission('data.view') || isSystemOwner || isSystemAdmin;
 
   if (!canManageData) {
     return (

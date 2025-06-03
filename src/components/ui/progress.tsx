@@ -10,7 +10,6 @@ interface ProgressProps extends React.ComponentPropsWithoutRef<typeof ProgressPr
   indicatorClassName?: string;
 }
 
-
 const Progress = React.forwardRef<
   React.ElementRef<typeof ProgressPrimitive.Root>,
   ProgressProps // Use the updated props interface

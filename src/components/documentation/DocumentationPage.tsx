@@ -131,19 +131,19 @@ const DocumentationPage: React.FC<DocumentationPageProps> = ({
     console.log('Checking access for document:', doc.id, 'with required permission:', doc.requiredPermission);
     console.log('User claims:', userClaims);
 
-    if (doc.requiredPermission === org_owner ) {
-      const hasAccess = userClaims?.system_owner === true;
+    if (doc.requiredPermission === 'org_owner') {
+      const hasAccess = userClaims?.isSystemOwner === true;
       console.log('Owner permission check:', hasAccess);
       return hasAccess;
     }
-    if (doc.requiredPermission === 'admin') {
-      const hasAccess = userClaims?.system_admin === true || userClaims?.system_owner === true ||
-                       userClaims?.org_owner === true || userClaims?.individual_admin === true;
+    if (doc.requiredPermission === 'org_admin') {
+      const hasAccess = userClaims?.isSystemAdmin === true || userClaims?.isSystemOwner === true ||
+                       userClaims?.isOrgOwner === true || userClaims?.isOrgAdmin === true;
       console.log('Admin permission check:', hasAccess);
       return hasAccess;
     }
-    if (doc.requiredPermission === 'user') {
-      console.log('User permission check: true');
+    if (doc.requiredPermission === 'independent') {
+      console.log('Independent user permission check: true');
       return true; // أي مستخدم مسجل الدخول
     }
 

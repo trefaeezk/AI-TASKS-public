@@ -232,9 +232,9 @@ export function CreateKeyResultDialog({ open, onOpenChange, onSubmit, objectiveI
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="owner">المسؤول</Label>
+                <Label htmlFor="org_owner">المسؤول</Label>
                 <Select value={ownerId} onValueChange={setOwnerId} required>
-                  <SelectTrigger id="owner">
+                  <SelectTrigger id="org_owner">
                     <SelectValue placeholder="اختر المسؤول" />
                   </SelectTrigger>
                   <SelectContent>

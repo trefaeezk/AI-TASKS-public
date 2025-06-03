@@ -1741,4 +1741,3 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
   );
 }
 
-

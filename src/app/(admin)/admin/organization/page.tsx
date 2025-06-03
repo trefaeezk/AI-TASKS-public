@@ -35,9 +35,9 @@ export default function OrganizationPage() {
   // التحقق من صلاحيات المستخدم (النظام الجديد فقط)
   const hasViewPermission = hasPermission('organization.view');
   const hasManagePermission = hasPermission('organization.manage');
-  const isSystemOwner = userClaims?.system_owner === true;
-  const isSystemAdmin = userClaims?.system_admin === true;
-  const isOrgOwner = userClaims?.org_owner === true;
+  const isSystemOwner = userClaims?.isSystemOwner === true;
+  const isSystemAdmin = userClaims?.isSystemAdmin === true;
+  const isOrgOwner = userClaims?.isOrgOwner === true;
   const organizationId = userClaims?.organizationId;
 
   useEffect(() => {

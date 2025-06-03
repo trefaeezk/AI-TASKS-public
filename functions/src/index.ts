@@ -56,7 +56,7 @@ const ensureAdmin = (context: LegacyCallableContext) => {
     const adminRoles = ['system_owner', 'system_admin', 'org_owner', 'org_admin', 'org_supervisor', 'org_engineer', 'org_technician', 'org_assistant'];
     const isAdminByRole = role && adminRoles.includes(role);
 
-    console.log(`🔍 Admin check results (النمط الموحد):`);
+    console.log(`🔍 Admin check results (النمط الجديد is* فقط):`);
     console.log(`  - isSystemOwner: ${isSystemOwner}`);
     console.log(`  - isSystemAdmin: ${isSystemAdmin}`);
     console.log(`  - isOrgOwner: ${isOrgOwner}`);
@@ -64,7 +64,7 @@ const ensureAdmin = (context: LegacyCallableContext) => {
     console.log(`  - role: ${role}`);
     console.log(`  - isAdminByRole: ${isAdminByRole}`);
 
-    // التحقق من وجود أي صلاحية إدارية (النمط الموحد)
+    // التحقق من وجود أي صلاحية إدارية (النمط الجديد is* فقط)
     const hasAdminPermission = isSystemOwner || isSystemAdmin || isOrgOwner || isOrgAdmin || isAdminByRole;
 
     if (!hasAdminPermission) {
@@ -73,7 +73,7 @@ const ensureAdmin = (context: LegacyCallableContext) => {
         console.error(`❌ Token values:`, token);
         throw new functions.https.HttpsError(
             "permission-denied",
-            `ليس لديك صلاحيات إدارية. الأدوار المطلوبة: system_owner, system_admin, org_owner, org_admin, أو individual_admin. دورك الحالي: ${role || 'غير محدد'}`
+            `ليس لديك صلاحيات إدارية. الأدوار المطلوبة: system_owner, system_admin, org_owner, org_admin, أو isIndependent. دورك الحالي: ${role || 'غير محدد'}`
         );
     }
 
@@ -154,7 +154,7 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
         }
 
         // إذا كان نوع الحساب فردي، نتأكد من أن الدور هو 'independent'
-        if (accountType === 'individual' && role !== 'independent' && role !== 'system_owner' && role !== 'system_admin' && role !== 'individual_admin') {
+        if (accountType === 'individual' && role !== 'independent' && role !== 'system_owner' && role !== 'system_admin' && role !== 'independent') {
             console.log(`${functionName}: Changing role from '${role}' to 'independent' for individual account type`);
             role = 'independent';  // تحديث المتغير المحلي أيضاً
             request.data.role = 'independent';
@@ -163,11 +163,11 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
         // التحقق من أن المستدعي مالك النظام إذا كان يحاول إنشاء مستخدم بدور مالك أو مسؤول
         console.log(`${functionName} DEBUG: Checking system owner permissions`);
         console.log(`${functionName} DEBUG: role = ${role}`);
-        console.log(`${functionName} DEBUG: context.auth?.token.system_owner = ${context.auth?.token.system_owner}`);
+        console.log(`${functionName} DEBUG: context.auth?.token.isSystemOwner = ${context.auth?.token.isSystemOwner}`);
         console.log(`${functionName} DEBUG: context.auth?.token.role = ${context.auth?.token.role}`);
         console.log(`${functionName} DEBUG: Full token:`, JSON.stringify(context.auth?.token, null, 2));
 
-        if ((role === 'system_owner' || role === 'system_admin') && !context.auth?.token.system_owner) {
+        if ((role === 'system_owner' || role === 'system_admin') && !context.auth?.token.isSystemOwner) {
             console.error(`${functionName} error: Only system owners can create system owner or admin users.`);
             console.error(`${functionName} error: Current user token:`, JSON.stringify(context.auth?.token, null, 2));
             throw new functions.https.HttpsError("permission-denied", "فقط مالك النظام يمكنه إنشاء مستخدمين بدور مالك أو مسؤول النظام.");
@@ -215,15 +215,15 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
         const customClaims: Record<string, any> = {
             role,
             accountType,
-            system_owner: role === 'system_owner',
-            system_admin: role === 'system_admin',
-            org_owner: role === 'org_owner',
-            org_admin: role === 'org_admin',
-            org_supervisor: role === 'org_supervisor',
-            org_engineer: role === 'org_engineer',
-            org_technician: role === 'org_technician',
-            org_assistant: role === 'org_assistant',
-            independent: role === 'independent'
+            isSystemOwner: role === 'system_owner',
+            isSystemAdmin: role === 'system_admin',
+            isOrgOwner: role === 'org_owner',
+            isOrgAdmin: role === 'org_admin',
+            isOrgSupervisor: role === 'org_supervisor',
+            isOrgEngineer: role === 'org_engineer',
+            isOrgTechnician: role === 'org_technician',
+            isOrgAssistant: role === 'org_assistant',
+            isIndependent: role === 'independent'
         };
 
         // إضافة معلومات المؤسسة إذا كان نوع الحساب مؤسسة
@@ -238,15 +238,15 @@ export const createUser = createCallableFunction<CreateUserRequest>(async (reque
         console.log(`Setting custom claims for user ${userRecord.uid}:`, {
             role,
             accountType,
-            system_owner: customClaims.system_owner,
-            system_admin: customClaims.system_admin,
-            org_owner: customClaims.org_owner,
-            org_admin: customClaims.org_admin,
-            org_supervisor: customClaims.org_supervisor,
-            org_engineer: customClaims.org_engineer,
-            org_technician: customClaims.org_technician,
-            org_assistant: customClaims.org_assistant,
-            independent: customClaims.independent
+            isSystemOwner: customClaims.isSystemOwner,
+            isSystemAdmin: customClaims.isSystemAdmin,
+            isOrgOwner: customClaims.isOrgOwner,
+            isOrgAdmin: customClaims.isOrgAdmin,
+            isOrgSupervisor: customClaims.isOrgSupervisor,
+            isOrgEngineer: customClaims.isOrgEngineer,
+            isOrgTechnician: customClaims.isOrgTechnician,
+            isOrgAssistant: customClaims.isOrgAssistant,
+            isIndependent: customClaims.isIndependent
         });
 
         await admin.auth().setCustomUserClaims(userRecord.uid, customClaims);
@@ -478,7 +478,6 @@ export const createUserHttp = createHttpFunction<CreateUserRequest>(async (reque
         throw new functions.https.HttpsError("internal", clientErrorMessage);
     }
 });
-
 
 /**
  * نوع بيانات طلب قائمة مستخدمي Firebase

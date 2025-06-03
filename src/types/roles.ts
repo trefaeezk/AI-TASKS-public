@@ -144,13 +144,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
     'dashboard:view'
   ],
 
-  // المستخدم العادي لديه صلاحيات العرض فقط
-  user: [
-    'tasks:view',
-    'dashboard:view',
-    // إدارة البيانات - تصدير واستيراد البيانات الخاصة به
-    'data:view', 'data:create', 'data:edit', 'data:delete'
-  ],
+
 
   // المستخدم المستقل (الفردي) لديه صلاحيات محددة على المحتوى الخاص به فقط
   independent: [

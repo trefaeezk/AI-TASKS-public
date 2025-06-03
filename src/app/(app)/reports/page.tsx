@@ -63,7 +63,6 @@ type WarningTask = TaskType & { warningReason: string };
 // Combined type for general use
 type EnrichedTask = TaskType & { planReasoning?: string; warningReason?: string };
 
-
  function ReportsPage() {
   const { user } = useAuth();
   const { getCategoryColor } = useTaskCategories(user?.uid);
@@ -96,7 +95,6 @@ type EnrichedTask = TaskType & { planReasoning?: string; warningReason?: string 
            setIsLoadingTasks(false); // Avoid reloading if tasks already loaded unless forced
            return;
       }
-
 
       setIsLoadingTasks(true);
       setError(null);
@@ -142,7 +140,6 @@ type EnrichedTask = TaskType & { planReasoning?: string; warningReason?: string 
       loadTasks();
    }, [loadTasks]); // Initial load trigger
 
-
    // --- AI Daily Plan Generation Function ---
    const handleGeneratePlan = useCallback(async (isAutoGenerate = false) => {
        // If auto-generating, check if already generated
@@ -164,7 +161,6 @@ type EnrichedTask = TaskType & { planReasoning?: string; warningReason?: string 
                  return;
             }
         }
-
 
        if (tasks.length === 0) {
            toast({
@@ -262,7 +258,6 @@ type EnrichedTask = TaskType & { planReasoning?: string; warningReason?: string 
        }
    }, [tasks, isLoadingTasks, toast, loadTasks, planGenerated]); // Added planGenerated
 
-
    // --- Optional: Auto-generate plan on load after tasks are fetched ---
    useEffect(() => {
         // Only attempt auto-generation when tasks finish loading AND plan hasn't been generated yet
@@ -281,13 +276,10 @@ type EnrichedTask = TaskType & { planReasoning?: string; warningReason?: string 
        }
    }, [isLoadingTasks, tasks.length, planGenerated, handleGeneratePlan]); // Depend on loading state, task count, flag, and the generation function
 
-
-
    // Placeholders for Edit/Delete/Status Change if needed on this page
     const handleDeleteTask = async (taskId: string) => console.warn("Delete action called on Reports page for task:", taskId);
     const handleEditTask = (task: TaskType) => console.warn("Edit action called on Reports page for task:", task.id);
     const handleStatusChange = (taskId: string, newStatus: TaskStatus) => console.warn("Status change action called on Reports page for task:", taskId, "to", newStatus);
-
 
   return (
     <div dir="rtl">
@@ -421,7 +413,6 @@ type EnrichedTask = TaskType & { planReasoning?: string; warningReason?: string 
                            لا توجد مهام قيد الانتظار أو معلقة لإنشاء خطة اليوم.
                           </p>
                       )}
-
 
                  </div>
             )}

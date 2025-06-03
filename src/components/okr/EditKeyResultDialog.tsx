@@ -257,9 +257,9 @@ export function EditKeyResultDialog({ open, onOpenChange, onSubmit, keyResult }:
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="owner">المسؤول</Label>
+                <Label htmlFor="org_owner">المسؤول</Label>
                 <Select value={ownerId} onValueChange={setOwnerId} required>
-                  <SelectTrigger id="owner">
+                  <SelectTrigger id="org_owner">
                     <SelectValue placeholder="اختر المسؤول" />
                   </SelectTrigger>
                   <SelectContent>

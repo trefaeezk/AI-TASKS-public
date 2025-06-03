@@ -224,10 +224,12 @@ export default function OrganizationRequestsPage() {
                 </Button>
               </div>
               <ul className="text-xs text-muted-foreground space-y-1">
-                <li><strong>الدور:</strong> {(user as ExtendedUser)?.customClaims?.role || 'غير محدد'}</li>
-                <li><strong>مالك النظام:</strong> {(user as ExtendedUser)?.customClaims?.owner ? 'نعم' : 'لا'}</li>
-                <li><strong>مسؤول:</strong> {(user as ExtendedUser)?.customClaims?.admin ? 'نعم' : 'لا'}</li>
-                <li><strong>مسؤول نظام الأفراد:</strong> {(user as ExtendedUser)?.customClaims?.individual_admin ? 'نعم' : 'لا'}</li>
+                <li><strong>الدور:</strong> {userClaims?.role || 'غير محدد'}</li>
+                <li><strong>مالك النظام:</strong> {userClaims?.isSystemOwner ? 'نعم' : 'لا'}</li>
+                <li><strong>أدمن النظام:</strong> {userClaims?.isSystemAdmin ? 'نعم' : 'لا'}</li>
+                <li><strong>مالك المؤسسة:</strong> {userClaims?.isOrgOwner ? 'نعم' : 'لا'}</li>
+                <li><strong>أدمن المؤسسة:</strong> {userClaims?.isOrgAdmin ? 'نعم' : 'لا'}</li>
+                <li><strong>مستخدم مستقل:</strong> {userClaims?.isIndependent ? 'نعم' : 'لا'}</li>
                 <li><strong>البريد الإلكتروني:</strong> {user?.email || 'غير متوفر'}</li>
                 <li><strong>معرف المستخدم:</strong> {user?.uid || 'غير متوفر'}</li>
               </ul>

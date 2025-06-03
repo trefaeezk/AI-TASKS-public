@@ -130,7 +130,7 @@ export const approveOrganizationRequest = createCallableFunction<ApproveOrganiza
         const userRecord = await admin.auth().getUser(uid);
         const customClaims = userRecord.customClaims || {};
 
-        const isSystemOwner = customClaims.system_owner === true;
+        const isSystemOwner = customClaims.isSystemOwner === true;
 
         if (!isSystemOwner) {
             throw new functions.https.HttpsError(
@@ -198,15 +198,15 @@ export const approveOrganizationRequest = createCallableFunction<ApproveOrganiza
         // تحديث custom claims للمستخدم
         const requesterRecord = await admin.auth().getUser(requestData.userId);
 
-        // تعيين المستخدم كمالك في المؤسسة (النمط الموحد is* فقط)
+        // تعيين المستخدم كمالك في المؤسسة (النمط الجديد is* فقط)
         const newClaims = {
             role: 'org_owner',
             accountType: 'organization',
             organizationId,
-            // النمط الموحد is* فقط (بدون تكرار)
-            isOrgOwner: true,
+            // النمط الجديد is* فقط - بدون أي توافق قديم
             isSystemOwner: false,
             isSystemAdmin: false,
+            isOrgOwner: true,
             isOrgAdmin: false,
             isOrgSupervisor: false,
             isOrgEngineer: false,
@@ -227,17 +227,16 @@ export const approveOrganizationRequest = createCallableFunction<ApproveOrganiza
                 name: requesterRecord.displayName || '',
                 email: requesterRecord.email,
                 role: 'org_owner',
-                // الأدوار المنطقية الجديدة فقط
-                isOrgOwner: true,
+                // النمط الجديد is* فقط - بدون أي توافق قديم
                 isSystemOwner: false,
                 isSystemAdmin: false,
+                isOrgOwner: true,
                 isOrgAdmin: false,
                 isOrgSupervisor: false,
                 isOrgEngineer: false,
                 isOrgTechnician: false,
                 isOrgAssistant: false,
                 isIndependent: false,
-                isOrgMember: false,
                 accountType: 'organization',
                 organizationId,
                 organizationName: organizationData.name,
@@ -250,23 +249,28 @@ export const approveOrganizationRequest = createCallableFunction<ApproveOrganiza
         } else {
             await userDocRef.update({
                 role: 'org_owner',
-                // الأدوار المنطقية الجديدة فقط
-                isOrgOwner: true,
+                // النمط الجديد is* فقط - بدون أي توافق قديم
                 isSystemOwner: false,
                 isSystemAdmin: false,
+                isOrgOwner: true,
                 isOrgAdmin: false,
                 isOrgSupervisor: false,
                 isOrgEngineer: false,
                 isOrgTechnician: false,
                 isOrgAssistant: false,
                 isIndependent: false,
-                isOrgMember: false,
                 accountType: 'organization',
                 organizationId,
                 organizationName: organizationData.name,
-                // حذف الأدوار القديمة والصلاحيات المخزنة
+                // حذف جميع الأنماط القديمة نهائياً
                 isAdmin: admin.firestore.FieldValue.delete(),
                 isOwner: admin.firestore.FieldValue.delete(),
+                admin: admin.firestore.FieldValue.delete(),
+                owner: admin.firestore.FieldValue.delete(),
+                system_owner: admin.firestore.FieldValue.delete(),
+                system_admin: admin.firestore.FieldValue.delete(),
+                org_owner: admin.firestore.FieldValue.delete(),
+                org_admin: admin.firestore.FieldValue.delete(),
                 canManageSystem: admin.firestore.FieldValue.delete(),
                 canManageUsers: admin.firestore.FieldValue.delete(),
                 canManageOrganization: admin.firestore.FieldValue.delete(),
@@ -327,7 +331,7 @@ export const rejectOrganizationRequest = createCallableFunction<RejectOrganizati
         const userRecord = await admin.auth().getUser(uid);
         const customClaims = userRecord.customClaims || {};
 
-        const isSystemOwner = customClaims.system_owner === true;
+        const isSystemOwner = customClaims.isSystemOwner === true;
 
         if (!isSystemOwner) {
             throw new functions.https.HttpsError(

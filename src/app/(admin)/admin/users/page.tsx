@@ -63,9 +63,9 @@ export default function UsersPage() {
 
       // الحصول على معرف المؤسسة من userClaims
       const organizationId = userClaims?.organizationId;
-      const isSystemOwner = userClaims?.system_owner === true;
-      const isSystemAdmin = userClaims?.system_admin === true;
-      const isOrgOwner = userClaims?.org_owner === true;
+      const isSystemOwner = userClaims?.isSystemOwner === true;
+      const isSystemAdmin = userClaims?.isSystemAdmin === true;
+      const isOrgOwner = userClaims?.isOrgOwner === true;
       const isOwner = isSystemOwner || isSystemAdmin || isOrgOwner;
 
       // استخدام وظائف الباك إند للحصول على المستخدمين
@@ -131,13 +131,13 @@ export default function UsersPage() {
             // ثانياً: استخدم customClaims كبديل
             if (user.customClaims?.role) {
               userRole = user.customClaims.role as UserRole;
-            } else if (user.customClaims?.system_owner) {
+            } else if (user.customClaims?.isSystemOwner) {
               userRole = 'system_owner';
-            } else if (user.customClaims?.system_admin) {
+            } else if (user.customClaims?.isSystemAdmin) {
               userRole = 'system_admin';
-            } else if (user.customClaims?.org_owner) {
+            } else if (user.customClaims?.isOrgOwner) {
               userRole = 'org_owner';
-            } else if (user.customClaims?.org_admin) {
+            } else if (user.customClaims?.isOrgAdmin) {
               userRole = 'org_admin';
             }
           }

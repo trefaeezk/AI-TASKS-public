@@ -58,7 +58,6 @@ const mapFirestoreTaskToTaskType = (id: string, data: TaskFirestoreData): TaskTy
 
      console.log(`[TaskDataLoader ${id}] Mapped milestones:`, JSON.stringify(mappedMilestones));
 
-
     const mappedTask: TaskType = {
         id,
         description: data.description,
@@ -83,7 +82,6 @@ const mapFirestoreTaskToTaskType = (id: string, data: TaskFirestoreData): TaskTy
     console.log(`[TaskDataLoader ${id}] Successfully mapped task:`, mappedTask);
     return mappedTask;
 };
-
 
 // --- Task Data Loader Component ---
 export function TaskDataLoader({ children }: { children: React.ReactNode }) {

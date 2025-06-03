@@ -158,7 +158,6 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
         hasUserSetDateFilter.current = false;
     }, [selectedCategory]);
 
-
   // Update state if initialTasks prop changes (e.g., due to TaskDataLoader update)
   useEffect(() => {
     console.log("TaskPageProvider: initialTasks prop updated, setting tasks state.", initialTasks.length);
@@ -213,7 +212,6 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
                     relevantDate = task.dueDate || task.startDate || null; // Default fallback
            }
 
-
            if (dateFilter.startDate && dateFilter.endDate && relevantDate) {
                const taskStartOfDay = startOfDay(relevantDate);
                const filterStartOfDay = startOfDay(dateFilter.startDate);
@@ -236,7 +234,6 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
            return true;
        });
    }, [tasks, categoryFilter, dateFilter, selectedCategory]);
-
 
   // --- Task Categorization and Sorting Logic (uses filteredTasks) ---
   const categorizedTasks = useMemo(() => {
@@ -276,7 +273,6 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
     return categories;
   }, [filteredTasks]); // Depend on filteredTasks
 
-
   // --- Set Initial Selected Category (Revised) ---
    useEffect(() => {
      if (!initialCategorySet.current && tasks.length > 0) {
@@ -303,7 +299,6 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
           // console.log("TaskPageProvider: Skipping initial category setting."); // Less verbose
      }
    }, [categorizedTasks, tasks.length]);
-
 
   // --- Optimistic Update Functions ---
   const updateTaskOptimistic = useCallback((taskId: string, updates: Partial<TaskType>) => {
@@ -386,7 +381,6 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
       });
   }, []);
 
-
     const moveTaskOptimistic = useCallback((taskId: string, targetCategory: TaskCategory) => {
         const newStatus: TaskStatus | null =
             targetCategory === 'completed' ? 'completed' :
@@ -401,7 +395,6 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
              console.warn(`Cannot move task ${taskId} to category ${targetCategory}: Invalid target.`);
         }
     }, [updateTaskOptimistic]);
-
 
   // --- Context Value ---
   const value = useMemo(() => ({

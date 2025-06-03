@@ -41,8 +41,8 @@ export function DailyMeetingGenerator({ departmentId, onSuccess }: DailyMeetingG
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const organizationId = userClaims?.organizationId;
-  const isOwner = userClaims?.owner === true;
-  const isAdmin = userClaims?.admin === true;
+  const isOwner = userClaims?.isOrgOwner === true;
+  const isAdmin = userClaims?.isOrgAdmin === true;
   const isEngineer = userClaims?.engineer === true;
   const isSupervisor = userClaims?.supervisor === true;
   const canCreateMeetings = isOwner || isAdmin || isEngineer || isSupervisor;
