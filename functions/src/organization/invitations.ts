@@ -104,7 +104,6 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
 
         const invitationData = {
             organizationId,
-            organizationName: organizationData?.name || '',
             email,
             role,
             departmentId: departmentId || null,
@@ -120,9 +119,26 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
         const invitationRef = await db.collection('organizationInvitations').add(invitationData);
         console.log(`[${functionName}] Organization invitation created with ID: ${invitationRef.id}`);
 
+        // إنشاء OTP للدعوة وإضافته للدعوة
+        const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+        const invitationOTP = generateOTP();
+        const otpExpiryTime = new Date();
+        otpExpiryTime.setHours(otpExpiryTime.getHours() + 12); // صالح لمدة 12 ساعة
+
+        // إضافة OTP للدعوة
+        await invitationRef.update({
+            otp: invitationOTP,
+            otpExpiryTime: admin.firestore.Timestamp.fromDate(otpExpiryTime),
+            otpUsed: false,
+            otpAttempts: 0, // عداد محاولات OTP
+            maxOtpAttempts: 5, // حد أقصى 5 محاولات
+            otpCreatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        console.log(`[${functionName}] OTP added to invitation ${invitationRef.id}`);
+
         console.log(`[${functionName}] Attempting to send invitation email to ${email}`);
         try {
-            const { sendOrganizationInvitationEmail } = await import('../email/index');
+            const { sendOrganizationInvitationEmail, sendOTPEmail } = await import('../email/index');
             
             // قراءة APP_BASE_URL من متغيرات البيئة
             const appBaseUrlFromEnv = process.env.APP_BASE_URL;
@@ -147,6 +163,7 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
             console.log(`[${functionName}] Constructed invitation URL: ${invitationUrl}`);
             console.log(`[${functionName}] Inviter name: ${inviterName}`);
 
+            // إرسال الإيميل الأول - الدعوة
             const emailSent = await sendOrganizationInvitationEmail(
                 email,
                 organizationData?.name || 'المؤسسة',
@@ -156,9 +173,27 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
             );
 
             if (emailSent) {
-                console.log(`[${functionName}] ✅ Invitation email send attempt was reported as successful for ${email}`);
+                console.log(`[${functionName}] ✅ Invitation email sent successfully to ${email}`);
+
+                // إرسال الإيميل الثاني - OTP منفصل
+                console.log(`[${functionName}] Sending OTP email to ${email}`);
+                const otpEmailSent = await sendOTPEmail({
+                to: email,
+                otp: invitationOTP,
+                expiryTime: otpExpiryTime,
+                subject: 'رمز التحقق للدعوة - Tasks Intelligence',
+                title: 'رمز التحقق للدعوة',
+                message: 'لإكمال عملية قبول الدعوة، يرجى استخدام رمز التحقق التالي:',
+                logContext: 'INVITATION'
+            });
+
+                if (otpEmailSent) {
+                    console.log(`[${functionName}] ✅ OTP email sent successfully to ${email}`);
+                } else {
+                    console.warn(`[${functionName}] ⚠️ Failed to send OTP email to ${email}`);
+                }
             } else {
-                console.warn(`[${functionName}] ⚠️ Failed to send invitation email to ${email} (sendOrganizationInvitationEmail returned false). Check EmailService logs (Resend/SMTP).`);
+                console.warn(`[${functionName}] ⚠️ Failed to send invitation email to ${email}`);
             }
         } catch (emailError) {
             console.error(`[${functionName}] ❌ Error sending invitation email to ${email}:`, emailError);
@@ -182,6 +217,7 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
  */
 interface GetInvitationInfoRequest {
     invitationId: string;
+    otp?: string; // رمز التحقق من الإيميل
 }
 
 /**
@@ -196,7 +232,7 @@ export const getInvitationInfo = createCallableFunction<GetInvitationInfoRequest
     console.log(`[${functionName}] Fetching invitation info for ID: ${data.invitationId}`);
 
     try {
-        const { invitationId } = data;
+        const { invitationId, otp } = data;
         if (!invitationId || typeof invitationId !== 'string') {
             console.error(`[${functionName}] Error: Invalid invitationId.`);
             throw new functions.https.HttpsError('invalid-argument', 'يجب توفير معرف دعوة صالح.');
@@ -210,6 +246,52 @@ export const getInvitationInfo = createCallableFunction<GetInvitationInfoRequest
 
         const invitationData = invitationDoc.data();
         console.log(`[${functionName}] Invitation data fetched:`, invitationData);
+
+        // التحقق من OTP إذا تم توفيره
+        if (!otp) {
+            // إذا لم يتم توفير OTP، نطلب من المستخدم إدخاله
+            throw new functions.https.HttpsError('failed-precondition', 'يجب إدخال رمز التحقق المرسل إلى بريدك الإلكتروني.');
+        }
+
+        // التحقق من صحة OTP
+        if (!invitationData?.otp) {
+            console.warn(`[${functionName}] No OTP stored for invitation ${invitationId}`);
+            throw new functions.https.HttpsError('failed-precondition', 'هذه الدعوة لا تحتوي على رمز أمان.');
+        }
+
+        // التحقق من عدد المحاولات
+        const currentAttempts = invitationData.otpAttempts || 0;
+        const maxAttempts = invitationData.maxOtpAttempts || 5;
+
+        if (currentAttempts >= maxAttempts) {
+            console.warn(`[${functionName}] Too many OTP attempts for invitation ${invitationId}`);
+            throw new functions.https.HttpsError('resource-exhausted', 'تم تجاوز الحد الأقصى لمحاولات إدخال رمز التحقق.');
+        }
+
+        if (invitationData.otp !== otp) {
+            // زيادة عداد المحاولات الفاشلة
+            await db.collection('organizationInvitations').doc(invitationId).update({
+                otpAttempts: admin.firestore.FieldValue.increment(1),
+                lastFailedAttempt: admin.firestore.FieldValue.serverTimestamp()
+            });
+
+            console.warn(`[${functionName}] Invalid OTP provided for invitation ${invitationId}. Attempts: ${currentAttempts + 1}/${maxAttempts}`);
+            throw new functions.https.HttpsError('permission-denied', `رمز التحقق غير صحيح. المحاولات المتبقية: ${maxAttempts - currentAttempts - 1}`);
+        }
+
+        // التحقق من انتهاء صلاحية OTP
+        if (invitationData.otpExpiryTime && invitationData.otpExpiryTime.toDate() < new Date()) {
+            console.warn(`[${functionName}] OTP expired for invitation ${invitationId}`);
+            throw new functions.https.HttpsError('deadline-exceeded', 'انتهت صلاحية رمز التحقق.');
+        }
+
+        console.log(`[${functionName}] OTP verified successfully for invitation ${invitationId}`);
+
+        // تسجيل النجاح وإعادة تعيين عداد المحاولات
+        await db.collection('organizationInvitations').doc(invitationId).update({
+            otpAttempts: 0, // إعادة تعيين العداد بعد النجاح
+            lastSuccessfulAttempt: admin.firestore.FieldValue.serverTimestamp()
+        });
 
         if (invitationData?.status !== 'pending') {
             console.warn(`[${functionName}] Invitation ${invitationId} status is not pending: ${invitationData?.status}`);
@@ -275,32 +357,47 @@ export const getInvitationInfo = createCallableFunction<GetInvitationInfoRequest
         }
         throw new functions.https.HttpsError('internal', `Failed to get invitation info: ${error.message || 'Unknown error'}`);
     }
-});
+}, { requireAuth: false });
 
 interface AcceptOrganizationInvitationRequest {
     invitationId: string;
+    otp: string; // رمز التحقق (مطلوب)
+    email: string; // البريد الإلكتروني
+    password: string; // كلمة المرور لإنشاء الحساب
+    displayName?: string; // الاسم (اختياري)
 }
 
 export const acceptOrganizationInvitation = createCallableFunction<AcceptOrganizationInvitationRequest>(async (request: CallableRequest<AcceptOrganizationInvitationRequest>) => {
-    const { data, auth } = request;
+    const { data } = request;
     const functionName = 'acceptOrganizationInvitation';
     console.log(`[${functionName}] --- Cloud Function triggered ---`);
-    console.log(`[${functionName}] Request data:`, data);
+    console.log(`[${functionName}] Request data (password masked):`, { ...data, password: '****' });
 
     try {
-        if (!auth) {
-            console.error(`[${functionName}] Error: User not authenticated.`);
-            throw new functions.https.HttpsError('unauthenticated', 'يجب تسجيل الدخول لقبول دعوة الانضمام إلى مؤسسة.');
-        }
-        const uid = auth.uid;
-        console.log(`[${functionName}] Authenticated user UID: ${uid}`);
+        const { invitationId, otp, email, password, displayName } = data;
 
-        const { invitationId } = data;
+        // التحقق من البيانات المطلوبة
         if (!invitationId || typeof invitationId !== 'string') {
             console.error(`[${functionName}] Error: Invalid invitationId.`);
             throw new functions.https.HttpsError('invalid-argument', 'يجب توفير معرف دعوة صالح.');
         }
 
+        if (!otp || typeof otp !== 'string') {
+            console.error(`[${functionName}] Error: OTP is required.`);
+            throw new functions.https.HttpsError('invalid-argument', 'يجب توفير رمز التحقق.');
+        }
+
+        if (!email || typeof email !== 'string') {
+            console.error(`[${functionName}] Error: Email is required.`);
+            throw new functions.https.HttpsError('invalid-argument', 'يجب توفير البريد الإلكتروني.');
+        }
+
+        if (!password || typeof password !== 'string') {
+            console.error(`[${functionName}] Error: Password is required.`);
+            throw new functions.https.HttpsError('invalid-argument', 'يجب توفير كلمة المرور.');
+        }
+
+        // جلب بيانات الدعوة
         const invitationDoc = await db.collection('organizationInvitations').doc(invitationId).get();
         if (!invitationDoc.exists) {
             console.warn(`[${functionName}] Invitation ${invitationId} not found.`);
@@ -310,20 +407,64 @@ export const acceptOrganizationInvitation = createCallableFunction<AcceptOrganiz
         const invitationData = invitationDoc.data();
         console.log(`[${functionName}] Invitation data fetched:`, invitationData);
 
-        if (invitationData?.userId && invitationData.userId !== uid) {
-            console.warn(`[${functionName}] Invitation ${invitationId} not for current user ${uid}. Invitation user ID: ${invitationData.userId}`);
-            throw new functions.https.HttpsError('permission-denied', 'هذه الدعوة ليست لك.');
+        // التحقق من البريد الإلكتروني
+        if (invitationData?.email !== email) {
+            console.warn(`[${functionName}] Email mismatch. Invitation email: ${invitationData?.email}, Provided email: ${email}`);
+            throw new functions.https.HttpsError('permission-denied', 'البريد الإلكتروني غير مطابق للدعوة.');
         }
 
-        const userRecord = await admin.auth().getUser(uid);
-        if (invitationData?.email !== userRecord.email) {
-            console.warn(`[${functionName}] Invitation email mismatch. Invitation email: ${invitationData?.email}, User email: ${userRecord.email}`);
-            throw new functions.https.HttpsError('permission-denied', 'هذه الدعوة ليست لبريدك الإلكتروني.');
+        // التحقق من عدد المحاولات
+        const currentAttempts = invitationData.otpAttempts || 0;
+        const maxAttempts = invitationData.maxOtpAttempts || 5;
+
+        if (currentAttempts >= maxAttempts) {
+            console.warn(`[${functionName}] Too many OTP attempts for invitation ${invitationId}`);
+            throw new functions.https.HttpsError('resource-exhausted', 'تم تجاوز الحد الأقصى لمحاولات إدخال رمز التحقق.');
+        }
+
+        // التحقق من OTP
+        if (!invitationData?.otp || invitationData.otp !== otp) {
+            // زيادة عداد المحاولات الفاشلة
+            await db.collection('organizationInvitations').doc(invitationId).update({
+                otpAttempts: admin.firestore.FieldValue.increment(1),
+                lastFailedAttempt: admin.firestore.FieldValue.serverTimestamp()
+            });
+
+            console.warn(`[${functionName}] Invalid OTP for invitation ${invitationId}. Attempts: ${currentAttempts + 1}/${maxAttempts}`);
+            throw new functions.https.HttpsError('permission-denied', `رمز التحقق غير صحيح. المحاولات المتبقية: ${maxAttempts - currentAttempts - 1}`);
+        }
+
+        // التحقق من انتهاء صلاحية OTP
+        if (invitationData.otpExpiryTime && invitationData.otpExpiryTime.toDate() < new Date()) {
+            console.warn(`[${functionName}] OTP expired for invitation ${invitationId}`);
+            throw new functions.https.HttpsError('deadline-exceeded', 'انتهت صلاحية رمز التحقق.');
         }
 
         if (invitationData?.status !== 'pending') {
             console.warn(`[${functionName}] Invitation ${invitationId} status is not pending: ${invitationData?.status}`);
             throw new functions.https.HttpsError('failed-precondition', 'لا يمكن قبول دعوة تمت معالجتها بالفعل.');
+        }
+
+        // التحقق من وجود الحساب أولاً
+        let userRecord: admin.auth.UserRecord;
+        let uid: string;
+
+        try {
+            // محاولة الحصول على المستخدم الموجود
+            userRecord = await admin.auth().getUserByEmail(email);
+            uid = userRecord.uid;
+            console.log(`[${functionName}] Found existing user account with UID: ${uid}`);
+        } catch (userNotFoundError) {
+            // إذا لم يوجد المستخدم، إنشاء حساب جديد
+            console.log(`[${functionName}] Creating new Firebase Auth account for ${email}`);
+            userRecord = await admin.auth().createUser({
+                email: email,
+                password: password,
+                displayName: displayName || email.split('@')[0],
+                emailVerified: true // نعتبر البريد محقق لأن المستخدم استخدم OTP
+            });
+            uid = userRecord.uid;
+            console.log(`[${functionName}] Created new user account with UID: ${uid}`);
         }
 
         console.log(`[${functionName}] Adding user ${uid} to organization ${invitationData.organizationId} as member with role ${invitationData.role}`);
@@ -341,7 +482,11 @@ export const acceptOrganizationInvitation = createCallableFunction<AcceptOrganiz
             status: 'accepted',
             userId: uid,
             acceptedAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            // إلغاء OTP نهائياً بعد القبول
+            otp: admin.firestore.FieldValue.delete(),
+            otpExpiryTime: admin.firestore.FieldValue.delete(),
+            otpUsed: true
         });
 
         const currentClaims = userRecord.customClaims || {};
@@ -363,6 +508,10 @@ export const acceptOrganizationInvitation = createCallableFunction<AcceptOrganiz
         console.log(`[${functionName}] Setting custom claims for user ${uid}:`, newClaims);
         await admin.auth().setCustomUserClaims(uid, newClaims);
 
+        // جلب اسم المؤسسة
+        const organizationDoc = await db.collection('organizations').doc(invitationData.organizationId).get();
+        const organizationName = organizationDoc.exists ? organizationDoc.data()?.name || 'مؤسسة غير معروفة' : 'مؤسسة غير معروفة';
+
         console.log(`[${functionName}] Updating user document for ${uid} in 'users' collection`);
         const userDocRef = db.collection('users').doc(uid);
         await userDocRef.set({
@@ -370,7 +519,7 @@ export const acceptOrganizationInvitation = createCallableFunction<AcceptOrganiz
             accountType: 'organization',
             organizationId: invitationData.organizationId,
             departmentId: invitationData.departmentId || null,
-            organizationName: invitationData.organizationName, // إضافة اسم المؤسسة
+            organizationName: organizationName, // إضافة اسم المؤسسة
              // ضمان تعيين الأدوار المنطقية بشكل صحيح
             isOrgOwner: invitationData.role === 'isOrgOwner',
             isOrgAdmin: invitationData.role === 'isOrgAdmin',
@@ -391,7 +540,7 @@ export const acceptOrganizationInvitation = createCallableFunction<AcceptOrganiz
         }
         throw new functions.https.HttpsError('internal', `Failed to accept organization invitation: ${error.message || 'Unknown error'}`);
     }
-});
+}, { requireAuth: false });
 
 interface RejectOrganizationInvitationRequest {
     invitationId: string;
@@ -460,4 +609,6 @@ export const rejectOrganizationInvitation = createCallableFunction<RejectOrganiz
         throw new functions.https.HttpsError('internal', `Failed to reject organization invitation: ${error.message || 'Unknown error'}`);
     }
 });
-    
+
+
+

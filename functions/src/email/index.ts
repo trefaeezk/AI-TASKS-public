@@ -64,10 +64,23 @@ export interface EmailData {
  * @returns وعد بنتيجة إرسال البريد الإلكتروني
  */
 export const sendEmail = async (emailData: EmailData): Promise<boolean> => {
-  console.log('[EmailService Index] Attempting to send email via Resend to:', emailData.to);
+  console.log('[EmailService Index] Attempting to send email to:', emailData.to);
+
+  // استخدام SMTP مباشرة بدلاً من Resend
   if (!resend) {
-    console.error('[EmailService Index] Resend is not initialized. Cannot send email. Ensure RESEND_API_KEY is set.');
-    return false;
+    console.log('[EmailService Index] Resend not configured, using SMTP directly.');
+    try {
+      const { sendEmailSMTP } = await import('./smtp');
+      return await sendEmailSMTP(
+        Array.isArray(emailData.to) ? emailData.to[0] : emailData.to,
+        emailData.subject,
+        emailData.text || '',
+        emailData.html
+      );
+    } catch (smtpError) {
+      console.error('[EmailService Index] SMTP fallback failed:', smtpError);
+      return false;
+    }
   }
 
   try {
@@ -124,37 +137,89 @@ export const sendEmail = async (emailData: EmailData): Promise<boolean> => {
 };
 
 /**
- * إرسال رمز OTP عبر البريد الإلكتروني
- * @param to عنوان البريد الإلكتروني للمستلم
- * @param otp رمز OTP
- * @param expiryTime وقت انتهاء صلاحية الرمز
+ * نوع بيانات إعدادات OTP العامة
+ */
+interface OTPEmailConfig {
+  to: string;
+  otp: string;
+  expiryTime: Date;
+  subject: string;
+  title: string;
+  message: string;
+  logContext?: string; // للوجات فقط
+}
+
+/**
+ * إرسال رمز OTP عبر البريد الإلكتروني - دالة عامة تماماً
+ * @param config إعدادات OTP
  * @returns وعد بنتيجة إرسال البريد الإلكتروني
  */
-export const sendOTPEmail = async (
-  to: string,
-  otp: string,
-  expiryTime: Date
-): Promise<boolean> => {
-  const subject = 'رمز التحقق لصفحة التشخيص';
+export const sendOTPEmail = async (config: OTPEmailConfig): Promise<boolean> => {
+  const { to, otp, expiryTime, subject, title, message, logContext = 'OTP' } = config;
+
   const formattedTime = expiryTime.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
   const text = `رمز التحقق الخاص بك هو: ${otp}. هذا الرمز صالح حتى الساعة ${formattedTime}.`;
+
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px; direction: rtl; text-align: right;">
-      <h2 style="color: #333;">رمز التحقق لصفحة التشخيص</h2>
-      <p>مرحبًا،</p>
-      <p>لقد طلبت رمز تحقق للوصول إلى صفحة التشخيص. رمز التحقق الخاص بك هو:</p>
-      <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; text-align: center; font-size: 24px; font-family: monospace; letter-spacing: 5px; margin: 20px 0;">
-        ${otp}
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; direction: rtl; background-color: #f8f9fa;">
+      <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #2563eb; margin: 0; font-size: 28px;">Tasks Intelligence</h1>
+          <div style="width: 50px; height: 3px; background-color: #2563eb; margin: 10px auto;"></div>
+        </div>
+        <h2 style="color: #1f2937; text-align: center; margin-bottom: 30px;">${title}</h2>
+        <div style="background-color: #eff6ff; padding: 20px; border-radius: 8px; border-right: 4px solid #2563eb; margin-bottom: 30px;">
+          <p style="font-size: 16px; line-height: 1.6; margin: 0; color: #1f2937;">
+            <strong>مرحبًا،</strong><br><br>
+            ${message}
+          </p>
+        </div>
+        <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; text-align: center; margin: 30px 0;">
+          <div style="font-size: 32px; font-family: monospace; letter-spacing: 8px; color: #2563eb; font-weight: bold;">
+            ${otp}
+          </div>
+        </div>
+        <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; border-right: 4px solid #f59e0b; margin: 30px 0;">
+          <p style="font-size: 14px; margin: 0; color: #92400e;">
+            <strong>ملاحظة:</strong> هذا الرمز صالح حتى الساعة ${formattedTime}. إذا لم تطلب هذا الرمز، يرجى تجاهل هذا البريد الإلكتروني.
+          </p>
+        </div>
+        <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
+          <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0;">
+            هذا بريد إلكتروني تم إنشاؤه تلقائيًا من نظام Tasks Intelligence<br>
+            يرجى عدم الرد على هذا البريد الإلكتروني
+          </p>
+        </div>
       </div>
-      <p>هذا الرمز صالح حتى الساعة ${formattedTime}.</p>
-      <p>إذا لم تطلب هذا الرمز، يرجى تجاهل هذا البريد الإلكتروني وإبلاغ مسؤول النظام.</p>
-      <p style="margin-top: 30px; font-size: 12px; color: #777;">
-        هذا بريد إلكتروني تم إنشاؤه تلقائيًا، يرجى عدم الرد عليه.
-      </p>
     </div>
   `;
-  console.log(`[EmailService Index] Preparing to send OTP email to ${to}.`);
-  return sendEmail({ to, subject, text, html });
+
+  console.log(`[EmailService Index] 🔥 PREPARING ${logContext} EMAIL to ${to} with OTP: ${otp}`);
+  const result = await sendEmail({ to, subject, text, html });
+  console.log(`[EmailService Index] 🔥 ${logContext} EMAIL RESULT: ${result} for ${to}`);
+
+  if (result) {
+    return true;
+  }
+
+  // Fallback to SMTP if Resend fails
+  console.warn(`[EmailService Index] Resend failed for ${logContext} to ${to}. Attempting SMTP fallback...`);
+  try {
+    // Dynamically import SMTP service to avoid issues if not configured
+    const { sendEmailSMTP } = await import('../email/smtp');
+    if (sendEmailSMTP) {
+      console.log(`[EmailService Index] Calling sendEmailSMTP for ${logContext} to ${to}.`);
+      const smtpEmailSent = await sendEmailSMTP(to, subject, text, html);
+      console.log(`[EmailService Index] SMTP ${logContext} email to ${to} send status: ${smtpEmailSent}`);
+      return smtpEmailSent;
+    } else {
+      console.error(`[EmailService Index] SMTP service (sendEmailSMTP) not available for ${logContext} fallback.`);
+      return false;
+    }
+  } catch (smtpImportError) {
+    console.error(`[EmailService Index] Error importing or calling SMTP service for ${logContext} to ${to}:`, smtpImportError);
+    return false;
+  }
 };
 
 /**
@@ -322,7 +387,15 @@ export const generateAndSendOTP = functions.region("europe-west1").https.onCall(
     console.log(`[generateAndSendOTP Function] OTP stored in Firestore for user ${uid}.`);
 
     console.log(`[generateAndSendOTP Function] Attempting to send OTP email to ${userEmail}.`);
-    const emailSent = await sendOTPEmail(userEmail, otp, expiryTime); // Pass the actual OTP
+    const emailSent = await sendOTPEmail({
+      to: userEmail,
+      otp,
+      expiryTime,
+      subject: 'رمز التحقق لصفحة التشخيص - Tasks Intelligence',
+      title: 'رمز التحقق لصفحة التشخيص',
+      message: 'للوصول إلى صفحة التشخيص، يرجى استخدام رمز التحقق التالي:',
+      logContext: 'DEBUG'
+    });
 
     if (emailSent) {
       console.log(`[generateAndSendOTP Function] Successfully sent OTP email to ${userEmail}`);
