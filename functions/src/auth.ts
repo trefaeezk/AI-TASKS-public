@@ -61,21 +61,65 @@ export const verifyAccountType = createCallableFunction<VerifyAccountTypeRequest
             if (!isIndividual) {
                 // إذا لم يكن المستخدم فرديًا، نقوم بإنشاء وثيقة وتحديث custom claims
                 try {
-                    // تحديث custom claims للمستخدم
+                    // تحديث custom claims للمستخدم - النظام الموحد
                     await admin.auth().setCustomUserClaims(uid, {
                         ...customClaims,
-                        role: 'isIndependent',
-                        accountType: 'individual'
+                        role: 'isIndependent',             // ✅ الدور الصحيح
+                        accountType: 'individual',
+                        // الأدوار المنطقية - النظام الموحد
+                        isSystemOwner: false,
+                        isSystemAdmin: false,
+                        isOrgOwner: false,
+                        isOrgAdmin: false,
+                        isOrgSupervisor: false,
+                        isOrgEngineer: false,
+                        isOrgTechnician: false,
+                        isOrgAssistant: false,
+                        isIndependent: true,                // ✅ الدور المنطقي الصحيح
+                        // الصلاحيات المحسوبة
+                        canManageSystem: false,
+                        canManageUsers: false,
+                        canManageOrganization: false,
+                        canViewReports: false,
+                        canEditSettings: false
                     });
 
-                    // إنشاء وثيقة المستخدم الفردي
-                    await db.collection('individuals').doc(uid).set({
-                        name: userRecord.displayName || '',
+                    // إنشاء وثيقة المستخدم في مجموعة users الموحدة
+                    const userName = userRecord.displayName ||
+                                   (userRecord.email ? userRecord.email.split('@')[0] : '') ||
+                                   'مستخدم';
+
+                    await db.collection('users').doc(uid).set({
+                        uid: uid,
+                        name: userName,
                         email: userRecord.email || '',
+                        displayName: userName,
                         role: 'isIndependent',
                         accountType: 'individual',
+                        // الأدوار المنطقية - النظام الموحد
+                        isSystemOwner: false,
+                        isSystemAdmin: false,
+                        isOrgOwner: false,
+                        isOrgAdmin: false,
+                        isOrgSupervisor: false,
+                        isOrgEngineer: false,
+                        isOrgTechnician: false,
+                        isOrgAssistant: false,
+                        isIndependent: true,
+                        // الصلاحيات المحسوبة
+                        canManageSystem: false,
+                        canManageUsers: false,
+                        canManageOrganization: false,
+                        canViewReports: false,
+                        canEditSettings: false,
+                        // معلومات إضافية
+                        organizationId: null,
+                        departmentId: null,
+                        customPermissions: [],
+                        disabled: false,
                         createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                        createdBy: uid
                     });
 
                     console.log(`Created individual account for user ${uid}`);
@@ -296,7 +340,17 @@ export const updateAccountType = createCallableFunction<UpdateAccountTypeRequest
                     isOrgEngineer: false,
                     isOrgTechnician: false,
                     isOrgAssistant: false,
-                    isIndependent: true
+                    isIndependent: true,
+                    // الصلاحيات المحسوبة
+                    canManageSystem: false,
+                    canManageUsers: false,
+                    canManageOrganization: false,
+                    canViewReports: false,
+                    canEditSettings: false,
+                    // معلومات إضافية
+                    organizationId: null,
+                    departmentId: null,
+                    customPermissions: []
                 });
             } else {
                 // تحديث البيانات الموجودة

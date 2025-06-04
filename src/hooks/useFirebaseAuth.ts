@@ -143,11 +143,11 @@ export function useFirebaseAuth() {
             email: userCredential.user.email,
             displayName: name || userCredential.user.email?.split('@')[0] || 'مستخدم',
             accountType: 'individual',
-            role: 'isIndependent',
+            role: 'isIndependent',                  // ✅ الدور الصحيح
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
             disabled: false,
-            // النمط الجديد is* فقط
+            // النمط الجديد is* فقط - النظام الموحد
             isSystemOwner: false,
             isSystemAdmin: false,
             isOrgOwner: false,
@@ -156,7 +156,13 @@ export function useFirebaseAuth() {
             isOrgEngineer: false,
             isOrgTechnician: false,
             isOrgAssistant: false,
-            isIndependent: true,
+            isIndependent: true,                    // ✅ الدور المنطقي الصحيح
+            // الصلاحيات المحسوبة - النظام الموحد
+            canManageSystem: false,
+            canManageUsers: false,
+            canManageOrganization: false,
+            canViewReports: false,
+            canEditSettings: false,
             // معلومات المؤسسة (null للأفراد)
             organizationId: null,                   // ✅ معرف المؤسسة
             departmentId: null,                     // ✅ معرف القسم
@@ -314,11 +320,11 @@ export function useFirebaseAuth() {
             email: result.user.email,
             displayName: userName,
             accountType: 'individual',
-            role: 'isIndependent',
+            role: 'isIndependent',                  // ✅ الدور الصحيح
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
             disabled: false,
-            // النمط الجديد is* فقط
+            // النمط الجديد is* فقط - النظام الموحد
             isSystemOwner: false,
             isSystemAdmin: false,
             isOrgOwner: false,
@@ -327,7 +333,13 @@ export function useFirebaseAuth() {
             isOrgEngineer: false,
             isOrgTechnician: false,
             isOrgAssistant: false,
-            isIndependent: true,
+            isIndependent: true,                    // ✅ الدور المنطقي الصحيح
+            // الصلاحيات المحسوبة - النظام الموحد
+            canManageSystem: false,
+            canManageUsers: false,
+            canManageOrganization: false,
+            canViewReports: false,
+            canEditSettings: false,
             // معلومات المؤسسة (null للأفراد)
             organizationId: null,                   // ✅ معرف المؤسسة
             departmentId: null,                     // ✅ معرف القسم
