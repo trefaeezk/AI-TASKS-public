@@ -25,11 +25,18 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# local env files
+# Environment variables (حماية المعلومات السرية)
+.env
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
 .env.production.local
+functions/.env
+functions/.env.local
+functions/.env.development
+functions/.env.production
 
 # vercel
 .vercel
