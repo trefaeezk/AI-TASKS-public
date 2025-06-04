@@ -33,7 +33,149 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Translate } from '@/components/Translate';
 
 import { NotificationsPopover } from '@/components/notifications/NotificationsPopover';
+import { useTaskPageContext, type TaskCategory, categoryInfo, categoryOrder } from '@/context/TaskPageContext';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DateRangePicker } from '@/components/DateRangePicker';
+import { CategoryFilter } from '@/components/CategoryFilter';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { OkrTaskFilter } from '@/components/okr/OkrTaskFilter';
+import { cn } from '@/lib/utils';
+import { Filter } from 'lucide-react';
 // import Link from 'next/link'; // غير مستخدم حالياً
+
+// --- Task Tabs Header Component ---
+function TaskTabsHeader() {
+    const pathname = usePathname();
+    let taskPageContext: ReturnType<typeof useTaskPageContext> | null = null;
+    const { t } = useLanguage();
+    try {
+        taskPageContext = useTaskPageContext();
+    } catch (e) {
+        // Context not available
+    }
+
+    if ((pathname !== '/' && pathname !== '/org/tasks') || !taskPageContext) {
+        return null;
+    }
+
+    const { categorizedTasks, selectedCategory, setSelectedCategory, categoryInfo, categoryOrder } = taskPageContext;
+
+    return (
+         <div className="overflow-x-auto whitespace-nowrap px-4 pb-2 md:px-6">
+            <Tabs value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as TaskCategory)}>
+                <TabsList className="inline-flex h-auto flex-wrap justify-start gap-x-1 gap-y-1 p-1 bg-transparent border-none shadow-none">
+                    {categoryOrder.map(categoryKey => {
+                        const info = categoryInfo[categoryKey];
+                        const count = categorizedTasks[categoryKey]?.length ?? 0;
+                        if (!info) return null;
+                        const IconComponent = info.icon;
+                        return (
+                            <TabsTrigger
+                                key={categoryKey}
+                                value={categoryKey}
+                                className={cn(
+                                    "flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm h-auto min-h-[2rem]",
+                                    "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md",
+                                    "hover:bg-accent/80 hover:text-accent-foreground",
+                                    count === 0 && "opacity-60",
+                                    !categorizedTasks[categoryKey] && "opacity-50 cursor-not-allowed"
+                                )}
+                                disabled={!categorizedTasks[categoryKey]}
+                            >
+                               {IconComponent ? <IconComponent className="ml-1.5 h-3.5 w-3.5 flex-shrink-0" /> : null}
+                               <span><Translate text={`tasks.category.${categoryKey}`} defaultValue={info.title} /></span>
+                                <span className="ml-1.5 text-xs opacity-80">({count})</span>
+                            </TabsTrigger>
+                        );
+                    })}
+                </TabsList>
+            </Tabs>
+        </div>
+    );
+}
+
+// --- Filter Popover Component ---
+function FilterPopover({ isActive, userId, organizationId }: { isActive: boolean; userId: string; organizationId?: string }) {
+    const pathname = usePathname();
+    const { t } = useLanguage();
+    let taskPageContext: ReturnType<typeof useTaskPageContext> | null = null;
+
+    try {
+        taskPageContext = useTaskPageContext();
+    } catch (e) {
+        // Context not available
+    }
+
+    const isTasksPage = pathname === '/org/tasks';
+
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                        "h-8 w-8 relative",
+                        isActive && "text-primary hover:text-primary"
+                    )}
+                    aria-label={t('common.applyFilters')}
+                >
+                    <Filter className="h-4 w-4" />
+                    {isActive && (
+                        <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />
+                    )}
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-4" align="start">
+                <div className="space-y-4">
+                    <h4 className="font-medium leading-none">{t('common.filters')}</h4>
+
+                    {isTasksPage && taskPageContext && (
+                        <>
+                            <CategoryFilter
+                                userId={userId}
+                                selectedCategory={taskPageContext.categoryFilter}
+                                onSelectCategory={taskPageContext.setCategoryFilter}
+                            />
+                            <DateRangePicker
+                                dateRange={taskPageContext.dateFilter}
+                                setDateRange={taskPageContext.setDateFilter}
+                            />
+                            <OkrTaskFilter
+                                value={taskPageContext.okrFilter}
+                                onChange={taskPageContext.setOkrFilter}
+                            />
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                    taskPageContext.setCategoryFilter(null);
+                                    const now = new Date();
+                                    const thirtyDaysAgo = new Date();
+                                    const thirtyDaysLater = new Date();
+                                    thirtyDaysAgo.setDate(now.getDate() - 30);
+                                    thirtyDaysLater.setDate(now.getDate() + 30);
+                                    taskPageContext.setDateFilter({ startDate: thirtyDaysAgo, endDate: thirtyDaysLater });
+                                    taskPageContext.setOkrFilter(false);
+                                }}
+                                disabled={!isActive}
+                            >
+                                {t('common.resetFilters')}
+                            </Button>
+                        </>
+                    )}
+
+                    {!isTasksPage && (
+                        <p className="text-sm text-muted-foreground">{t('common.noFiltersAvailable')}</p>
+                    )}
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
+}
 
 export function OrganizationLayoutContent({ children }: { children: ReactNode }) {
   const { user, userClaims } = useAuth();
@@ -42,6 +184,19 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const { isMobile, openMobile, setOpenMobile } = useSidebar();
+
+  // Get task page context for filters and tabs
+  const taskPageContext = useTaskPageContext();
+
+  // Check if we're on tasks page
+  const isTasksPage = pathname === '/org/tasks';
+
+  // Check if filters are active
+  let isFilterActive = false;
+  if (isTasksPage && taskPageContext) {
+    const { categoryFilter, dateFilter, okrFilter } = taskPageContext;
+    isFilterActive = !!categoryFilter || !!dateFilter.startDate || !!dateFilter.endDate || !!okrFilter;
+  }
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -173,6 +328,13 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
 
           <div className="flex items-center gap-2 flex-wrap">
             <LanguageSwitcher variant="default" size="sm" />
+            {isTasksPage && taskPageContext && (
+              <FilterPopover
+                isActive={isFilterActive}
+                userId={user?.uid || ''}
+                organizationId={userClaims?.organizationId}
+              />
+            )}
             {pathname === '/org/tasks' && user && (
               <AddTaskSheet user={user} />
             )}
@@ -195,6 +357,9 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
             )}
           </div>
         </header>
+
+        {/* Task Tabs Header for tasks page */}
+        {isTasksPage && taskPageContext && <TaskTabsHeader />}
 
         <main className="flex-1 overflow-auto p-4 md:p-6">
           {children}

@@ -62,7 +62,7 @@ function TaskTabsHeader() {
         // Context not available
     }
 
-    if (pathname !== '/' || !taskPageContext) {
+    if ((pathname !== '/' && pathname !== '/org/tasks') || !taskPageContext) {
         return null;
     }
 
@@ -117,7 +117,7 @@ function FilterPopover() {
 
     if (!user) return null;
 
-    const isTasksPage = pathname === '/';
+    const isTasksPage = pathname === '/' || pathname === '/org/tasks';
     const isKpiPage = pathname === '/kpi';
     const isReportsPage = pathname.startsWith('/reports');
     const isDataManagementPage = pathname.startsWith('/data') || pathname.startsWith('/admin/data-management');
@@ -521,7 +521,7 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                          <h2 className="text-sm font-semibold text-primary md:hidden"><Translate text="general.appName" /></h2>
                     </div>
                 </div>
-                 {pathname === '/' && taskPageContextForAppLayout && <TaskTabsHeader />}
+                 {(pathname === '/' || pathname === '/org/tasks') && taskPageContextForAppLayout && <TaskTabsHeader />}
             </header>
             <main className="flex-1 overflow-y-auto p-4 md:p-6">
                 {children}

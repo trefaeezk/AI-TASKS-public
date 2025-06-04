@@ -375,7 +375,7 @@ export default function InvitationPage() {
           </div>
 
           <Button
-            onClick={() => router.push('/auth/login')}
+            onClick={() => router.push('/login')}
             className="w-full bg-green-600 hover:bg-green-700"
           >
             الذهاب لتسجيل الدخول الآن
