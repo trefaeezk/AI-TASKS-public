@@ -2,7 +2,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import {
   Home, FileText, Settings, Menu, UserCircle,
   BarChart3, Users, Database, Building, FolderTree, ListTodo,
@@ -43,8 +43,31 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { OkrTaskFilter } from '@/components/okr/OkrTaskFilter';
 import { cn } from '@/lib/utils';
-import { Filter } from 'lucide-react';
+import { Filter, ChevronDown } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 // import Link from 'next/link'; // غير مستخدم حالياً
+
+// Task Type Filter Context
+type TaskTypeFilter = 'organization' | 'department' | 'individual';
+
+interface TaskTypeFilterContextType {
+  taskTypeFilter: TaskTypeFilter;
+  setTaskTypeFilter: (filter: TaskTypeFilter) => void;
+}
+
+const TaskTypeFilterContext = createContext<TaskTypeFilterContextType | null>(null);
+
+export const useTaskTypeFilter = () => {
+  const context = useContext(TaskTypeFilterContext);
+  if (!context) {
+    // Return default values if context is not available
+    return {
+      taskTypeFilter: 'individual' as TaskTypeFilter,
+      setTaskTypeFilter: () => {}
+    };
+  }
+  return context;
+};
 
 // --- Task Tabs Header Component ---
 function TaskTabsHeader() {
@@ -179,8 +202,11 @@ function FilterPopover({ isActive, userId, organizationId }: { isActive: boolean
 
 export function OrganizationLayoutContent({ children }: { children: ReactNode }) {
   const { user, userClaims } = useAuth();
-  const { t, direction } = useLanguage();
+  const { t, direction, language } = useLanguage();
   const pathname = usePathname();
+
+  // تحديد ما إذا كانت اللغة عربية
+  const isRTL = language === 'ar' || direction === 'rtl';
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const { isMobile, openMobile, setOpenMobile } = useSidebar();
@@ -190,6 +216,19 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
 
   // Check if we're on tasks page
   const isTasksPage = pathname === '/org/tasks';
+
+  // Task type filter state - default based on user role
+  const getDefaultTaskType = () => {
+    if (userClaims?.isOrgOwner || userClaims?.isOrgAdmin) {
+      return 'organization'; // الإدارة العليا تبدأ بمهام المؤسسة
+    } else if (userClaims?.isOrgSupervisor) {
+      return 'department'; // المشرفين يبدؤون بمهام القسم
+    } else {
+      return 'individual'; // باقي الأدوار تبدأ بالمهام الفردية
+    }
+  };
+
+  const [taskTypeFilter, setTaskTypeFilter] = useState<'organization' | 'department' | 'individual'>(getDefaultTaskType());
 
   // Check if filters are active
   let isFilterActive = false;
@@ -210,7 +249,8 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
   const isAdmin = userClaims?.isOrgAdmin === true;
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    <TaskTypeFilterContext.Provider value={{ taskTypeFilter, setTaskTypeFilter }}>
+      <div className="flex min-h-screen bg-background text-foreground">
       <Sidebar
         side="right" // For RTL
         collapsible="icon"
@@ -293,18 +333,60 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
           </SidebarMenu>
         </SidebarContent>
 
-        <SidebarFooter className="p-4">
-          <div className="flex flex-col space-y-2 group-data-[collapsible=icon]:hidden">
-            <div className="text-sm text-muted-foreground">
-              {format(currentDate, 'EEEE, d MMMM yyyy', { locale: ar })}
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <UserCircle className="h-5 w-5 ml-2 text-muted-foreground" />
-                <span className="text-sm truncate max-w-[120px]">{user?.displayName || user?.email}</span>
+        <SidebarFooter className="p-3 border-t mt-auto">
+          <div className="flex flex-col justify-center space-y-2 group-data-[collapsible=icon]:hidden">
+            {/* الاسم والأيقونة */}
+            <div className="flex items-center">
+              <UserCircle className="h-4 w-4 text-primary flex-shrink-0 ml-2" />
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-medium truncate" title={user?.displayName || user?.email}>
+                  {user?.displayName || user?.email?.split('@')[0] || 'مستخدم'}
+                </span>
+                {user?.displayName && user?.email && (
+                  <span className="text-[10px] text-muted-foreground truncate" title={user.email}>
+                    {user.email}
+                  </span>
+                )}
               </div>
+            </div>
+
+            {/* الدور */}
+            <div className="flex">
+              <Badge
+                variant={
+                  userClaims?.isOrgOwner || userClaims?.isOrgAdmin ? "default" :
+                  userClaims?.isOrgSupervisor ? "secondary" : "outline"
+                }
+                className="text-[10px] px-1.5 py-0.5 h-auto"
+              >
+                {userClaims?.isOrgOwner && <Translate text="roles.isOrgOwner" defaultValue="مالك المؤسسة" />}
+                {userClaims?.isOrgAdmin && <Translate text="roles.isOrgAdmin" defaultValue="أدمن المؤسسة" />}
+                {userClaims?.isOrgSupervisor && <Translate text="roles.isOrgSupervisor" defaultValue="مشرف" />}
+                {userClaims?.isOrgEngineer && <Translate text="roles.isOrgEngineer" defaultValue="مهندس" />}
+                {userClaims?.isOrgTechnician && <Translate text="roles.isOrgTechnician" defaultValue="فني" />}
+                {userClaims?.isOrgAssistant && <Translate text="roles.isOrgAssistant" defaultValue="مساعد فني" />}
+                {!userClaims?.isOrgOwner && !userClaims?.isOrgAdmin && !userClaims?.isOrgSupervisor &&
+                 !userClaims?.isOrgEngineer && !userClaims?.isOrgTechnician && !userClaims?.isOrgAssistant && (
+                  <Translate text="roles.member" defaultValue="عضو" />
+                )}
+              </Badge>
+            </div>
+
+            {/* زر تسجيل الخروج */}
+            <div className="flex">
               <SignOutButton />
             </div>
+
+            {/* التاريخ */}
+            <div className="text-[10px] text-muted-foreground text-center border-t pt-1">
+              {format(currentDate, 'EEEE، d MMMM yyyy', { locale: ar })}
+            </div>
+          </div>
+
+          {/* عرض مبسط عند طي الشريط الجانبي */}
+          <div className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:space-y-2 hidden">
+            <UserCircle className="h-6 w-6 text-primary" />
+            <SignOutButton />
           </div>
         </SidebarFooter>
       </Sidebar>
@@ -329,11 +411,58 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
           <div className="flex items-center gap-2 flex-wrap">
             <LanguageSwitcher variant="default" size="sm" />
             {isTasksPage && taskPageContext && (
-              <FilterPopover
-                isActive={isFilterActive}
-                userId={user?.uid || ''}
-                organizationId={userClaims?.organizationId}
-              />
+              <>
+                {/* Task Type Filter Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs"
+                    >
+                      {taskTypeFilter === 'organization' && <Translate text="tasks.organizationTasks" defaultValue="مهام المؤسسة" />}
+                      {taskTypeFilter === 'department' && <Translate text="tasks.departmentTasks" defaultValue="مهام القسم" />}
+                      {taskTypeFilter === 'individual' && <Translate text="tasks.individualTasks" defaultValue="مهام فردية" />}
+                      <ChevronDown className="mr-1 h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    {/* مهام المؤسسة - للإدارة العليا فقط */}
+                    {(userClaims?.isOrgOwner || userClaims?.isOrgAdmin) && (
+                      <DropdownMenuItem
+                        onClick={() => setTaskTypeFilter('organization')}
+                        className={taskTypeFilter === 'organization' ? 'bg-accent' : ''}
+                      >
+                        <Translate text="tasks.organizationTasks" defaultValue="مهام المؤسسة" />
+                      </DropdownMenuItem>
+                    )}
+
+                    {/* مهام القسم - للمشرفين والإدارة */}
+                    {(userClaims?.isOrgOwner || userClaims?.isOrgAdmin || userClaims?.isOrgSupervisor) && (
+                      <DropdownMenuItem
+                        onClick={() => setTaskTypeFilter('department')}
+                        className={taskTypeFilter === 'department' ? 'bg-accent' : ''}
+                      >
+                        <Translate text="tasks.departmentTasks" defaultValue="مهام القسم" />
+                      </DropdownMenuItem>
+                    )}
+
+                    {/* المهام الفردية - للجميع */}
+                    <DropdownMenuItem
+                      onClick={() => setTaskTypeFilter('individual')}
+                      className={taskTypeFilter === 'individual' ? 'bg-accent' : ''}
+                    >
+                      <Translate text="tasks.individualTasks" defaultValue="مهام فردية" />
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <FilterPopover
+                  isActive={isFilterActive}
+                  userId={user?.uid || ''}
+                  organizationId={userClaims?.organizationId}
+                />
+              </>
             )}
             {pathname === '/org/tasks' && user && (
               <AddTaskSheet user={user} />
@@ -365,6 +494,7 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
           {children}
         </main>
       </SidebarInset>
-    </div>
+      </div>
+    </TaskTypeFilterContext.Provider>
   );
 }

@@ -32,6 +32,7 @@ import {
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { useTaskCategories } from '@/hooks/useTaskCategories';
+import { useTaskTypeFilter } from '../../OrganizationLayoutContent';
 
 export default function OrganizationTasksPage() {
   const { user, userClaims } = useAuth();
@@ -47,6 +48,9 @@ export default function OrganizationTasksPage() {
 
   // استخدام سياق صفحة المهام
   const taskPageContext = useTaskPageContext();
+
+  // استخدام فلتر نوع المهام
+  const { taskTypeFilter } = useTaskTypeFilter();
 
   // الحصول على البيانات وحالة التصفية من السياق بأمان
   const {
@@ -103,7 +107,7 @@ export default function OrganizationTasksPage() {
     // جرب استعلام بسيط أولاً لمعرفة ما إذا كانت هناك مهام
     const simpleQuery = query(tasksColRef, where('organizationId', '==', organizationId));
 
-    console.log('Querying tasks with organizationId:', organizationId);
+    console.log('Querying tasks with organizationId:', organizationId, 'taskTypeFilter:', taskTypeFilter);
 
     // إنشاء مستمع للتغييرات في المهام
     const unsubscribe = onSnapshot(
@@ -115,6 +119,44 @@ export default function OrganizationTasksPage() {
         snapshot.forEach((doc) => {
           console.log('Processing doc:', doc.id, doc.data());
           const data = doc.data() as TaskFirestoreData;
+
+          // تصفية المهام حسب النوع والصلاحيات
+          const shouldIncludeTask = () => {
+            switch (taskTypeFilter) {
+              case 'organization':
+                // مهام المؤسسة - للإدارة العليا فقط
+                if (!userClaims?.isOrgOwner && !userClaims?.isOrgAdmin) return false;
+                return data.taskContext === 'organization' || (!data.taskContext && !data.departmentId && !data.assignedToUserId);
+
+              case 'department':
+                // مهام القسم - للمشرفين والإدارة
+                if (!userClaims?.isOrgOwner && !userClaims?.isOrgAdmin && !userClaims?.isOrgSupervisor) return false;
+                return data.taskContext === 'department' || (data.departmentId && data.departmentId === userClaims?.departmentId);
+
+              case 'individual':
+                // المهام الفردية - المهام المسندة للمستخدم أو التي أنشأها
+                return data.taskContext === 'individual' ||
+                       data.assignedToUserId === user?.uid ||
+                       data.userId === user?.uid ||
+                       data.createdBy === user?.uid;
+
+              default:
+                return false;
+            }
+          };
+
+          if (!shouldIncludeTask()) {
+            console.log(`Skipping task ${doc.id} - doesn't match filter ${taskTypeFilter}`, {
+              taskContext: data.taskContext,
+              departmentId: data.departmentId,
+              assignedToUserId: data.assignedToUserId,
+              userId: data.userId,
+              createdBy: data.createdBy,
+              userDepartmentId: userClaims?.departmentId,
+              currentUserId: user?.uid
+            });
+            return; // تخطي هذه المهمة
+          }
 
           // تحويل البيانات من Firestore إلى كائن المهمة
           const task: TaskType = {
@@ -185,7 +227,7 @@ export default function OrganizationTasksPage() {
       unsubscribe();
       firestoreListenerManager.removeListener(`org-tasks-${organizationId}`);
     };
-  }, [user, organizationId, setTasksDirectly, toast]);
+  }, [user, organizationId, setTasksDirectly, toast, taskTypeFilter, userClaims]);
 
   // معالجة حدث انتهاء السحب
   const handleDragEnd = useCallback((event: DragEndEvent) => {
