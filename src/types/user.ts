@@ -1,3 +1,4 @@
+
 // src/types/user.ts
 import { PermissionKey, UserRole } from './roles';
 import { SystemType } from './system';
@@ -107,3 +108,6 @@ export interface CreateUserInput {
   organizationId?: string; // معرف المؤسسة (إذا كان نوع الحساب مؤسسة)
   departmentId?: string; // معرف القسم (إذا كان نوع الحساب مؤسسة)
 }
+
+
+    

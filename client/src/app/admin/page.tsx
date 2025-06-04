@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -92,14 +93,12 @@ export default function AdminDashboardPage() {
          const fetchedUsers: ManagedUser[] = usersData.map((u: any) => ({
             uid: u.uid,
             email: u.email ?? `مستخدم (${u.uid.substring(0, 6)}...)`,
-            // Check customClaims for admin role (assuming claim is { org_admin: true })
-             // Important: Also include name if available from Firestore/Auth
             name: u.displayName ?? u.name ?? 'غير متوفر', // Prioritize displayName, fallback to 'name' if stored
             role: u.role || u.customClaims?.role || 'isIndependent', // النظام الجديد الموحد
             accountType: u.accountType || u.customClaims?.accountType || 'individual',
             organizationId: u.organizationId || u.customClaims?.organizationId,
             departmentId: u.departmentId || u.customClaims?.departmentId,
-            isAdmin: !!(u.customClaims?.isSystemOwner || u.customClaims?.isSystemAdmin || u.customClaims?.isOrgOwner),
+            hasAdminAccess: !!(u.customClaims?.isSystemOwner || u.customClaims?.isSystemAdmin || u.customClaims?.isOrgOwner || u.customClaims?.isOrgAdmin),
             disabled: u.disabled ?? false,
             customPermissions: u.customPermissions || [], // Add customPermissions property
             createdAt: u.createdAt, // Add createdAt property
@@ -174,23 +173,23 @@ export default function AdminDashboardPage() {
   };
 
   // --- Toggle Admin Status using Cloud Function ---
-  const toggleAdminStatus = async (userId: string, currentIsAdmin: boolean) => {
+  const toggleAdminStatus = async (userId: string, currentHasAdminAccess: boolean) => {
      if (!functionsInstance) {
         toast({ title: 'خطأ', description: "Firebase Functions ليست مهيأة.", variant: 'destructive' });
         return;
     }
-    if (userId === user?.uid && currentIsAdmin) {
+    if (userId === user?.uid && currentHasAdminAccess) {
       toast({ title: 'لا يمكن إزالة صلاحية المسؤول عن نفسك', variant: 'destructive' });
       return;
     }
 
     setActionLoadingState(userId, 'org_admin', true);
     const functionName = 'setAdminRole';
-    console.log(`[AdminPage Client] Calling Cloud Function '${functionName}' for user ${userId} to ${!currentIsAdmin}...`);
+    console.log(`[AdminPage Client] Calling Cloud Function '${functionName}' for user ${userId} to ${!currentHasAdminAccess}...`);
 
     try {
         const setAdminRoleFn = httpsCallable<{ uid: string; isAdmin: boolean }, { result?: string; error?: string }>(functionsInstance, functionName);
-        const result = await setAdminRoleFn({ uid: userId, isAdmin: !currentIsAdmin });
+        const result = await setAdminRoleFn({ uid: userId, isAdmin: !currentHasAdminAccess });
         console.log(`[AdminPage Client] setAdminRole function result for ${userId}:`, result?.data);
 
         if (result?.data?.error) {
@@ -199,7 +198,7 @@ export default function AdminDashboardPage() {
 
         toast({
             title: 'تم تحديث صلاحية المسؤول',
-            description: `تم ${currentIsAdmin ? 'إلغاء' : 'منح'} صلاحية المسؤول للمستخدم.`,
+            description: `تم ${currentHasAdminAccess ? 'إلغاء' : 'منح'} صلاحية المسؤول للمستخدم.`,
         });
         console.log(`[AdminPage Client] Successfully toggled admin status for ${userId}. Refetching users...`);
         fetchUsers(); // Refetch user list to get updated status
@@ -395,8 +394,8 @@ export default function AdminDashboardPage() {
                      <p className="text-sm font-medium text-foreground truncate">{u.name ?? u.email ?? `مستخدم (${u.uid.substring(0, 8)}...)`}</p>
                      <p className="text-xs text-muted-foreground truncate">{u.email ?? 'لا يوجد بريد إلكتروني'}</p> {/* Display email separately */}
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant={u.isAdmin ? "default" : "secondary"} className="text-xs py-0.5 px-1.5 h-auto">
-                        {u.isAdmin ? 'مسؤول' : 'مستخدم'}
+                      <Badge variant={u.hasAdminAccess ? "default" : "secondary"} className="text-xs py-0.5 px-1.5 h-auto">
+                        {u.hasAdminAccess ? 'مسؤول' : 'مستخدم'}
                       </Badge>
                       <Badge variant={u.disabled ? "destructive" : "outline"} className="text-xs py-0.5 px-1.5 h-auto">
                         {u.disabled ? 'معطل' : 'نشط'}
@@ -408,16 +407,16 @@ export default function AdminDashboardPage() {
                   <div className="flex items-center gap-4 flex-wrap sm:flex-nowrap w-full sm:w-auto justify-end">
                     {/* Toggle Admin */}
                     <Button
-                      variant={u.isAdmin ? "destructive" : "outline"}
+                      variant={u.hasAdminAccess ? "destructive" : "outline"}
                       size="sm"
-                      onClick={() => toggleAdminStatus(u.uid, u.isAdmin)}
+                      onClick={() => toggleAdminStatus(u.uid, u.hasAdminAccess)}
                       disabled={actionLoading[u.uid]?.admin || loading || u.uid === user?.uid}
                       className="w-full sm:w-32 flex items-center justify-center"
-                      aria-label={u.isAdmin ? 'إزالة صلاحية المسؤول' : 'منح صلاحية المسؤول'}
+                      aria-label={u.hasAdminAccess ? 'إزالة صلاحية المسؤول' : 'منح صلاحية المسؤول'}
                     >
                       {actionLoading[u.uid]?.admin ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : u.isAdmin ? (
+                      ) : u.hasAdminAccess ? (
                         <>
                           <ShieldOff className="ml-1.5 h-4 w-4" />
                           إزالة المسؤول
@@ -461,3 +460,6 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+
+
+    
