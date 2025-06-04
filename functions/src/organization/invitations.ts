@@ -69,7 +69,7 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
         if (!canInvite) {
             throw new functions.https.HttpsError(
                 'permission-denied',
-                'ليس لديك صلاحيات لدعوة مستخدمين إلى هذه المؤسسة. يجب أن تكون مسؤولاً أو مشرفاً أو مهندساً.'
+                'ليس لديك صلاحيات لدعوة مستخدمين إلى هذه المؤسسة. يجب أن تكون مالك المؤسسة أو مسؤولاً أو مشرفاً أو مهندساً.'
             );
         }
 
@@ -523,3 +523,6 @@ export const rejectOrganizationInvitation = createCallableFunction<RejectOrganiz
         );
     }
 });
+
+
+    

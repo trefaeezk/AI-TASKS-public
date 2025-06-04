@@ -182,7 +182,7 @@ export const approveOrganizationRequest = createCallableFunction<ApproveOrganiza
 
         // إضافة المستخدم كمالك للمؤسسة (الدور الجديد)
         await db.collection('organizations').doc(organizationId).collection('members').doc(requestData.userId).set({
-            role: 'org_owner',
+            role: 'isOrgOwner', // Corrected to isOrgOwner
             joinedAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
@@ -400,3 +400,6 @@ export const rejectOrganizationRequest = createCallableFunction<RejectOrganizati
         );
     }
 });
+
+
+    

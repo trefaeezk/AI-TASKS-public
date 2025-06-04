@@ -102,9 +102,9 @@ export const createOrganization = createCallableFunction<CreateOrganizationReque
             createdBy: uid
         });
 
-        // إضافة المستخدم الحالي كمسؤول في المؤسسة
+        // إضافة المستخدم الحالي كمالك في المؤسسة
         await db.collection('organizations').doc(orgId).collection('members').doc(uid).set({
-            role: 'isOrgAdmin',
+            role: 'isOrgOwner', // Corrected to isOrgOwner
             joinedAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
@@ -500,3 +500,6 @@ export const getOrganizationMembers = createCallableFunction<GetOrganizationMemb
     }
 });
 
+
+
+    
