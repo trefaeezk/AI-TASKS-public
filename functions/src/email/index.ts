@@ -1,3 +1,4 @@
+
 import { Resend } from 'resend';
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
@@ -336,8 +337,8 @@ export const generateAndSendOTP = functions.region("europe-west1").https.onCall(
   const uid = context.auth.uid;
   const userEmail = context.auth.token.email;
 
-  // التحقق من أن المستخدم هو مالك التطبيق
-  const isOwner = context.auth.token.isSystemOwner === true; // Use the new claim
+  // التحقق من أن المستخدم هو مالك النظام (الأدوار الجديدة فقط)
+  const isOwner = context.auth.token.isSystemOwner === true;
 
   if (!isOwner) {
     throw new functions.https.HttpsError(
@@ -448,8 +449,8 @@ export const verifyOTP = functions.region("europe-west1").https.onCall(async (da
     );
   }
 
-  // التحقق من أن المستخدم هو مالك التطبيق
-  const isOwner = context.auth.token.isSystemOwner === true; // Use the new claim
+  // التحقق من أن المستخدم مالك النظام (الأدوار الجديدة فقط)
+  const isOwner = context.auth.token.isSystemOwner === true;
 
   if (!isOwner) {
     throw new functions.https.HttpsError(
@@ -513,3 +514,5 @@ export const verifyOTP = functions.region("europe-west1").https.onCall(async (da
     );
   }
 });
+
+    
