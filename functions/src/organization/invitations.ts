@@ -165,10 +165,10 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
         try {
             const { sendOrganizationInvitationEmail } = await import('../email/index');
             
-            // قراءة رابط التطبيق الأساسي من متغيرات البيئة
+            // قراءة رابط التطبيق الأساسي من متغيرات البيئة أو استخدام قيمة افتراضية
             const appBaseUrl = process.env.APP_BASE_URL || functions.config().app?.base_url || 'https://tasks-intelligence.web.app';
             if (!process.env.APP_BASE_URL && !functions.config().app?.base_url) {
-                console.warn(`[${functionName}] ⚠️ APP_BASE_URL environment variable is not set. Using default: https://tasks-intelligence.web.app`);
+                console.warn(`[${functionName}] ⚠️ تحذير: متغير البيئة APP_BASE_URL (أو functions.config().app.base_url) غير معين. يتم استخدام القيمة الافتراضية: 'https://tasks-intelligence.web.app'. يرجى تعيين هذا المتغير في ملف .env الخاص بالدوال أو في تكوين دوال Firebase لضمان صحة روابط الدعوات.`);
             }
             console.log(`[${functionName}] Using APP_BASE_URL: ${appBaseUrl}`);
 
@@ -583,3 +583,5 @@ export const rejectOrganizationInvitation = createCallableFunction<RejectOrganiz
     }
 });
 
+
+    
