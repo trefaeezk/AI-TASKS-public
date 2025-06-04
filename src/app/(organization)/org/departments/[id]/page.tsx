@@ -1,10 +1,11 @@
+
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // Added useCallback
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useParams, useRouter } from 'next/navigation';
-import { FolderTree, Users, Calendar, BarChart3, ArrowLeft, Building2 } from 'lucide-react';
+import { FolderTree, Users, Calendar, BarChart3, ArrowLeft, Building2, PlusCircle } from 'lucide-react'; // Added PlusCircle
 import { db } from '@/config/firebase';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import { AssignMemberToDepartmentDialog } from '@/components/organization/AssignMemberToDepartmentDialog'; // Import the new dialog
 
 interface Department {
   id: string;
@@ -25,6 +27,7 @@ interface Member {
   uid: string;
   email: string;
   displayName?: string;
+  name?: string; // Add name as it's used
   role: string;
   departmentId?: string;
 }
@@ -48,126 +51,102 @@ export default function DepartmentDetailsPage() {
     },
     meetings: 0
   });
+  const [isAssignMemberDialogOpen, setIsAssignMemberDialogOpen] = useState(false); // State for new dialog
 
   const organizationId = userClaims?.organizationId;
-  // استخدام أسماء الحقول الصحيحة من قاعدة البيانات
   const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOwner === true;
   const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isAdmin === true;
-  const isEngineer = userClaims?.engineer === true;
-  const isSupervisor = userClaims?.supervisor === true;
+  const canManageMembers = isOwner || isAdmin; // Permission to manage members
 
-  // تحميل معلومات القسم
-  useEffect(() => {
+  // Renamed and memoized for stability
+  const refreshDepartmentData = useCallback(async () => {
     if (!user || !organizationId || !departmentId) {
       setLoading(false);
       return;
     }
+    setLoading(true); // Set loading true when fetching data
+    try {
+      const departmentDoc = await getDoc(doc(db, 'organizations', organizationId, 'departments', departmentId));
 
-    const fetchDepartmentData = async () => {
-      try {
-        // جلب معلومات القسم من المسار الموحد
-        const departmentDoc = await getDoc(doc(db, 'organizations', organizationId, 'departments', departmentId));
-
-        if (!departmentDoc.exists()) {
-          toast({
-            title: 'خطأ',
-            description: 'القسم غير موجود',
-            variant: 'destructive',
-          });
-          router.push('/org/departments');
-          return;
-        }
-
-        const departmentData = departmentDoc.data() as Department;
-
-        // لا حاجة للتحقق من organizationId لأننا نجلب من مسار المؤسسة مباشرة
-
-        setDepartment({
-          id: departmentDoc.id,
-          ...departmentData,
-        });
-
-        // جلب أعضاء القسم
-        const membersQuery = query(
-          collection(db, 'organizations', organizationId, 'members'),
-          where('departmentId', '==', departmentId)
-        );
-
-        const membersSnapshot = await getDocs(membersQuery);
-        const membersList: Member[] = [];
-
-        membersSnapshot.forEach((doc) => {
-          membersList.push({
-            uid: doc.id,
-            ...doc.data() as Member,
-          });
-        });
-
-        setMembers(membersList);
-
-        // جلب إحصائيات المهام
-        const tasksQuery = query(
-          collection(db, 'tasks'),
-          where('organizationId', '==', organizationId),
-          where('departmentId', '==', departmentId)
-        );
-
-        const tasksSnapshot = await getDocs(tasksQuery);
-        let totalTasks = 0;
-        let completedTasks = 0;
-        let pendingTasks = 0;
-        let overdueTasks = 0;
-
-        const now = new Date();
-
-        tasksSnapshot.forEach((doc) => {
-          const taskData = doc.data();
-          totalTasks++;
-
-          if (taskData.status === 'completed') {
-            completedTasks++;
-          } else if (taskData.status === 'pending') {
-            pendingTasks++;
-
-            // التحقق من المهام المتأخرة
-            if (taskData.dueDate && taskData.dueDate.toDate() < now) {
-              overdueTasks++;
-            }
-          }
-        });
-
-        // جلب عدد الاجتماعات
-        const meetingsQuery = query(
-          collection(db, 'meetings'),
-          where('organizationId', '==', organizationId),
-          where('departmentId', '==', departmentId)
-        );
-
-        const meetingsSnapshot = await getDocs(meetingsQuery);
-
-        setStats({
-          tasks: {
-            total: totalTasks,
-            completed: completedTasks,
-            pending: pendingTasks,
-            overdue: overdueTasks
-          },
-          meetings: meetingsSnapshot.size
-        });
-      } catch (error) {
-        console.error('Error fetching department data:', error);
+      if (!departmentDoc.exists()) {
         toast({
           title: 'خطأ',
-          description: 'حدث خطأ أثناء تحميل معلومات القسم',
+          description: 'القسم غير موجود',
           variant: 'destructive',
         });
-      } finally {
-        setLoading(false);
+        router.push('/org/departments');
+        return;
       }
-    };
 
-    fetchDepartmentData();
+      const departmentData = departmentDoc.data() as Department;
+      setDepartment({ id: departmentDoc.id, ...departmentData });
+
+      const membersQuery = query(
+        collection(db, 'organizations', organizationId, 'members'),
+        where('departmentId', '==', departmentId)
+      );
+      const membersSnapshot = await getDocs(membersQuery);
+      const membersList: Member[] = [];
+      for (const memberDoc of membersSnapshot.docs) {
+        const memberData = memberDoc.data();
+        const userDetailsDoc = await getDoc(doc(db, 'users', memberDoc.id));
+        const userName = userDetailsDoc.exists() ? userDetailsDoc.data().name || userDetailsDoc.data().displayName : 'مستخدم غير معروف';
+        membersList.push({
+          uid: memberDoc.id,
+          email: memberData.email || 'N/A',
+          name: userName,
+          displayName: userName,
+          role: memberData.role || 'N/A',
+          departmentId: memberData.departmentId,
+        });
+      }
+      setMembers(membersList);
+
+      const tasksQuery = query(
+        collection(db, 'tasks'),
+        where('organizationId', '==', organizationId),
+        where('departmentId', '==', departmentId)
+      );
+      const tasksSnapshot = await getDocs(tasksQuery);
+      let totalTasks = 0;
+      let completedTasks = 0;
+      let pendingTasks = 0;
+      let overdueTasks = 0;
+      const now = new Date();
+      tasksSnapshot.forEach((doc) => {
+        const taskData = doc.data();
+        totalTasks++;
+        if (taskData.status === 'completed') completedTasks++;
+        else if (taskData.status === 'pending') pendingTasks++;
+        if (taskData.status !== 'completed' && taskData.dueDate && taskData.dueDate.toDate() < now) overdueTasks++;
+      });
+
+      const meetingsQuery = query(
+        collection(db, 'meetings'),
+        where('organizationId', '==', organizationId),
+        where('departmentId', '==', departmentId)
+      );
+      const meetingsSnapshot = await getDocs(meetingsQuery);
+
+      setStats({
+        tasks: { total: totalTasks, completed: completedTasks, pending: pendingTasks, overdue: overdueTasks },
+        meetings: meetingsSnapshot.size
+      });
+    } catch (error) {
+      console.error('Error fetching department data:', error);
+      toast({
+        title: 'خطأ',
+        description: 'حدث خطأ أثناء تحميل معلومات القسم',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   }, [user, organizationId, departmentId, router, toast]);
+
+  useEffect(() => {
+    refreshDepartmentData();
+  }, [refreshDepartmentData]); // Run the memoized function
 
   if (loading) {
     return (
@@ -236,7 +215,7 @@ export default function DepartmentDetailsPage() {
           </CardContent>
           <CardFooter>
             <Button asChild variant="ghost" className="w-full">
-              <Link href="/org/members">عرض الأعضاء</Link>
+              <Link href={`/org/members?department=${departmentId}`}>عرض الأعضاء</Link>
             </Button>
           </CardFooter>
         </Card>
@@ -278,7 +257,7 @@ export default function DepartmentDetailsPage() {
           </CardContent>
           <CardFooter>
             <Button asChild variant="ghost" className="w-full">
-              <Link href="/org/kpi">عرض مؤشرات الأداء</Link>
+              <Link href={`/org/kpi?department=${departmentId}`}>عرض مؤشرات الأداء</Link>
             </Button>
           </CardFooter>
         </Card>
@@ -320,7 +299,7 @@ export default function DepartmentDetailsPage() {
               </div>
               <div className="mt-6 text-center">
                 <Button asChild>
-                  <Link href="/org/tasks">عرض مهام القسم</Link>
+                  <Link href={`/org/tasks?department=${departmentId}`}>عرض مهام القسم</Link>
                 </Button>
               </div>
             </CardContent>
@@ -343,14 +322,9 @@ export default function DepartmentDetailsPage() {
                   {members.map((member) => (
                     <div key={member.uid} className="flex justify-between items-center border-b pb-2">
                       <div>
-                        <h3 className="font-medium">{member.displayName || member.email}</h3>
+                        <h3 className="font-medium">{member.displayName || member.name || member.email}</h3>
                         <p className="text-sm text-muted-foreground">
-                          {member.role === 'org_owner'  ? 'مالك' :
-                           member.role === 'org_admin' ? 'مسؤول' :
-                           member.role === 'engineer' ? 'مهندس' :
-                           member.role === 'supervisor' ? 'مشرف' :
-                           member.role === 'technician' ? 'فني' :
-                           member.role === 'assistant' ? 'مساعد فني' : 'مستخدم'}
+                          {member.role}
                         </p>
                       </div>
                       <div className="text-sm text-muted-foreground">
@@ -361,9 +335,12 @@ export default function DepartmentDetailsPage() {
                 </div>
               )}
               <div className="mt-6 text-center">
-                <Button asChild>
-                  <Link href="/org/members">إدارة الأعضاء</Link>
-                </Button>
+                {canManageMembers && (
+                  <Button onClick={() => setIsAssignMemberDialogOpen(true)} variant="outline">
+                    <PlusCircle className="ml-2 h-4 w-4" />
+                    تعيين عضو إلى هذا القسم
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -398,6 +375,19 @@ export default function DepartmentDetailsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {organizationId && (
+        <AssignMemberToDepartmentDialog
+          isOpen={isAssignMemberDialogOpen}
+          onOpenChange={setIsAssignMemberDialogOpen}
+          organizationId={organizationId}
+          departmentId={departmentId}
+          currentDepartmentMembers={members}
+          onMemberAssigned={() => refreshDepartmentData()} // Refresh members list after assignment
+        />
+      )}
     </div>
   );
 }
+
+    
