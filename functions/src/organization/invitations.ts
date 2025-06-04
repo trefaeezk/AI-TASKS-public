@@ -164,7 +164,15 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
         console.log(`[${functionName}] Attempting to send invitation email to ${email}`);
         try {
             const { sendOrganizationInvitationEmail } = await import('../email/index');
-            const invitationUrl = `https://tasks-intelligence.web.app/invitation/${invitationRef.id}`; // Ensure this matches your app's URL structure
+            
+            // قراءة رابط التطبيق الأساسي من متغيرات البيئة
+            const appBaseUrl = process.env.APP_BASE_URL || functions.config().app?.base_url || 'https://tasks-intelligence.web.app';
+            if (!process.env.APP_BASE_URL && !functions.config().app?.base_url) {
+                console.warn(`[${functionName}] ⚠️ APP_BASE_URL environment variable is not set. Using default: https://tasks-intelligence.web.app`);
+            }
+            console.log(`[${functionName}] Using APP_BASE_URL: ${appBaseUrl}`);
+
+            const invitationUrl = `${appBaseUrl}/invitation/${invitationRef.id}`;
             const inviterName = auth?.token?.name || auth?.token?.email || 'مدير المؤسسة';
 
             const emailSent = await sendOrganizationInvitationEmail(
@@ -574,3 +582,4 @@ export const rejectOrganizationInvitation = createCallableFunction<RejectOrganiz
         );
     }
 });
+
