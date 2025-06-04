@@ -26,22 +26,26 @@ interface InviteUserToOrganizationRequest {
 export const inviteUserToOrganization = createCallableFunction<InviteUserToOrganizationRequest>(async (request: CallableRequest<InviteUserToOrganizationRequest>) => {
     const { data, auth } = request;
     const functionName = 'inviteUserToOrganization';
-    console.log(`--- ${functionName} Cloud Function triggered ---`);
+    console.log(`[${functionName}] --- Cloud Function triggered ---`);
+    console.log(`[${functionName}] Request data:`, data);
 
     try {
         // التحقق من وجود مستخدم مسجل الدخول
         if (!auth) {
+            console.error(`[${functionName}] Error: User not authenticated.`);
             throw new functions.https.HttpsError(
                 'unauthenticated',
                 'يجب تسجيل الدخول لدعوة مستخدم للانضمام إلى مؤسسة.'
             );
         }
         const uid = auth.uid;
+        console.log(`[${functionName}] Authenticated user UID: ${uid}`);
 
         // التحقق من صحة المدخلات
         const { organizationId, email, role, departmentId } = data;
 
         if (!organizationId || typeof organizationId !== 'string') {
+            console.error(`[${functionName}] Error: Invalid organizationId.`);
             throw new functions.https.HttpsError(
                 'invalid-argument',
                 'يجب توفير معرف مؤسسة صالح.'
@@ -49,6 +53,7 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
         }
 
         if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            console.error(`[${functionName}] Error: Invalid email.`);
             throw new functions.https.HttpsError(
                 'invalid-argument',
                 'يجب توفير بريد إلكتروني صالح.'
@@ -57,26 +62,32 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
 
         const validRoles = ['isOrgAdmin', 'isOrgEngineer', 'isOrgSupervisor', 'isOrgTechnician', 'isOrgAssistant'];
         if (!role || typeof role !== 'string' || !validRoles.includes(role)) {
+            console.error(`[${functionName}] Error: Invalid role provided: ${role}. Valid roles: ${validRoles.join(', ')}`);
             throw new functions.https.HttpsError(
                 'invalid-argument',
                 `يجب توفير دور صالح. الأدوار الصالحة هي: ${validRoles.join(', ')}`
             );
         }
+        console.log(`[${functionName}] Input validated. Org ID: ${organizationId}, Email: ${email}, Role: ${role}`);
 
         // التحقق من أن المستخدم يملك صلاحيات دعوة مستخدمين للمؤسسة
+        console.log(`[${functionName}] Checking invitation permissions for user ${uid} in org ${organizationId}`);
         const canInvite = await canInviteToOrganization(uid, organizationId);
 
         if (!canInvite) {
+            console.error(`[${functionName}] Error: User ${uid} does not have permission to invite to organization ${organizationId}.`);
             throw new functions.https.HttpsError(
                 'permission-denied',
                 'ليس لديك صلاحيات لدعوة مستخدمين إلى هذه المؤسسة. يجب أن تكون مالك المؤسسة أو مسؤولاً أو مشرفاً أو مهندساً.'
             );
         }
+        console.log(`[${functionName}] User ${uid} has invitation permissions.`);
 
         // الحصول على معلومات المؤسسة
         const organizationDoc = await db.collection('organizations').doc(organizationId).get();
 
         if (!organizationDoc.exists) {
+            console.error(`[${functionName}] Error: Organization ${organizationId} not found.`);
             throw new functions.https.HttpsError(
                 'not-found',
                 'المؤسسة غير موجودة.'
@@ -84,14 +95,20 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
         }
 
         const organizationData = organizationDoc.data();
+        console.log(`[${functionName}] Organization data fetched: ${organizationData?.name}`);
 
         // البحث عن المستخدم بواسطة البريد الإلكتروني
         let invitedUserRecord;
         try {
             invitedUserRecord = await admin.auth().getUserByEmail(email);
-        } catch (error) {
-            // إذا لم يتم العثور على المستخدم، نستمر بإنشاء دعوة بالبريد الإلكتروني فقط
-            console.log(`User with email ${email} not found, creating invitation without user ID.`);
+            console.log(`[${functionName}] Invited user found by email: ${invitedUserRecord.uid}`);
+        } catch (error: any) {
+            if (error.code === 'auth/user-not-found') {
+                console.log(`[${functionName}] User with email ${email} not found, creating invitation without user ID.`);
+            } else {
+                console.error(`[${functionName}] Error fetching user by email ${email}:`, error);
+                // Do not throw here, proceed with email-only invitation
+            }
         }
 
         // التحقق من عدم وجود دعوة معلقة للمستخدم نفسه
@@ -102,6 +119,7 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
             .get();
 
         if (!existingInvitationsQuery.empty) {
+            console.warn(`[${functionName}] Pending invitation already exists for ${email} in organization ${organizationId}.`);
             throw new functions.https.HttpsError(
                 'already-exists',
                 'هناك دعوة معلقة بالفعل لهذا المستخدم في هذه المؤسسة.'
@@ -114,6 +132,7 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
                 .collection('members').doc(invitedUserRecord.uid).get();
 
             if (memberDoc.exists) {
+                console.warn(`[${functionName}] User ${invitedUserRecord.uid} is already a member of organization ${organizationId}.`);
                 throw new functions.https.HttpsError(
                     'already-exists',
                     'المستخدم عضو بالفعل في هذه المؤسسة.'
@@ -130,29 +149,24 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
             departmentId: departmentId || null,
             status: 'pending', // pending, accepted, rejected
             invitedBy: uid,
-            invitedByName: auth?.token.name || '',
+            invitedByName: auth?.token.name || auth?.token.email || '', // Use inviter's name/email
             userId: invitedUserRecord?.uid || null,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         };
+        console.log(`[${functionName}] Invitation data prepared:`, invitationData);
 
         // حفظ الدعوة في Firestore
         const invitationRef = await db.collection('organizationInvitations').add(invitationData);
-
-        console.log(`Organization invitation created with ID: ${invitationRef.id}`);
+        console.log(`[${functionName}] Organization invitation created with ID: ${invitationRef.id}`);
 
         // إرسال إيميل الدعوة
+        console.log(`[${functionName}] Attempting to send invitation email to ${email}`);
         try {
-            // استيراد دالة إرسال الإيميل
             const { sendOrganizationInvitationEmail } = await import('../email/index');
-
-            // إنشاء رابط الدعوة
-            const invitationUrl = `https://studio--tasks-intelligence.web.app/invitation/${invitationRef.id}`;
-
-            // الحصول على اسم المرسل
+            const invitationUrl = `https://tasks-intelligence.web.app/invitation/${invitationRef.id}`; // Ensure this matches your app's URL structure
             const inviterName = auth?.token?.name || auth?.token?.email || 'مدير المؤسسة';
 
-            // إرسال الإيميل
             const emailSent = await sendOrganizationInvitationEmail(
                 email,
                 organizationData?.name || 'المؤسسة',
@@ -162,13 +176,13 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
             );
 
             if (emailSent) {
-                console.log(`✅ Invitation email sent successfully to ${email}`);
+                console.log(`[${functionName}] ✅ Invitation email sent successfully to ${email}`);
             } else {
-                console.warn(`⚠️ Failed to send invitation email to ${email}`);
+                console.warn(`[${functionName}] ⚠️ Failed to send invitation email to ${email}. Check EmailService logs.`);
             }
         } catch (emailError) {
-            console.error('Error sending invitation email:', emailError);
-            // لا نفشل العملية إذا فشل إرسال الإيميل
+            console.error(`[${functionName}] ❌ Error sending invitation email:`, emailError);
+            // لا نفشل العملية إذا فشل إرسال الإيميل، ولكن نسجل الخطأ
         }
 
         return {
@@ -176,7 +190,7 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
             invitationId: invitationRef.id
         };
     } catch (error: any) {
-        console.error(`Error in ${functionName}:`, error);
+        console.error(`[${functionName}] ❌ Top-level error:`, error);
         if (error instanceof functions.https.HttpsError) {
             throw error;
         }
@@ -202,14 +216,15 @@ interface GetInvitationInfoRequest {
 export const getInvitationInfo = createCallableFunction<GetInvitationInfoRequest>(async (request: CallableRequest<GetInvitationInfoRequest>) => {
     const { data } = request;
     const functionName = 'getInvitationInfo';
-    console.log(`--- ${functionName} Cloud Function triggered ---`);
-    console.log(`Fetching invitation info for ID: ${data.invitationId}`);
+    console.log(`[${functionName}] --- Cloud Function triggered ---`);
+    console.log(`[${functionName}] Fetching invitation info for ID: ${data.invitationId}`);
 
     try {
         // التحقق من صحة المدخلات
         const { invitationId } = data;
 
         if (!invitationId || typeof invitationId !== 'string') {
+            console.error(`[${functionName}] Error: Invalid invitationId.`);
             throw new functions.https.HttpsError(
                 'invalid-argument',
                 'يجب توفير معرف دعوة صالح.'
@@ -220,6 +235,7 @@ export const getInvitationInfo = createCallableFunction<GetInvitationInfoRequest
         const invitationDoc = await db.collection('organizationInvitations').doc(invitationId).get();
 
         if (!invitationDoc.exists) {
+            console.warn(`[${functionName}] Invitation ${invitationId} not found.`);
             throw new functions.https.HttpsError(
                 'not-found',
                 'الدعوة غير موجودة أو انتهت صلاحيتها.'
@@ -227,31 +243,33 @@ export const getInvitationInfo = createCallableFunction<GetInvitationInfoRequest
         }
 
         const invitationData = invitationDoc.data();
+        console.log(`[${functionName}] Invitation data fetched:`, invitationData);
 
         // التحقق من أن الدعوة معلقة
         if (invitationData?.status !== 'pending') {
+            console.warn(`[${functionName}] Invitation ${invitationId} status is not pending: ${invitationData?.status}`);
             throw new functions.https.HttpsError(
                 'failed-precondition',
                 `هذه الدعوة ${invitationData?.status === 'accepted' ? 'تم قبولها بالفعل' : 'تم رفضها بالفعل'}.`
             );
         }
 
-        // جلب معلومات المؤسسة (مثل نمط listFirebaseUsers)
-        console.log(`Fetching organization data for ID: ${invitationData.organizationId}`);
+        // جلب معلومات المؤسسة
+        console.log(`[${functionName}] Fetching organization data for ID: ${invitationData.organizationId}`);
         const organizationDoc = await db.collection('organizations').doc(invitationData.organizationId).get();
         const organizationData = organizationDoc.exists ? organizationDoc.data() : null;
 
         if (!organizationData) {
-            console.warn(`Organization ${invitationData.organizationId} not found in Firestore`);
+            console.warn(`[${functionName}] Organization ${invitationData.organizationId} not found for invitation ${invitationId}`);
         } else {
-            console.log(`Successfully fetched organization: ${organizationData.name}`);
+            console.log(`[${functionName}] Successfully fetched organization: ${organizationData.name}`);
         }
 
-        // جلب معلومات القسم إذا كان محدد (مع معالجة الأخطاء)
+        // جلب معلومات القسم إذا كان محدد
         let departmentData: any = null;
         if (invitationData.departmentId) {
             try {
-                console.log(`Fetching department data for ID: ${invitationData.departmentId}`);
+                console.log(`[${functionName}] Fetching department data for ID: ${invitationData.departmentId}`);
                 const departmentDoc = await db.collection('organizations')
                     .doc(invitationData.organizationId)
                     .collection('departments')
@@ -259,21 +277,16 @@ export const getInvitationInfo = createCallableFunction<GetInvitationInfoRequest
                     .get();
 
                 if (departmentDoc.exists) {
-                    const docData = departmentDoc.data();
-                    if (docData) {
-                        departmentData = docData;
-                        console.log(`Successfully fetched department: ${departmentData.name}`);
-                    }
+                    departmentData = departmentDoc.data();
+                    console.log(`[${functionName}] Successfully fetched department: ${departmentData.name}`);
                 } else {
-                    console.warn(`Department ${invitationData.departmentId} not found`);
+                    console.warn(`[${functionName}] Department ${invitationData.departmentId} not found for invitation ${invitationId}`);
                 }
             } catch (departmentError) {
-                console.error(`Error fetching department ${invitationData.departmentId}:`, departmentError);
-                // لا نفشل العملية إذا فشل جلب القسم
+                console.error(`[${functionName}] Error fetching department ${invitationData.departmentId}:`, departmentError);
             }
         }
 
-        // إرجاع المعلومات الآمنة فقط (مثل نمط listFirebaseUsers)
         const result = {
             success: true,
             invitation: {
@@ -299,10 +312,10 @@ export const getInvitationInfo = createCallableFunction<GetInvitationInfoRequest
             } : null
         };
 
-        console.log(`Successfully processed invitation info for ${invitationData.email}`);
+        console.log(`[${functionName}] Successfully processed invitation info for ${invitationData.email}`);
         return result;
     } catch (error: any) {
-        console.error(`Error in ${functionName}:`, error);
+        console.error(`[${functionName}] ❌ Top-level error:`, error);
         if (error instanceof functions.https.HttpsError) {
             throw error;
         }
@@ -326,22 +339,26 @@ interface AcceptOrganizationInvitationRequest {
 export const acceptOrganizationInvitation = createCallableFunction<AcceptOrganizationInvitationRequest>(async (request: CallableRequest<AcceptOrganizationInvitationRequest>) => {
     const { data, auth } = request;
     const functionName = 'acceptOrganizationInvitation';
-    console.log(`--- ${functionName} Cloud Function triggered ---`);
+    console.log(`[${functionName}] --- Cloud Function triggered ---`);
+    console.log(`[${functionName}] Request data:`, data);
 
     try {
         // التحقق من وجود مستخدم مسجل الدخول
         if (!auth) {
+            console.error(`[${functionName}] Error: User not authenticated.`);
             throw new functions.https.HttpsError(
                 'unauthenticated',
                 'يجب تسجيل الدخول لقبول دعوة الانضمام إلى مؤسسة.'
             );
         }
         const uid = auth.uid;
+        console.log(`[${functionName}] Authenticated user UID: ${uid}`);
 
         // التحقق من صحة المدخلات
         const { invitationId } = data;
 
         if (!invitationId || typeof invitationId !== 'string') {
+            console.error(`[${functionName}] Error: Invalid invitationId.`);
             throw new functions.https.HttpsError(
                 'invalid-argument',
                 'يجب توفير معرف دعوة صالح.'
@@ -352,6 +369,7 @@ export const acceptOrganizationInvitation = createCallableFunction<AcceptOrganiz
         const invitationDoc = await db.collection('organizationInvitations').doc(invitationId).get();
 
         if (!invitationDoc.exists) {
+            console.warn(`[${functionName}] Invitation ${invitationId} not found.`);
             throw new functions.https.HttpsError(
                 'not-found',
                 'الدعوة غير موجودة.'
@@ -359,9 +377,11 @@ export const acceptOrganizationInvitation = createCallableFunction<AcceptOrganiz
         }
 
         const invitationData = invitationDoc.data();
+        console.log(`[${functionName}] Invitation data fetched:`, invitationData);
 
         // التحقق من أن الدعوة للمستخدم الحالي
         if (invitationData?.userId && invitationData.userId !== uid) {
+            console.warn(`[${functionName}] Invitation ${invitationId} not for current user ${uid}. Invitation user ID: ${invitationData.userId}`);
             throw new functions.https.HttpsError(
                 'permission-denied',
                 'هذه الدعوة ليست لك.'
@@ -371,6 +391,7 @@ export const acceptOrganizationInvitation = createCallableFunction<AcceptOrganiz
         // التحقق من أن البريد الإلكتروني للدعوة يتطابق مع بريد المستخدم
         const userRecord = await admin.auth().getUser(uid);
         if (invitationData?.email !== userRecord.email) {
+            console.warn(`[${functionName}] Invitation email mismatch. Invitation email: ${invitationData?.email}, User email: ${userRecord.email}`);
             throw new functions.https.HttpsError(
                 'permission-denied',
                 'هذه الدعوة ليست لبريدك الإلكتروني.'
@@ -379,6 +400,7 @@ export const acceptOrganizationInvitation = createCallableFunction<AcceptOrganiz
 
         // التحقق من أن الدعوة معلقة
         if (invitationData?.status !== 'pending') {
+            console.warn(`[${functionName}] Invitation ${invitationId} status is not pending: ${invitationData?.status}`);
             throw new functions.https.HttpsError(
                 'failed-precondition',
                 'لا يمكن قبول دعوة تمت معالجتها بالفعل.'
@@ -386,16 +408,19 @@ export const acceptOrganizationInvitation = createCallableFunction<AcceptOrganiz
         }
 
         // إضافة المستخدم كعضو في المؤسسة
+        console.log(`[${functionName}] Adding user ${uid} to organization ${invitationData.organizationId} as member with role ${invitationData.role}`);
         await db.collection('organizations').doc(invitationData.organizationId)
             .collection('members').doc(uid).set({
                 role: invitationData.role,
                 email: userRecord.email,
                 name: userRecord.displayName || '',
                 joinedAt: admin.firestore.FieldValue.serverTimestamp(),
-                invitationId: invitationId
+                invitationId: invitationId,
+                departmentId: invitationData.departmentId || null // إضافة معرف القسم هنا
             });
 
         // تحديث حالة الدعوة
+        console.log(`[${functionName}] Updating invitation ${invitationId} status to 'accepted'`);
         await db.collection('organizationInvitations').doc(invitationId).update({
             status: 'accepted',
             userId: uid, // تحديث معرف المستخدم إذا لم يكن موجودًا
@@ -404,21 +429,36 @@ export const acceptOrganizationInvitation = createCallableFunction<AcceptOrganiz
         });
 
         // تحديث custom claims للمستخدم
-        const customClaims = userRecord.customClaims || {};
-
-        await admin.auth().setCustomUserClaims(uid, {
-            ...customClaims,
+        const currentClaims = userRecord.customClaims || {};
+        const newClaims = {
+            ...currentClaims,
             role: invitationData.role,
             accountType: 'organization',
-            organizationId: invitationData.organizationId
-        });
+            organizationId: invitationData.organizationId,
+            departmentId: invitationData.departmentId || null // إضافة معرف القسم للـ claims
+        };
+        console.log(`[${functionName}] Setting custom claims for user ${uid}:`, newClaims);
+        await admin.auth().setCustomUserClaims(uid, newClaims);
 
+        // تحديث وثيقة المستخدم في مجموعة 'users'
+        console.log(`[${functionName}] Updating user document for ${uid} in 'users' collection`);
+        const userDocRef = db.collection('users').doc(uid);
+        await userDocRef.set({
+            role: invitationData.role,
+            accountType: 'organization',
+            organizationId: invitationData.organizationId,
+            departmentId: invitationData.departmentId || null,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+
+        console.log(`[${functionName}] User ${uid} successfully accepted invitation ${invitationId}`);
         return {
             success: true,
             organizationId: invitationData.organizationId
         };
     } catch (error: any) {
-        console.error(`Error in ${functionName}:`, error);
+        console.error(`[${functionName}] ❌ Top-level error:`, error);
         if (error instanceof functions.https.HttpsError) {
             throw error;
         }
@@ -442,22 +482,26 @@ interface RejectOrganizationInvitationRequest {
 export const rejectOrganizationInvitation = createCallableFunction<RejectOrganizationInvitationRequest>(async (request: CallableRequest<RejectOrganizationInvitationRequest>) => {
     const { data, auth } = request;
     const functionName = 'rejectOrganizationInvitation';
-    console.log(`--- ${functionName} Cloud Function triggered ---`);
+    console.log(`[${functionName}] --- Cloud Function triggered ---`);
+    console.log(`[${functionName}] Request data:`, data);
 
     try {
         // التحقق من وجود مستخدم مسجل الدخول
         if (!auth) {
+            console.error(`[${functionName}] Error: User not authenticated.`);
             throw new functions.https.HttpsError(
                 'unauthenticated',
                 'يجب تسجيل الدخول لرفض دعوة الانضمام إلى مؤسسة.'
             );
         }
         const uid = auth.uid;
+        console.log(`[${functionName}] Authenticated user UID: ${uid}`);
 
         // التحقق من صحة المدخلات
         const { invitationId } = data;
 
         if (!invitationId || typeof invitationId !== 'string') {
+            console.error(`[${functionName}] Error: Invalid invitationId.`);
             throw new functions.https.HttpsError(
                 'invalid-argument',
                 'يجب توفير معرف دعوة صالح.'
@@ -468,6 +512,7 @@ export const rejectOrganizationInvitation = createCallableFunction<RejectOrganiz
         const invitationDoc = await db.collection('organizationInvitations').doc(invitationId).get();
 
         if (!invitationDoc.exists) {
+            console.warn(`[${functionName}] Invitation ${invitationId} not found.`);
             throw new functions.https.HttpsError(
                 'not-found',
                 'الدعوة غير موجودة.'
@@ -475,9 +520,11 @@ export const rejectOrganizationInvitation = createCallableFunction<RejectOrganiz
         }
 
         const invitationData = invitationDoc.data();
+        console.log(`[${functionName}] Invitation data fetched:`, invitationData);
 
         // التحقق من أن الدعوة للمستخدم الحالي
         if (invitationData?.userId && invitationData.userId !== uid) {
+            console.warn(`[${functionName}] Invitation ${invitationId} not for current user ${uid}. Invitation user ID: ${invitationData.userId}`);
             throw new functions.https.HttpsError(
                 'permission-denied',
                 'هذه الدعوة ليست لك.'
@@ -487,6 +534,7 @@ export const rejectOrganizationInvitation = createCallableFunction<RejectOrganiz
         // التحقق من أن البريد الإلكتروني للدعوة يتطابق مع بريد المستخدم
         const userRecord = await admin.auth().getUser(uid);
         if (invitationData?.email !== userRecord.email) {
+            console.warn(`[${functionName}] Invitation email mismatch. Invitation email: ${invitationData?.email}, User email: ${userRecord.email}`);
             throw new functions.https.HttpsError(
                 'permission-denied',
                 'هذه الدعوة ليست لبريدك الإلكتروني.'
@@ -495,6 +543,7 @@ export const rejectOrganizationInvitation = createCallableFunction<RejectOrganiz
 
         // التحقق من أن الدعوة معلقة
         if (invitationData?.status !== 'pending') {
+            console.warn(`[${functionName}] Invitation ${invitationId} status is not pending: ${invitationData?.status}`);
             throw new functions.https.HttpsError(
                 'failed-precondition',
                 'لا يمكن رفض دعوة تمت معالجتها بالفعل.'
@@ -502,6 +551,7 @@ export const rejectOrganizationInvitation = createCallableFunction<RejectOrganiz
         }
 
         // تحديث حالة الدعوة
+        console.log(`[${functionName}] Updating invitation ${invitationId} status to 'rejected'`);
         await db.collection('organizationInvitations').doc(invitationId).update({
             status: 'rejected',
             userId: uid, // تحديث معرف المستخدم إذا لم يكن موجودًا
@@ -509,11 +559,12 @@ export const rejectOrganizationInvitation = createCallableFunction<RejectOrganiz
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
+        console.log(`[${functionName}] User ${uid} successfully rejected invitation ${invitationId}`);
         return {
             success: true
         };
     } catch (error: any) {
-        console.error(`Error in ${functionName}:`, error);
+        console.error(`[${functionName}] ❌ Top-level error:`, error);
         if (error instanceof functions.https.HttpsError) {
             throw error;
         }
@@ -523,6 +574,3 @@ export const rejectOrganizationInvitation = createCallableFunction<RejectOrganiz
         );
     }
 });
-
-
-    

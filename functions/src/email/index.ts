@@ -6,10 +6,20 @@ import * as admin from 'firebase-admin';
 // يجب إضافة مفتاح API في إعدادات Firebase Functions Environment Variables
 // firebase functions:config:set resend.apikey="YOUR_RESEND_API_KEY"
 const apiKey = process.env.RESEND_API_KEY || functions.config().resend?.apikey || 're_ArCXhKjj_NS9DCLB8DYpKL3HV6FxcXu92';
-console.log('Resend API Key:', apiKey); // إضافة سجل للتحقق من المفتاح
+console.log('[EmailService] Resend API Key used:', apiKey ? `${apiKey.substring(0, 5)}...` : 'Not Set'); // Log only part of the key
 
 // إنشاء مثيل من Resend
-const resend = new Resend(apiKey);
+let resend: Resend | null = null;
+if (apiKey) {
+  try {
+    resend = new Resend(apiKey);
+    console.log('[EmailService] Resend instance created successfully.');
+  } catch (e: any) {
+    console.error('[EmailService] Failed to initialize Resend with API key:', e.message);
+  }
+} else {
+  console.warn('[EmailService] Resend API key is not configured. Email sending will be skipped.');
+}
 
 /**
  * أنواع قوالب البريد الإلكتروني المتاحة في النظام
@@ -42,8 +52,8 @@ export interface EmailData {
  * @returns وعد بنتيجة إرسال البريد الإلكتروني
  */
 export const sendEmail = async (emailData: EmailData): Promise<boolean> => {
-  if (!apiKey) {
-    console.error('Resend API key is not set. Cannot send email.');
+  if (!resend) { // Check if resend instance is initialized
+    console.error('[EmailService] Resend is not initialized. Cannot send email. Ensure RESEND_API_KEY is set.');
     return false;
   }
 
@@ -60,7 +70,7 @@ export const sendEmail = async (emailData: EmailData): Promise<boolean> => {
       html: htmlContent,
       text: textContent,
       // إضافة خاصية react لتوافق مع متطلبات Resend API
-      react: null
+      react: null // Ensure react is explicitly null if not used
     };
 
     // إضافة الخيارات الاختيارية إذا كانت موجودة
@@ -68,26 +78,36 @@ export const sendEmail = async (emailData: EmailData): Promise<boolean> => {
     if (emailData.bcc) emailOptions.bcc = emailData.bcc;
     if (emailData.replyTo) emailOptions.reply_to = emailData.replyTo;
 
-    console.log('Sending email with options:', JSON.stringify(emailOptions));
+    console.log('[EmailService] Attempting to send email with options:', JSON.stringify({
+      from: emailOptions.from,
+      to: emailOptions.to,
+      subject: emailOptions.subject,
+      hasHtml: !!emailOptions.html,
+      hasText: !!emailOptions.text
+    }));
 
-    try {
-      const result = await resend.emails.send(emailOptions);
+    const result = await resend.emails.send(emailOptions);
+    console.log('[EmailService] Resend API response:', JSON.stringify(result, null, 2)); // Log the full response
 
-      console.log('Resend API response:', JSON.stringify(result));
-
-      if (result.error) {
-        console.error('Error sending email with Resend:', result.error);
-        return false;
-      }
-
-      console.log(`Email sent successfully to ${emailData.to} with ID: ${result.data?.id}`);
-      return true;
-    } catch (sendError) {
-      console.error('Exception during Resend API call:', sendError);
+    if (result.error) {
+      console.error('[EmailService] Error sending email with Resend:', result.error);
       return false;
     }
-  } catch (error) {
-    console.error('Error sending email:', error);
+
+    if (result.data && result.data.id) {
+        console.log(`[EmailService] Email sent successfully to ${emailData.to} with ID: ${result.data.id}`);
+        return true;
+    } else {
+        console.warn('[EmailService] Email sending status uncertain. Resend response did not include a data.id.', result);
+        // Consider this a failure if no ID is returned, as we can't confirm success.
+        return false;
+    }
+
+  } catch (error: any) { // Catch any exception during the send call
+    console.error('[EmailService] Exception during Resend API call or email preparation:', error);
+    if (error.response && error.response.data) {
+        console.error('[EmailService] Resend Error Details:', JSON.stringify(error.response.data, null, 2));
+    }
     return false;
   }
 };
@@ -112,11 +132,6 @@ export const sendOTPEmail = async (
     minute: '2-digit',
   });
 
-  // إذا كان هناك قالب معد مسبقًا في Resend، يمكن استخدامه هنا
-  // يمكن استخدام React Email مع Resend لإنشاء قوالب بريد إلكتروني جميلة
-  // https://resend.com/docs/react-email
-
-  // استخدام HTML مخصص إذا لم يكن هناك قالب
   const text = `رمز التحقق الخاص بك هو: ${otp}. هذا الرمز صالح حتى الساعة ${formattedTime}.`;
 
   const html = `
@@ -142,12 +157,6 @@ export const sendOTPEmail = async (
     html,
   });
 };
-
-/**
- * إرسال بريد إلكتروني ترحيبي للمستخدمين الجدد
- * تم تعطيلها مؤقتًا لتقليل استهلاك الموارد
- */
-// export const sendWelcomeEmail = async (...)
 
 /**
  * إرسال تذكير بالمهام
@@ -222,9 +231,9 @@ export const sendOrganizationInvitationEmail = async (
   role: string,
   invitationUrl: string
 ): Promise<boolean> => {
+  console.log(`[EmailService] Preparing organization invitation email for: ${to}`);
   const subject = `دعوة للانضمام إلى مؤسسة ${organizationName}`;
 
-  // ترجمة الأدوار للعربية (النمط الجديد is* فقط)
   const roleTranslations: { [key: string]: string } = {
     'isOrgOwner': 'مالك المؤسسة',
     'isOrgAdmin': 'مدير المؤسسة',
@@ -300,12 +309,14 @@ ${invitationUrl}
     </div>
   `;
 
-  return sendEmail({
+  const emailSent = await sendEmail({
     to,
     subject,
     text,
     html,
   });
+  console.log(`[EmailService] Invitation email to ${to} send status: ${emailSent}`);
+  return emailSent;
 };
 
 /**
@@ -326,12 +337,12 @@ export const generateAndSendOTP = functions.https.onCall(async (_, context) => {
   const userEmail = context.auth.token.email;
 
   // التحقق من أن المستخدم هو مالك التطبيق
-  const isOwner = context.auth.token.owner === true;
+  const isOwner = context.auth.token.isSystemOwner === true; // Use the new claim
 
   if (!isOwner) {
     throw new functions.https.HttpsError(
       'permission-denied',
-      'غير مصرح لك بإنشاء رمز التحقق'
+      'غير مصرح لك بإنشاء رمز التحقق. يجب أن تكون مالك النظام.'
     );
   }
 
@@ -362,52 +373,50 @@ export const generateAndSendOTP = functions.https.onCall(async (_, context) => {
       used: false
     });
 
-    // إرسال الرمز عبر البريد الإلكتروني باستخدام SMTP
-    console.log(`Attempting to send OTP email via SMTP to ${userEmail} with code ${otp}`);
+    // إرسال الرمز عبر البريد الإلكتروني باستخدام Resend أولاً
+    console.log(`[EmailService] Attempting to send OTP email via Resend to ${userEmail} with code ${otp}`);
+    const resendEmailSent = await sendOTPEmail(userEmail, otp, expiryTime);
 
-    try {
-      // استيراد وظيفة sendOTPEmailSMTP من ملف smtp
-      const { sendOTPEmailSMTP } = await import('../email/smtp');
-
-      // إرسال البريد الإلكتروني باستخدام SMTP
-      const smtpEmailSent = await sendOTPEmailSMTP(userEmail, otp, expiryTime);
-
-      if (smtpEmailSent) {
-        console.log(`Successfully sent OTP email via SMTP to ${userEmail}`);
-        return {
-          success: true,
-          emailSent: true,
-          expiryTime: expiryTime.toISOString(),
-          message: 'تم إرسال رمز التحقق إلى بريدك الإلكتروني'
-        };
-      } else {
-        console.warn(`Failed to send OTP email via SMTP to ${userEmail}`);
-      }
-    } catch (smtpError) {
-      console.error('Error sending email via SMTP:', smtpError);
-    }
-
-    // إذا فشل إرسال البريد الإلكتروني باستخدام SMTP، نحاول استخدام Resend
-    console.log(`Attempting to send OTP email via Resend to ${userEmail} with code ${otp}`);
-    const emailSent = await sendOTPEmail(userEmail, otp, expiryTime);
-
-    if (!emailSent) {
-      console.warn(`Failed to send OTP email via Resend to ${userEmail}`);
+    if (resendEmailSent) {
+      console.log(`[EmailService] Successfully sent OTP email via Resend to ${userEmail}`);
+      return {
+        success: true,
+        emailSent: true,
+        expiryTime: expiryTime.toISOString(),
+        message: 'تم إرسال رمز التحقق إلى بريدك الإلكتروني'
+      };
     } else {
-      console.log(`Successfully sent OTP email via Resend to ${userEmail}`);
+      console.warn(`[EmailService] Failed to send OTP email via Resend to ${userEmail}. Trying SMTP as fallback...`);
+      // إذا فشل Resend، نحاول استخدام SMTP
+      try {
+        const { sendOTPEmailSMTP } = await import('../email/smtp');
+        const smtpEmailSent = await sendOTPEmailSMTP(userEmail, otp, expiryTime);
+
+        if (smtpEmailSent) {
+          console.log(`[EmailService] Successfully sent OTP email via SMTP to ${userEmail}`);
+          return {
+            success: true,
+            emailSent: true,
+            expiryTime: expiryTime.toISOString(),
+            message: 'تم إرسال رمز التحقق إلى بريدك الإلكتروني عبر SMTP'
+          };
+        } else {
+          console.warn(`[EmailService] Failed to send OTP email via SMTP as well to ${userEmail}`);
+        }
+      } catch (smtpError) {
+        console.error('[EmailService] Error sending email via SMTP:', smtpError);
+      }
     }
 
-    // إرجاع نتيجة العملية
+    // إرجاع نتيجة العملية (إذا فشلت كلتا الطريقتين)
     return {
       success: true,
-      emailSent,
+      emailSent: false,
       expiryTime: expiryTime.toISOString(),
-      message: emailSent
-        ? 'تم إرسال رمز التحقق إلى بريدك الإلكتروني'
-        : 'تم إنشاء رمز التحقق ولكن فشل إرساله عبر البريد الإلكتروني. يرجى التحقق من إعدادات البريد الإلكتروني.'
+      message: 'تم إنشاء رمز التحقق ولكن فشل إرساله عبر البريد الإلكتروني. يرجى التحقق من إعدادات البريد الإلكتروني.'
     };
   } catch (error) {
-    console.error('Error generating OTP:', error);
+    console.error('[EmailService] Error generating OTP:', error);
     throw new functions.https.HttpsError(
       'internal',
       'حدث خطأ أثناء إنشاء رمز التحقق',
@@ -440,12 +449,12 @@ export const verifyOTP = functions.https.onCall(async (data, context) => {
   }
 
   // التحقق من أن المستخدم هو مالك التطبيق
-  const isOwner = context.auth.token.owner === true;
+  const isOwner = context.auth.token.isSystemOwner === true; // Use the new claim
 
   if (!isOwner) {
     throw new functions.https.HttpsError(
       'permission-denied',
-      'غير مصرح لك بالتحقق من رمز التحقق'
+      'غير مصرح لك بالتحقق من رمز التحقق. يجب أن تكون مالك النظام.'
     );
   }
 
@@ -496,7 +505,7 @@ export const verifyOTP = functions.https.onCall(async (data, context) => {
       throw error;
     }
 
-    console.error('Error verifying OTP:', error);
+    console.error('[EmailService] Error verifying OTP:', error);
     throw new functions.https.HttpsError(
       'internal',
       'حدث خطأ أثناء التحقق من رمز التحقق',
@@ -504,5 +513,3 @@ export const verifyOTP = functions.https.onCall(async (data, context) => {
     );
   }
 });
-
-// تم حذف وظيفة اختبار إرسال البريد الإلكتروني لأنها نجحت
