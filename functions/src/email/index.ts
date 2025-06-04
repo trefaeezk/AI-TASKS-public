@@ -6,8 +6,19 @@ import * as admin from 'firebase-admin';
 // تكوين مفتاح API لـ Resend
 // يجب إضافة مفتاح API في إعدادات Firebase Functions Environment Variables
 // firebase functions:config:set resend.apikey="YOUR_RESEND_API_KEY"
-const apiKey = process.env.RESEND_API_KEY || functions.config().resend?.apikey || 're_ArCXhKjj_NS9DCLB8DYpKL3HV6FxcXu92';
-console.log('[EmailService Index] Resend API Key used:', apiKey ? `re_****${apiKey.substring(apiKey.length - 4)}` : 'Not Set');
+const apiKeyFromEnv = process.env.RESEND_API_KEY;
+const apiKeyFromConfig = functions.config().resend?.apikey;
+const apiKey = apiKeyFromEnv || apiKeyFromConfig || 're_ArCXhKjj_NS9DCLB8DYpKL3HV6FxcXu92'; // Fallback to default only if others are not set
+
+if (apiKeyFromEnv) {
+  console.log('[EmailService Index] Using Resend API Key from process.env.RESEND_API_KEY');
+} else if (apiKeyFromConfig) {
+  console.log('[EmailService Index] Using Resend API Key from functions.config().resend.apikey');
+} else {
+  console.warn('[EmailService Index] Using default/fallback Resend API Key. This is NOT recommended for production.');
+}
+console.log('[EmailService Index] Final Resend API Key used:', apiKey ? `re_****${apiKey.substring(apiKey.length - 4)}` : 'Not Set');
+
 
 // إنشاء مثيل من Resend
 let resend: Resend | null = null;
@@ -16,7 +27,7 @@ if (apiKey) {
     resend = new Resend(apiKey);
     console.log('[EmailService Index] Resend instance created successfully.');
   } catch (e: any) {
-    console.error('[EmailService Index] Failed to initialize Resend with API key:', e.message);
+    console.error('[EmailService Index] Failed to initialize Resend with API key:', e.message, e);
   }
 } else {
   console.warn('[EmailService Index] Resend API key is not configured. Email sending via Resend will be skipped.');
@@ -100,7 +111,7 @@ export const sendEmail = async (emailData: EmailData): Promise<boolean> => {
         return true;
     } else {
         console.warn('[EmailService Index] Resend email sending status uncertain. Response did not include a data.id.', result);
-        return false;
+        return false; // Consider this a failure if ID is missing
     }
 
   } catch (error: any) {
@@ -142,7 +153,7 @@ export const sendOTPEmail = async (
       </p>
     </div>
   `;
-  console.log(`[EmailService Index] Preparing to send OTP email to ${to} via Resend.`);
+  console.log(`[EmailService Index] Preparing to send OTP email to ${to}.`);
   return sendEmail({ to, subject, text, html });
 };
 
@@ -179,7 +190,7 @@ export const sendTaskReminderEmail = async (
       </p>
     </div>
   `;
-  console.log(`[EmailService Index] Preparing to send task reminder email to ${to} via Resend.`);
+  console.log(`[EmailService Index] Preparing to send task reminder email to ${to}.`);
   return sendEmail({ to, subject, text, html });
 };
 
@@ -258,13 +269,19 @@ export const sendOrganizationInvitationEmail = async (
   // Fallback to SMTP if Resend fails
   console.warn(`[EmailService Index] Resend failed for invitation to ${to}. Attempting SMTP fallback...`);
   try {
+    // Dynamically import SMTP service to avoid issues if not configured
     const { sendEmailSMTP } = await import('../email/smtp'); // Ensure path is correct
-    console.log(`[EmailService Index] Calling sendEmailSMTP for invitation to ${to}.`);
-    const smtpEmailSent = await sendEmailSMTP(to, subject, text, html);
-    console.log(`[EmailService Index] SMTP invitation email to ${to} send status: ${smtpEmailSent}`);
-    return smtpEmailSent;
-  } catch (smtpError) {
-    console.error(`[EmailService Index] Error sending invitation email via SMTP to ${to}:`, smtpError);
+    if (sendEmailSMTP) {
+      console.log(`[EmailService Index] Calling sendEmailSMTP for invitation to ${to}.`);
+      const smtpEmailSent = await sendEmailSMTP(to, subject, text, html);
+      console.log(`[EmailService Index] SMTP invitation email to ${to} send status: ${smtpEmailSent}`);
+      return smtpEmailSent;
+    } else {
+      console.error('[EmailService Index] SMTP service (sendEmailSMTP) not available for fallback.');
+      return false;
+    }
+  } catch (smtpImportError) {
+    console.error(`[EmailService Index] Error importing or calling SMTP service for ${to}:`, smtpImportError);
     return false;
   }
 };
@@ -295,32 +312,37 @@ export const generateAndSendOTP = functions.region("europe-west1").https.onCall(
     const db = admin.firestore();
     const otp = generateOTP();
     const expiryTime = new Date();
-    expiryTime.setMinutes(expiryTime.getMinutes() + 30);
+    expiryTime.setMinutes(expiryTime.getMinutes() + 30); // OTP valid for 30 minutes
 
-    console.log(`[generateAndSendOTP Function] Generated OTP ${otp.substring(0,1)}***** for user ${uid}, expires at ${expiryTime.toISOString()}.`);
+    console.log(`[generateAndSendOTP Function] Generated OTP (masked) for user ${uid}, expires at ${expiryTime.toISOString()}.`);
     await db.collection('debugOTP').doc(uid).set({
-      userId: uid, userEmail: userEmail, otp,
+      userId: uid, userEmail: userEmail, otp, // Store the actual OTP here
       createdAt: admin.firestore.FieldValue.serverTimestamp(), expiryTime, used: false
     });
     console.log(`[generateAndSendOTP Function] OTP stored in Firestore for user ${uid}.`);
 
-    console.log(`[generateAndSendOTP Function] Attempting to send OTP email to ${userEmail} via Resend.`);
-    const resendEmailSent = await sendOTPEmail(userEmail, otp, expiryTime);
+    console.log(`[generateAndSendOTP Function] Attempting to send OTP email to ${userEmail}.`);
+    const emailSent = await sendOTPEmail(userEmail, otp, expiryTime); // Pass the actual OTP
 
-    if (resendEmailSent) {
-      console.log(`[generateAndSendOTP Function] Successfully sent OTP email via Resend to ${userEmail}`);
+    if (emailSent) {
+      console.log(`[generateAndSendOTP Function] Successfully sent OTP email to ${userEmail}`);
       return { success: true, emailSent: true, expiryTime: expiryTime.toISOString(), message: 'تم إرسال رمز التحقق إلى بريدك الإلكتروني' };
     } else {
-      console.warn(`[generateAndSendOTP Function] Failed to send OTP email via Resend to ${userEmail}. Trying SMTP fallback.`);
+      console.warn(`[generateAndSendOTP Function] Failed to send OTP email to ${userEmail}. Trying SMTP fallback (if configured).`);
       try {
         const { sendOTPEmailSMTP } = await import('../email/smtp');
-        const smtpEmailSent = await sendOTPEmailSMTP(userEmail, otp, expiryTime);
-        if (smtpEmailSent) {
-          console.log(`[generateAndSendOTP Function] Successfully sent OTP email via SMTP to ${userEmail}`);
-          return { success: true, emailSent: true, expiryTime: expiryTime.toISOString(), message: 'تم إرسال رمز التحقق إلى بريدك الإلكتروني عبر SMTP' };
+        if (sendOTPEmailSMTP) {
+            const smtpEmailSent = await sendOTPEmailSMTP(userEmail, otp, expiryTime);
+            if (smtpEmailSent) {
+              console.log(`[generateAndSendOTP Function] Successfully sent OTP email via SMTP to ${userEmail}`);
+              return { success: true, emailSent: true, expiryTime: expiryTime.toISOString(), message: 'تم إرسال رمز التحقق إلى بريدك الإلكتروني عبر SMTP' };
+            } else {
+              console.warn(`[generateAndSendOTP Function] Failed to send OTP email via SMTP as well to ${userEmail}`);
+              return { success: true, emailSent: false, expiryTime: expiryTime.toISOString(), message: 'تم إنشاء رمز التحقق ولكن فشل إرساله عبر البريد الإلكتروني.' };
+            }
         } else {
-          console.warn(`[generateAndSendOTP Function] Failed to send OTP email via SMTP as well to ${userEmail}`);
-          return { success: true, emailSent: false, expiryTime: expiryTime.toISOString(), message: 'تم إنشاء رمز التحقق ولكن فشل إرساله عبر البريد الإلكتروني.' };
+            console.warn(`[generateAndSendOTP Function] SMTP service not available for OTP fallback.`);
+            return { success: true, emailSent: false, expiryTime: expiryTime.toISOString(), message: 'تم إنشاء رمز التحقق ولكن فشل إرساله (SMTP غير متاح).' };
         }
       } catch (smtpError) {
         console.error(`[generateAndSendOTP Function] Error sending OTP email via SMTP to ${userEmail}:`, smtpError);
@@ -337,7 +359,7 @@ export const generateAndSendOTP = functions.region("europe-west1").https.onCall(
  * وظيفة سحابية للتحقق من رمز OTP
  */
 export const verifyOTP = functions.region("europe-west1").https.onCall(async (data, context) => {
-  console.log('[verifyOTP Function] Triggered with data:', data);
+  console.log('[verifyOTP Function] Triggered with data (OTP masked):', { ...data, otp: data.otp ? '******' : undefined });
   if (!context.auth) {
     console.error('[verifyOTP Function] Unauthenticated call.');
     throw new functions.https.HttpsError('unauthenticated', 'يجب تسجيل الدخول للتحقق من رمز التحقق');
@@ -364,7 +386,7 @@ export const verifyOTP = functions.region("europe-west1").https.onCall(async (da
     }
     const otpData = otpDoc.data();
     if (!otpData || otpData.otp !== otp || otpData.used === true) {
-      console.warn(`[verifyOTP Function] Invalid or used OTP for user ${uid}. Provided: ${otp}, Stored: ${otpData?.otp}, Used: ${otpData?.used}`);
+      console.warn(`[verifyOTP Function] Invalid or used OTP for user ${uid}. Provided (masked), Stored (masked), Used: ${otpData?.used}`);
       throw new functions.https.HttpsError('invalid-argument', 'رمز التحقق غير صحيح أو تم استخدامه بالفعل');
     }
     const expiryTime = otpData.expiryTime.toDate();
@@ -384,5 +406,4 @@ export const verifyOTP = functions.region("europe-west1").https.onCall(async (da
     throw new functions.https.HttpsError('internal', 'حدث خطأ أثناء التحقق من رمز التحقق', error);
   }
 });
-
     

@@ -1,5 +1,6 @@
 
 import * as functions from 'firebase-functions';
+import nodemailer from 'nodemailer'; // Use import instead of require
 
 /**
  * وظيفة لإرسال البريد الإلكتروني باستخدام SMTP مباشرة
@@ -13,15 +14,27 @@ export const sendEmailSMTP = async (
 ): Promise<boolean> => {
   console.log(`[SMTP Service] Attempting to send email via SMTP to: ${to}`);
   try {
-    const nodemailer = require('nodemailer');
+    // قراءة إعدادات SMTP من متغيرات البيئة أو تكوين Firebase
+    const smtpUserFromEnv = process.env.SMTP_USER;
+    const smtpPassFromEnv = process.env.SMTP_PASS;
+    const smtpHostFromEnv = process.env.SMTP_HOST;
+    const smtpPortFromEnv = process.env.SMTP_PORT;
 
-    const smtpUser = process.env.SMTP_USER || functions.config().smtp?.user || 'tarf4657@gmail.com';
-    const smtpPass = process.env.SMTP_PASS || functions.config().smtp?.pass || 'wdak ntgs yjwi pqtl'; // كلمة مرور التطبيق
-    const smtpHost = process.env.SMTP_HOST || functions.config().smtp?.host || 'smtp.gmail.com';
-    const smtpPortEnv = process.env.SMTP_PORT || functions.config().smtp?.port;
-    const smtpPort = smtpPortEnv ? parseInt(smtpPortEnv) : 587; // تأكد من أن المنفذ رقم, الافتراضي 587
+    const smtpUserFromConfig = functions.config().smtp?.user;
+    const smtpPassFromConfig = functions.config().smtp?.pass;
+    const smtpHostFromConfig = functions.config().smtp?.host;
+    const smtpPortFromConfig = functions.config().smtp?.port;
 
-    console.log(`[SMTP Service] Configuration - Host: ${smtpHost}, Port: ${smtpPort}, User: ${smtpUser ? smtpUser.substring(0,3) + '***' : 'NOT SET'}`);
+    const smtpUser = smtpUserFromEnv || smtpUserFromConfig || 'tarf4657@gmail.com';
+    const smtpPass = smtpPassFromEnv || smtpPassFromConfig; // لا يوجد قيمة افتراضية لكلمة المرور
+    const smtpHost = smtpHostFromEnv || smtpHostFromConfig || 'smtp.gmail.com';
+    const smtpPortConfigValue = smtpPortFromEnv || smtpPortFromConfig;
+    const smtpPort = smtpPortConfigValue ? parseInt(smtpPortConfigValue) : 587;
+
+    console.log(`[SMTP Service] Configuration - Host: ${smtpHost}, Port: ${smtpPort}, User: ${smtpUser ? smtpUser.substring(0, Math.min(3, smtpUser.length)) + '***' : 'NOT SET'}`);
+    console.log(`[SMTP Service] SMTP_USER source: ${smtpUserFromEnv ? 'process.env' : smtpUserFromConfig ? 'functions.config' : 'default'}`);
+    console.log(`[SMTP Service] SMTP_PASS source: ${smtpPassFromEnv ? 'process.env (exists)' : smtpPassFromConfig ? 'functions.config (exists)' : 'NOT SET'}`);
+
 
     if (!smtpUser || !smtpPass) {
       console.error('[SMTP Service] SMTP User or Password not configured. Cannot send email via SMTP.');
@@ -34,11 +47,10 @@ export const sendEmailSMTP = async (
       secure: smtpPort === 465, // true for 465, false for other ports (STARTTLS)
       auth: {
         user: smtpUser,
-        pass: smtpPass,
+        pass: smtpPass, // كلمة مرور التطبيق
       },
-      // إضافة المزيد من خيارات التصحيح إذا لزم الأمر
-      // logger: true,
-      // debug: true, // Enable debug output from nodemailer
+      // logger: true, // Uncomment for detailed Nodemailer logs
+      // debug: true,  // Uncomment for detailed Nodemailer logs
     });
 
     console.log('[SMTP Service] Verifying SMTP connection...');
@@ -47,7 +59,7 @@ export const sendEmailSMTP = async (
       console.log('[SMTP Service] SMTP connection verified successfully.');
     } catch (verifyError: any) {
       console.error('[SMTP Service] SMTP connection verification failed:', verifyError.message);
-      console.error('[SMTP Service] SMTP Verification Error Details:', verifyError);
+      console.error('[SMTP Service] SMTP Verification Error Details:', JSON.stringify(verifyError, Object.getOwnPropertyNames(verifyError)));
       return false; // لا يمكن المتابعة إذا فشل التحقق
     }
 
@@ -67,11 +79,12 @@ export const sendEmailSMTP = async (
 
     const info = await transporter.sendMail(mailOptions);
     console.log(`[SMTP Service] Email sent successfully via SMTP to ${to}. Message ID: ${info.messageId}`);
+    console.log(`[SMTP Service] SMTP Response: ${info.response}`);
     return true;
 
   } catch (error: any) {
     console.error('[SMTP Service] Exception during SMTP email sending:', error);
-    console.error('[SMTP Service] SMTP Error Details - Message:', error.message, 'Stack:', error.stack, 'Response:', error.response, 'Response Code:', error.responseCode);
+    console.error('[SMTP Service] SMTP Error Details - Message:', error.message, 'Stack:', error.stack, 'Response:', error.response, 'Response Code:', error.responseCode, 'Full Error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     return false;
   }
 };
@@ -84,9 +97,9 @@ export const sendOTPEmailSMTP = async (
   otp: string,
   expiryTime: Date
 ): Promise<boolean> => {
-  console.log(`[SMTP Service] Preparing to send OTP email via SMTP to ${to} with code ${otp.substring(0,1)}*****`);
+  console.log(`[SMTP Service] Preparing to send OTP email via SMTP to ${to} with code (masked)`);
   const subject = 'رمز التحقق لصفحة التشخيص (SMTP)';
-  const formattedTime = `${expiryTime.getHours()}:${expiryTime.getMinutes().toString().padStart(2, '0')}`;
+  const formattedTime = expiryTime.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
   const text = `رمز التحقق الخاص بك هو: ${otp}. هذا الرمز صالح حتى الساعة ${formattedTime}.`;
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px; text-align: center;">
@@ -105,5 +118,4 @@ export const sendOTPEmailSMTP = async (
   `;
   return sendEmailSMTP(to, subject, text, html);
 };
-
     

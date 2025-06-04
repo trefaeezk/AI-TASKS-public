@@ -80,6 +80,7 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
                 console.log(`[${functionName}] User with email ${email} not found, creating invitation without user ID.`);
             } else {
                 console.error(`[${functionName}] Error fetching user by email ${email}:`, error);
+                 // لا ترمي خطأ هنا، فقط سجل الخطأ، فقد يتمكن المستخدم من التسجيل لاحقًا
             }
         }
 
@@ -109,7 +110,7 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
             departmentId: departmentId || null,
             status: 'pending',
             invitedBy: uid,
-            invitedByName: auth?.token.name || auth?.token.email || '',
+            invitedByName: auth?.token.name || auth?.token.email || 'مدير المؤسسة',
             userId: invitedUserRecord?.uid || null,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
@@ -123,16 +124,20 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
         try {
             const { sendOrganizationInvitationEmail } = await import('../email/index');
             
+            // قراءة APP_BASE_URL من متغيرات البيئة
             const appBaseUrlFromEnv = process.env.APP_BASE_URL;
-            const appBaseUrlFromConfig = functions.config().app?.base_url;
-            const appBaseUrl = appBaseUrlFromEnv || appBaseUrlFromConfig || 'https://tasks-intelligence.web.app';
+            const appBaseUrlFromConfig = functions.config().app?.base_url; // طريقة قديمة، لكن نتركها للتوافق
+            const appBaseUrl = appBaseUrlFromEnv || appBaseUrlFromConfig || 'https://tasks-intelligence.web.app'; // قيمة افتراضية
             
-            const envSource = appBaseUrlFromEnv ? 'process.env.APP_BASE_URL' : 
-                              appBaseUrlFromConfig ? 'functions.config().app.base_url' : 
-                              'Fallback Default';
+            let envSource = 'Fallback Default';
+            if (appBaseUrlFromEnv) {
+                envSource = 'process.env.APP_BASE_URL';
+            } else if (appBaseUrlFromConfig) {
+                envSource = 'functions.config().app.base_url';
+            }
 
             if (appBaseUrl === 'https://tasks-intelligence.web.app' && (!appBaseUrlFromEnv && !appBaseUrlFromConfig)) {
-                 console.warn(`[${functionName}] ⚠️ تحذير: متغير البيئة APP_BASE_URL (أو functions.config().app.base_url) غير معين. يتم استخدام القيمة الافتراضية: '${appBaseUrl}'. يرجى تعيين هذا المتغير في ملف .env الخاص بالدوال أو في تكوين دوال Firebase لضمان صحة روابط الدعوات. مصدر القيمة المستخدمة: ${envSource}`);
+                 console.warn(`[${functionName}] ⚠️ تحذير: متغير البيئة APP_BASE_URL (أو functions.config().app.base_url) غير معين. يتم استخدام القيمة الافتراضية: '${appBaseUrl}'. يرجى تعيين هذا المتغير في ملف .env الخاص بالدوال (للتطوير) أو في تكوين دوال Firebase (للنشر) لضمان صحة روابط الدعوات. مصدر القيمة المستخدمة: ${envSource}`);
             }
             console.log(`[${functionName}] Using APP_BASE_URL: ${appBaseUrl} (From: ${envSource})`);
 
@@ -140,6 +145,7 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
             const inviterName = auth?.token?.name || auth?.token?.email || 'مدير المؤسسة';
 
             console.log(`[${functionName}] Constructed invitation URL: ${invitationUrl}`);
+            console.log(`[${functionName}] Inviter name: ${inviterName}`);
 
             const emailSent = await sendOrganizationInvitationEmail(
                 email,
@@ -150,7 +156,7 @@ export const inviteUserToOrganization = createCallableFunction<InviteUserToOrgan
             );
 
             if (emailSent) {
-                console.log(`[${functionName}] ✅ Invitation email send attempt successful for ${email}`);
+                console.log(`[${functionName}] ✅ Invitation email send attempt was reported as successful for ${email}`);
             } else {
                 console.warn(`[${functionName}] ⚠️ Failed to send invitation email to ${email} (sendOrganizationInvitationEmail returned false). Check EmailService logs (Resend/SMTP).`);
             }
@@ -344,7 +350,15 @@ export const acceptOrganizationInvitation = createCallableFunction<AcceptOrganiz
             role: invitationData.role,
             accountType: 'organization',
             organizationId: invitationData.organizationId,
-            departmentId: invitationData.departmentId || null
+            departmentId: invitationData.departmentId || null,
+            // ضمان تعيين الأدوار المنطقية بشكل صحيح
+            isOrgOwner: invitationData.role === 'isOrgOwner',
+            isOrgAdmin: invitationData.role === 'isOrgAdmin',
+            isOrgSupervisor: invitationData.role === 'isOrgSupervisor',
+            isOrgEngineer: invitationData.role === 'isOrgEngineer',
+            isOrgTechnician: invitationData.role === 'isOrgTechnician',
+            isOrgAssistant: invitationData.role === 'isOrgAssistant',
+            isIndependent: false, // لم يعد مستقلاً
         };
         console.log(`[${functionName}] Setting custom claims for user ${uid}:`, newClaims);
         await admin.auth().setCustomUserClaims(uid, newClaims);
@@ -356,6 +370,15 @@ export const acceptOrganizationInvitation = createCallableFunction<AcceptOrganiz
             accountType: 'organization',
             organizationId: invitationData.organizationId,
             departmentId: invitationData.departmentId || null,
+            organizationName: invitationData.organizationName, // إضافة اسم المؤسسة
+             // ضمان تعيين الأدوار المنطقية بشكل صحيح
+            isOrgOwner: invitationData.role === 'isOrgOwner',
+            isOrgAdmin: invitationData.role === 'isOrgAdmin',
+            isOrgSupervisor: invitationData.role === 'isOrgSupervisor',
+            isOrgEngineer: invitationData.role === 'isOrgEngineer',
+            isOrgTechnician: invitationData.role === 'isOrgTechnician',
+            isOrgAssistant: invitationData.role === 'isOrgAssistant',
+            isIndependent: false,
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
 
@@ -437,5 +460,4 @@ export const rejectOrganizationInvitation = createCallableFunction<RejectOrganiz
         throw new functions.https.HttpsError('internal', `Failed to reject organization invitation: ${error.message || 'Unknown error'}`);
     }
 });
-
     
