@@ -14,7 +14,7 @@
 
 ### 🌐 Base URL
 ```
-https://us-central1-your-project.cloudfunctions.net/api
+https://europe-west1-your-project.cloudfunctions.net/api
 ```
 
 ### 📝 تنسيق الاستجابة
@@ -401,7 +401,7 @@ PUT /api/users/user_123/permissions
 ### 🔧 JavaScript/TypeScript Client
 ```typescript
 class UserManagementAPI {
-  private baseURL = 'https://us-central1-your-project.cloudfunctions.net/api';
+  private baseURL = 'https://europe-west1-your-project.cloudfunctions.net/api';
   private token: string;
 
   constructor(token: string) {
@@ -494,7 +494,7 @@ from typing import Dict, Any, Optional
 
 class UserManagementAPI:
     def __init__(self, token: str):
-        self.base_url = 'https://us-central1-your-project.cloudfunctions.net/api'
+        self.base_url = 'https://europe-west1-your-project.cloudfunctions.net/api'
         self.headers = {
             'Authorization': f'Bearer {token}',
             'Content-Type': 'application/json'

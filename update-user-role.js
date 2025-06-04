@@ -38,7 +38,7 @@ async function updateUserRole() {
     // الحصول على معرف المستخدم المستهدف
     console.log(`البحث عن المستخدم: ${targetEmail}`);
     const listUsersResponse = await axios.post(
-      'https://us-central1-tasks-intelligence.cloudfunctions.net/listFirebaseUsers',
+      'https://europe-west1-tasks-intelligence.cloudfunctions.net/listFirebaseUsers',
       {},
       {
         headers: {
@@ -61,7 +61,7 @@ async function updateUserRole() {
     // تحديث دور المستخدم
     console.log(`تحديث دور المستخدم إلى: ${newRole}`);
     const updateRoleResponse = await axios.post(
-      'https://us-central1-tasks-intelligence.cloudfunctions.net/updateUserRoleHttp',
+      'https://europe-west1-tasks-intelligence.cloudfunctions.net/updateUserRoleHttp',
       {
         uid: targetUid,
         role: newRole

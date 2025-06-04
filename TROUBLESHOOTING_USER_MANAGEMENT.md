@@ -40,7 +40,7 @@
 ## الأخطاء الشائعة وحلولها
 
 ### 1. CORS Error
-**المشكلة:** `Access to fetch at 'https://us-central1-tasks-intelligence.cloudfunctions.net/createUser' from origin 'http://localhost:9003' has been blocked by CORS policy`
+**المشكلة:** `Access to fetch at 'https://europe-west1-tasks-intelligence.cloudfunctions.net/createUser' from origin 'http://localhost:9003' has been blocked by CORS policy`
 
 **الحل:**
 ```bash
@@ -159,7 +159,7 @@ console.log('Auth user:', auth.currentUser);
 
 ## ملاحظات مهمة
 
-- تأكد من أن Firebase Functions منشورة في المنطقة الصحيحة (us-central1)
+- تأكد من أن Firebase Functions منشورة في المنطقة الصحيحة (europe-west1)
 - تحقق من أن المستخدم لديه صلاحيات admin في custom claims
 - راجع Firebase Console للتأكد من عدم وجود مشاكل في الفوترة أو الحدود
 - تأكد من أن جميع التبعيات محدثة ومتوافقة

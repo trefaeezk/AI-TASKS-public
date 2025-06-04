@@ -5,7 +5,7 @@ C:\Users\Taha\Desktop\Admin\AI-tasks-1\src\lib\firebase.ts:28 🔧 Firebase Func
 C:\Users\Taha\Desktop\Admin\AI-tasks-1\src\lib\firebase.ts:29   - Environment: development
 C:\Users\Taha\Desktop\Admin\AI-tasks-1\src\lib\firebase.ts:30   - Hostname: 192.168.1.104
 C:\Users\Taha\Desktop\Admin\AI-tasks-1\src\lib\firebase.ts:31   - Project ID: tasks-intelligence
-C:\Users\Taha\Desktop\Admin\AI-tasks-1\src\lib\firebase.ts:32   - Region: us-central1
+C:\Users\Taha\Desktop\Admin\AI-tasks-1\src\lib\firebase.ts:32   - Region: europe-west1
 C:\Users\Taha\Desktop\Admin\AI-tasks-1\src\context\LanguageContext.tsx:108 [LanguageContext] Loaded language from localStorage: ar
 C:\Users\Taha\Desktop\Admin\AI-tasks-1\src\context\AuthContext.tsx:514 [AuthContext] Displaying global loading spinner. Loading: true User: false Path: /admin/diagnostics
 C:\Users\Taha\Desktop\Admin\AI-tasks-1\src\context\AuthContext.tsx:348 [AuthContext] Setting up auth state listener.
@@ -299,11 +299,11 @@ C:\Users\Taha\Desktop\Admin\AI-tasks-1\src\hooks\usePermissions.tsx:162 [usePerm
 C:\Users\Taha\Desktop\Admin\AI-tasks-1\src\components\PermissionSidebarItem.tsx:76 [PermissionSidebarItem] الوثائق: Required permission settings.view, has permission: true
 C:\Users\Taha\Desktop\Admin\AI-tasks-1\src\components\PermissionSidebarItem.tsx:80 [PermissionSidebarItem] الوثائق: Final access decision: true
 C:\Users\Taha\Desktop\Admin\AI-tasks-1\src\components\debug\CreateUserTest.tsx:85 🧪 Testing createUser with data: {email: 'tttttttttttt@example.com', password: 'testpass123', name: 'Test User', role: 'org_assistant', accountType: 'individual'}
-diagnostics:1 Access to fetch at 'https://us-central1-tasks-intelligence.cloudfunctions.net/createUser' from origin 'http://192.168.1.104:9003' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+diagnostics:1 Access to fetch at 'https://europe-west1-tasks-intelligence.cloudfunctions.net/createUser' from origin 'http://192.168.1.104:9003' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
 C:\Users\Taha\Desktop\Admin\AI-tasks-1\src\components\debug\CreateUserTest.tsx:88 
             
             
-           POST https://us-central1-tasks-intelligence.cloudfunctions.net/createUser net::ERR_FAILED
+           POST https://europe-west1-tasks-intelligence.cloudfunctions.net/createUser net::ERR_FAILED
 fetchImpl @ index.esm2017.js:455
 postJSON @ index.esm2017.js:549
 callAtURL @ index.esm2017.js:621

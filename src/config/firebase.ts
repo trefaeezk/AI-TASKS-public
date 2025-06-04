@@ -34,7 +34,7 @@ if (!getApps().length) {
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 const db = getFirestore(app); // Initialize Firestore
-const functions = getFunctions(app, 'us-central1'); // Initialize Functions with region
+const functions = getFunctions(app, 'europe-west1'); // Initialize Functions with region
 
 // تعيين timeout أطول للدوال
 if (typeof window !== 'undefined') {

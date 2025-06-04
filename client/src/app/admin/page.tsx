@@ -39,8 +39,8 @@ try {
 let functionsInstance: ReturnType<typeof getFunctions> | null = null;
 if (app && !functionsInstance) { // Check if already initialized
     try {
-        functionsInstance = getFunctions(app, "us-central1");
-         console.log("[AdminPage Client] Firebase Functions initialized for region us-central1.");
+        functionsInstance = getFunctions(app, "europe-west1");
+         console.log("[AdminPage Client] Firebase Functions initialized for region europe-west1.");
     } catch(error) {
         console.error("[AdminPage Client] Failed to initialize Firebase Functions:", error);
          // Handle initialization error

@@ -281,7 +281,7 @@ export default function OrganizationRequestsPage() {
                         throw new Error('لم يتم العثور على رمز المصادقة');
                       }
 
-                      const response = await fetch(`https://us-central1-tasks-intelligence.cloudfunctions.net/setOwnerDirectHttp?uid=${user?.uid}`, {
+                      const response = await fetch(`https://europe-west1-tasks-intelligence.cloudfunctions.net/setOwnerDirectHttp?uid=${user?.uid}`, {
                         method: 'GET',
                         headers: {
                           'Authorization': `Bearer ${idToken}`

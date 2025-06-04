@@ -324,7 +324,7 @@ ${invitationUrl}
  * تتحقق من أن المستخدم هو مالك التطبيق
  * ثم تنشئ رمز OTP وترسله عبر البريد الإلكتروني
  */
-export const generateAndSendOTP = functions.https.onCall(async (_, context) => {
+export const generateAndSendOTP = functions.region("europe-west1").https.onCall(async (_, context) => {
   // التحقق من وجود مستخدم مسجل الدخول
   if (!context.auth) {
     throw new functions.https.HttpsError(
@@ -429,7 +429,7 @@ export const generateAndSendOTP = functions.https.onCall(async (_, context) => {
  * وظيفة سحابية للتحقق من رمز OTP
  * تتحقق من صحة الرمز وأنه لم ينته وقته ولم يتم استخدامه من قبل
  */
-export const verifyOTP = functions.https.onCall(async (data, context) => {
+export const verifyOTP = functions.region("europe-west1").https.onCall(async (data, context) => {
   // التحقق من وجود مستخدم مسجل الدخول
   if (!context.auth) {
     throw new functions.https.HttpsError(

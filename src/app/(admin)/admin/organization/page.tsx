@@ -52,7 +52,7 @@ export default function OrganizationPage() {
         const idToken = await user.getIdToken();
 
         // جلب بيانات المؤسسة
-        const response = await fetch(`https://us-central1-tasks-intelligence.cloudfunctions.net/getOrganizationHttp?orgId=${organizationId}`, {
+        const response = await fetch(`https://europe-west1-tasks-intelligence.cloudfunctions.net/getOrganizationHttp?orgId=${organizationId}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${idToken}`

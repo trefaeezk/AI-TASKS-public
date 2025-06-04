@@ -128,7 +128,7 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
               } else {
                 // Fallback if not in 'users', try Firebase Auth (less reliable for display name)
                 const idToken = await user.getIdToken();
-                const response = await fetch(`https://us-central1-tasks-intelligence.cloudfunctions.net/getUserHttp?uid=${doc.id}`, {
+                const response = await fetch(`https://europe-west1-tasks-intelligence.cloudfunctions.net/getUserHttp?uid=${doc.id}`, {
                   method: 'GET',
                   headers: {
                     'Authorization': `Bearer ${idToken}`

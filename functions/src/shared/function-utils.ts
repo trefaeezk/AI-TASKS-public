@@ -38,7 +38,7 @@ export function createCallableFunction<T = any, R = any>(
   handler: (request: CallableRequest<T>) => Promise<R> | R,
   options: { region?: string; requireAuth?: boolean; runWith?: functions.RuntimeOptions } = {}
 ) {
-  const region = options.region || 'us-central1';
+  const region = options.region || 'europe-west1';
   const requireAuth = options.requireAuth !== false; // افتراضياً true إلا إذا تم تحديده صراحةً كـ false
   // Ensure maxInstances is set to 10 by default for callable functions
   const runWithOptions = {
@@ -103,7 +103,7 @@ export function createHttpFunction<T = any, R = any>(
   handler: (request: CallableRequest<T>) => Promise<R> | R,
   options: { region?: string; requireAuth?: boolean; runWith?: functions.RuntimeOptions } = {}
 ) {
-  const region = options.region || 'us-central1';
+  const region = options.region || 'europe-west1';
   const requireAuth = options.requireAuth !== false;
   const runWithOptions = { maxInstances: 10, ...options.runWith };
 

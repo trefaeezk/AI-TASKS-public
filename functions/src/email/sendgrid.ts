@@ -34,7 +34,7 @@ export const sendEmail = async (
   try {
     const msg = {
       to,
-      from: 'security@studio--tasks-intelligence.us-central1.hosted.app', // يجب أن يكون هذا البريد الإلكتروني متحققًا منه في SendGrid
+      from: 'security@studio--tasks-intelligence.europe-west1.hosted.app', // يجب أن يكون هذا البريد الإلكتروني متحققًا منه في SendGrid
       subject,
       text,
       html: html || text,

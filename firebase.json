@@ -26,7 +26,7 @@
       "NEXT_PUBLIC_FIREBASE_APP_ID": "1:770714758504:web:aea98ba39a726df1ba3add"
     },
     "frameworksBackend": {
-      "region": "us-central1",
+      "region": "europe-west1",
       "maxInstances": 10
     }
   },

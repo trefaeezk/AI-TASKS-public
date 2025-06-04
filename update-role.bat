@@ -8,7 +8,7 @@ curl -X POST ^
   -H "Content-Type: application/json" ^
   -H "Authorization: Bearer TOKEN_HERE" ^
   -d "{\"uid\":\"USER_ID_HERE\",\"role\":\"engineer\"}" ^
-  https://us-central1-tasks-intelligence.cloudfunctions.net/updateUserRoleHttp
+  https://europe-west1-tasks-intelligence.cloudfunctions.net/updateUserRoleHttp
 
 echo.
 echo تم الانتهاء من العملية.

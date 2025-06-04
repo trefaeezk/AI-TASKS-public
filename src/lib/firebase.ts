@@ -19,7 +19,7 @@ let functions: any;
 
 if (typeof window !== 'undefined') {
   // في المتصفح
-  functions = getFunctions(app, 'us-central1');
+  functions = getFunctions(app, 'europe-west1');
 
   // تحقق من البيئة
   const isDevelopment = process.env.NODE_ENV === 'development';
@@ -29,7 +29,7 @@ if (typeof window !== 'undefined') {
   console.log('  - Environment:', process.env.NODE_ENV);
   console.log('  - Hostname:', window.location.hostname);
   console.log('  - Project ID:', firebaseConfig.projectId);
-  console.log('  - Region: us-central1');
+  console.log('  - Region: europe-west1');
 
   // في حالة التطوير المحلي، يمكن استخدام المحاكي إذا كان متاحاً
   if (isDevelopment && isLocalhost) {

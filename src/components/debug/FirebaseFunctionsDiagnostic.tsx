@@ -34,7 +34,7 @@ export function FirebaseFunctionsDiagnostic() {
           test: 'Firebase Functions Instance',
           status: 'success',
           message: 'Firebase Functions instance is available',
-          details: { region: 'us-central1' }
+          details: { region: 'europe-west1' }
         });
       } else {
         testResults.push({
