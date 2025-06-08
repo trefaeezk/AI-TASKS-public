@@ -7,7 +7,7 @@ const nextConfig = {
   },
 
   // تكوين webpack لتجاوز مشاكل الوحدات الخارجية ودعم WebAssembly
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
     // تجاهل مكتبات جانب الخادم في جانب العميل
     if (!isServer) {
       config.resolve.fallback = {
@@ -22,14 +22,37 @@ const nextConfig = {
       };
     }
 
-    // تعطيل HMR في بيئة الإنتاج
-    if (process.env.NODE_ENV === 'production') {
-      config.optimization.runtimeChunk = false;
-      config.optimization.splitChunks = {
-        cacheGroups: {
-          default: false,
+    // إعدادات لحل مشاكل chunk loading
+    if (dev) {
+      config.output = {
+        ...config.output,
+        chunkLoadTimeout: 30000, // زيادة timeout إلى 30 ثانية
+      };
+    }
+
+    // تحسين استخدام الذاكرة والمساحة في الإنتاج
+    if (!dev) {
+      // تقليل حجم الملفات
+      config.optimization = {
+        ...config.optimization,
+        minimize: true,
+        splitChunks: {
+          chunks: 'all',
+          minSize: 20000,
+          maxSize: 244000,
+          cacheGroups: {
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendors',
+              chunks: 'all',
+              maxSize: 244000,
+            },
+          },
         },
       };
+
+      // تقليل استخدام الذاكرة
+      config.cache = false;
     }
 
     return config;
@@ -43,6 +66,11 @@ const nextConfig = {
   // تكوين لتجنب مشاكل HMR
   devIndicators: {
     position: 'bottom-right',
+  },
+
+  // إعدادات إضافية لحل مشاكل chunk loading
+  experimental: {
+    esmExternals: 'loose',
   },
 
   // تكوين لتحسين الأداء في بيئة الإنتاج

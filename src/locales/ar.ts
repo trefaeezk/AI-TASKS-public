@@ -236,6 +236,11 @@ const ar = {
     googleSignInFailed: "فشل تسجيل الدخول باستخدام جوجل.",
     orContinueWith: "أو استمر بواسطة",
     signInWithGoogle: "تسجيل الدخول باستخدام جوجل",
+    registrationSuccessful: "تم التسجيل بنجاح!",
+    accountCreatedSuccessfully: "تم إنشاء حسابك بنجاح",
+    pleaseSignIn: "يرجى تسجيل الدخول للمتابعة",
+    redirectingToLogin: "جاري التوجيه إلى صفحة تسجيل الدخول...",
+    goToLogin: "الذهاب إلى تسجيل الدخول",
   },
 
   // الاقتراحات - Suggestions

@@ -17,21 +17,7 @@ import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { Translate } from '../Translate';
 
-// دالة لعرض أسماء الأدوار بالعربية
-const getRoleDisplayName = (role: string): string => {
-  const roleNames: Record<string, string> = {
-    'isSystemOwner': 'مالك النظام',
-    'isSystemAdmin': 'أدمن النظام العام',
-    'isIndependent': 'مستخدم مستقل',
-    'isOrgOwner': 'مالك المؤسسة',
-    'isOrgAdmin': 'أدمن المؤسسة',
-    'isOrgSupervisor': 'مشرف',
-    'isOrgEngineer': 'مهندس',
-    'isOrgTechnician': 'فني',
-    'isOrgAssistant': 'مساعد فني'
-  };
-  return roleNames[role] || role;
-};
+
 
 interface UserDetailsDialogProps {
   isOpen: boolean;
@@ -167,7 +153,7 @@ export function UserDetailsDialog({
                     <Label className="text-muted-foreground">الدور الحالي</Label>
                     <p className="text-sm font-medium bg-primary/10 text-primary px-2 py-1 rounded-md inline-block">
                       {user.role ? (
-                        getRoleDisplayName(user.role)
+                        <Translate text={`roles.${user.role}`} defaultValue={user.role} />
                       ) : (
                         'غير محدد'
                       )}

@@ -131,67 +131,21 @@ export function useFirebaseAuth() {
         }
       }
 
-      // إنشاء وثيقة المستخدم في Firestore مع جميع العناصر المطلوبة
+      // تسجيل نجاح إنشاء المستخدم في Firebase Auth
       if (userCredential.user) {
-        try {
-          const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
-          const { db } = await import('@/lib/firebase');
+        console.log("[useFirebaseAuth] ✅ User created successfully in Firebase Auth:", userCredential.user.uid);
+        console.log("[useFirebaseAuth] 📝 User document will be created automatically by Cloud Function");
 
-          const userData = {
-            uid: userCredential.user.uid,           // ✅ معرف المستخدم
-            name: name || userCredential.user.email?.split('@')[0] || 'مستخدم',
-            email: userCredential.user.email,
-            displayName: name || userCredential.user.email?.split('@')[0] || 'مستخدم',
-            accountType: 'individual',
-            role: 'isIndependent',                  // ✅ الدور الصحيح
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-            disabled: false,
-            // النمط الجديد is* فقط - النظام الموحد
-            isSystemOwner: false,
-            isSystemAdmin: false,
-            isOrgOwner: false,
-            isOrgAdmin: false,
-            isOrgSupervisor: false,
-            isOrgEngineer: false,
-            isOrgTechnician: false,
-            isOrgAssistant: false,
-            isIndependent: true,                    // ✅ الدور المنطقي الصحيح
-            // الصلاحيات المحسوبة - النظام الموحد
-            canManageSystem: false,
-            canManageUsers: false,
-            canManageOrganization: false,
-            canViewReports: false,
-            canEditSettings: false,
-            // معلومات المؤسسة (null للأفراد)
-            organizationId: null,                   // ✅ معرف المؤسسة
-            departmentId: null,                     // ✅ معرف القسم
-            // الصلاحيات المخصصة
-            customPermissions: [],                  // ✅ الصلاحيات المخصصة
-            // من أنشأ المستخدم
-            createdBy: userCredential.user.uid      // ✅ المستخدم أنشأ نفسه
-          };
+        // لا نحاول إنشاء وثيقة Firestore هنا لتجنب مشاكل الصلاحيات
+        // سيتم إنشاؤها تلقائياً عبر Cloud Function: createUserDocument
 
-          await setDoc(doc(db, 'users', userCredential.user.uid), userData);
-          console.log("[useFirebaseAuth] ✅ User document created in Firestore with all required fields");
-        } catch (firestoreError) {
-          console.error("[useFirebaseAuth] Error creating user document in Firestore:", firestoreError);
-          // نستمر حتى لو فشل إنشاء الوثيقة، سيتم إنشاؤها في AuthContext
-        }
+        // انتظار قصير للسماح للـ Cloud Function بالعمل
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
 
-      // تعيين نوع الحساب كمستقل (individual) والدور كمستخدم مستقل (isIndependent)
-      try {
-        const updateAccountTypeFunc = httpsCallable(functions, 'updateAccountType');
-        await updateAccountTypeFunc({
-          accountType: 'individual'
-        });
-
-        console.log("[useFirebaseAuth] User account type set to individual");
-      } catch (updateError) {
-        console.error("[useFirebaseAuth] Error setting account type:", updateError);
-        // نستمر حتى لو فشل تعيين نوع الحساب، سيتم التعامل معه لاحقًا في AuthContext
-      }
+      // تم إزالة تعيين نوع الحساب هنا لتجنب مشاكل الصلاحيات
+      // سيتم تعيينه تلقائياً عبر Cloud Function: createUserDocument
+      console.log("[useFirebaseAuth] 📝 Account type and claims will be set automatically by Cloud Function");
 
       toast({
         title: 'تم إنشاء الحساب بنجاح!', // Account created successfully!
@@ -305,78 +259,23 @@ export function useFirebaseAuth() {
       // التحقق مما إذا كان المستخدم جديدًا
       const isNewUser = result.user.metadata.creationTime === result.user.metadata.lastSignInTime;
 
-      // إذا كان المستخدم جديدًا، نقوم بإنشاء وثيقة Firestore وتعيين نوع الحساب
+      // إذا كان المستخدم جديدًا، نعرض رسالة ترحيب
       if (isNewUser) {
-        try {
-          // إنشاء وثيقة المستخدم في Firestore مع جميع العناصر المطلوبة
-          const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
-          const { db } = await import('@/lib/firebase');
+        console.log("[useFirebaseAuth] ✅ New Google user detected, document will be created by Cloud Function");
 
-          const userName = result.user.displayName || result.user.email?.split('@')[0] || 'مستخدم';
+        // انتظار قصير للسماح للـ Cloud Function بالعمل
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
-          const userData = {
-            uid: result.user.uid,                   // ✅ معرف المستخدم
-            name: userName,
-            email: result.user.email,
-            displayName: userName,
-            accountType: 'individual',
-            role: 'isIndependent',                  // ✅ الدور الصحيح
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-            disabled: false,
-            // النمط الجديد is* فقط - النظام الموحد
-            isSystemOwner: false,
-            isSystemAdmin: false,
-            isOrgOwner: false,
-            isOrgAdmin: false,
-            isOrgSupervisor: false,
-            isOrgEngineer: false,
-            isOrgTechnician: false,
-            isOrgAssistant: false,
-            isIndependent: true,                    // ✅ الدور المنطقي الصحيح
-            // الصلاحيات المحسوبة - النظام الموحد
-            canManageSystem: false,
-            canManageUsers: false,
-            canManageOrganization: false,
-            canViewReports: false,
-            canEditSettings: false,
-            // معلومات المؤسسة (null للأفراد)
-            organizationId: null,                   // ✅ معرف المؤسسة
-            departmentId: null,                     // ✅ معرف القسم
-            // الصلاحيات المخصصة
-            customPermissions: [],                  // ✅ الصلاحيات المخصصة
-            // من أنشأ المستخدم
-            createdBy: result.user.uid              // ✅ المستخدم أنشأ نفسه
-          };
+        toast({
+          title: 'تم إنشاء الحساب بنجاح!',
+          description: 'تم تسجيلك كمستخدم مستقل باستخدام حساب جوجل.',
+        });
 
-          await setDoc(doc(db, 'users', result.user.uid), userData);
-          console.log("[useFirebaseAuth] ✅ Google user document created in Firestore with all required fields");
+        // تحديث token المستخدم لتحميل الصلاحيات الجديدة للمستخدم الجديد
+        console.log("[useFirebaseAuth] Refreshing user token after Google signup");
 
-          // تعيين نوع الحساب في Custom Claims
-          const updateAccountTypeFunc = httpsCallable(functions, 'updateAccountType');
-          await updateAccountTypeFunc({
-            accountType: 'individual'
-          });
-
-          console.log("[useFirebaseAuth] New Google user account type set to individual");
-
-          toast({
-            title: 'تم إنشاء الحساب بنجاح!',
-            description: 'تم تسجيلك كمستخدم مستقل باستخدام حساب جوجل.',
-          });
-
-          // تحديث token المستخدم لتحميل الصلاحيات الجديدة للمستخدم الجديد
-          console.log("[useFirebaseAuth] Refreshing user token after Google signup");
-
-          // إضافة تأخير قبل تحديث الـ token
-          await new Promise(resolve => setTimeout(resolve, 1000));
-
-          if (await refreshUserToken()) {
-            console.log("[useFirebaseAuth] User token refreshed successfully after Google signup");
-          }
-        } catch (updateError) {
-          console.error("[useFirebaseAuth] Error setting account type for Google user:", updateError);
-          // نستمر حتى لو فشل تعيين نوع الحساب، سيتم التعامل معه لاحقًا في AuthContext
+        if (await refreshUserToken()) {
+          console.log("[useFirebaseAuth] User token refreshed successfully after Google signup");
         }
       } else {
         toast({

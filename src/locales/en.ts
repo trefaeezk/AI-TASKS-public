@@ -234,6 +234,11 @@ const en = {
     googleSignInFailed: "Failed to sign in with Google.",
     orContinueWith: "Or continue with",
     signInWithGoogle: "Sign in with Google",
+    registrationSuccessful: "Registration Successful!",
+    accountCreatedSuccessfully: "Your account has been created successfully",
+    pleaseSignIn: "Please sign in to continue",
+    redirectingToLogin: "Redirecting to login page...",
+    goToLogin: "Go to Login",
   },
 
   // Suggestions

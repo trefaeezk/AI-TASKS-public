@@ -395,5 +395,86 @@ export const updateAccountType = createCallableFunction<UpdateAccountTypeRequest
     }
 });
 
+/**
+ * Cloud Function تلقائية لإنشاء وثيقة المستخدم عند التسجيل
+ * تتفعل تلقائياً عند إنشاء مستخدم جديد في Firebase Auth
+ */
+export const createUserDocument = functions
+    .region('europe-west1')
+    .auth.user().onCreate(async (user) => {
+    const functionName = 'createUserDocument';
+    console.log(`🚀 --- ${functionName} Cloud Function triggered for user: ${user.uid} ---`);
 
-    
+    try {
+        // التحقق من وجود وثيقة المستخدم مسبقاً
+        const userDocRef = db.collection('users').doc(user.uid);
+        const userDoc = await userDocRef.get();
+
+        if (userDoc.exists) {
+            console.log(`[${functionName}] User document already exists for ${user.uid}, skipping creation`);
+            return;
+        }
+
+        // إنشاء اسم المستخدم
+        const userName = user.displayName ||
+                        (user.email ? user.email.split('@')[0] : '') ||
+                        'مستخدم جديد';
+
+        // إنشاء بيانات المستخدم الافتراضية
+        const userData = {
+            uid: user.uid,
+            name: userName,
+            email: user.email || '',
+            displayName: userName,
+            role: 'isIndependent',
+            accountType: 'individual',
+            // الأدوار المنطقية - النظام الموحد
+            isSystemOwner: false,
+            isSystemAdmin: false,
+            isOrgOwner: false,
+            isOrgAdmin: false,
+            isOrgSupervisor: false,
+            isOrgEngineer: false,
+            isOrgTechnician: false,
+            isOrgAssistant: false,
+            isIndependent: true,
+            // معلومات إضافية
+            organizationId: null,
+            departmentId: null,
+            customPermissions: [],
+            disabled: false,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdBy: user.uid
+        };
+
+        // إنشاء وثيقة المستخدم
+        await userDocRef.set(userData);
+        console.log(`[${functionName}] ✅ User document created successfully for ${user.uid}`);
+
+        // تحديث Custom Claims للمستخدم الجديد
+        await admin.auth().setCustomUserClaims(user.uid, {
+            role: 'isIndependent',
+            accountType: 'individual',
+            isSystemOwner: false,
+            isSystemAdmin: false,
+            isOrgOwner: false,
+            isOrgAdmin: false,
+            isOrgSupervisor: false,
+            isOrgEngineer: false,
+            isOrgTechnician: false,
+            isOrgAssistant: false,
+            isIndependent: true,
+            customPermissions: []
+        });
+
+        console.log(`[${functionName}] ✅ Custom claims set successfully for ${user.uid}`);
+
+    } catch (error) {
+        console.error(`[${functionName}] ❌ Error creating user document for ${user.uid}:`, error);
+        // لا نرمي خطأ هنا لأن هذا قد يؤثر على عملية التسجيل
+        // المستخدم سيتمكن من تسجيل الدخول والوثيقة ستُنشأ لاحقاً
+    }
+});
+
+

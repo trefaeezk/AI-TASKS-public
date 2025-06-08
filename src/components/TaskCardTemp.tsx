@@ -5,7 +5,7 @@ import type { TaskType, DurationUnit, TaskStatus, PriorityLevel, Milestone, Mile
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar as CalendarIcon, ChevronDown, ChevronUp, Clock, AlertTriangle, CheckCircle2, PauseCircle, MoreHorizontal, Edit, Trash2, GripVertical, Tag, CircleHelp, Info, ListChecks, Share2, Target, Percent } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronDown, ChevronUp, Clock, AlertTriangle, CheckCircle2, PauseCircle, MoreHorizontal, Edit, Trash2, GripVertical, Tag, CircleHelp, Info, ListChecks, Share2, Target, Percent, User } from 'lucide-react';
 import { CreateSubtasksDialog } from './CreateSubtasksDialog';
 import { SubtasksList } from './SubtasksList';
 import { AssignTaskToMembersDialog } from './AssignTaskToMembersDialog';
@@ -25,12 +25,13 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { MilestoneTracker } from './MilestoneTracker';
 import { db } from '@/config/firebase';
-import { doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, updateDoc, Timestamp, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
 import { v4 as uuidv4 } from 'uuid';
 import { OkrTaskBadge } from './okr/OkrTaskBadge';
 import { TaskKeyResultBadge } from './okr/TaskKeyResultBadge';
+import { useAuth } from '@/context/AuthContext';
 
 interface TaskCardTempProps {
   task: TaskType;
@@ -97,7 +98,39 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   const [isMilestonesExpanded, setIsMilestonesExpanded] = useState(false);
   const [showSubtasks, setShowSubtasks] = useState(false);
+  const [assigneeName, setAssigneeName] = useState<string | null>(null);
   const { toast } = useToast();
+  const { userClaims } = useAuth();
+
+
+
+  // جلب اسم المكلف بالمهمة للمؤسسات فقط
+  useEffect(() => {
+    const fetchAssigneeName = async () => {
+
+
+      if (!task.assignedToUserId || !task.organizationId) {
+        setAssigneeName(null);
+        return;
+      }
+
+      try {
+        const userDoc = await getDoc(doc(db, 'users', task.assignedToUserId));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const name = userData.displayName || userData.name || userData.email || 'مستخدم';
+          setAssigneeName(name);
+        } else {
+          setAssigneeName('مستخدم غير معروف');
+        }
+      } catch (error) {
+        console.error('Error fetching assignee name:', error);
+        setAssigneeName(null);
+      }
+    };
+
+    fetchAssigneeName();
+  }, [task.assignedToUserId, task.organizationId]);
 
   const {
       attributes,
@@ -247,9 +280,7 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
        }
    }, [task?.id, toast]);
 
-  useEffect(() => {
-    console.log(`[TaskCardTemp ${task?.id}] Rendering task, Description: ${task?.description}`);
-  }, [task]);
+
 
   if (!task) {
       console.warn("TaskCardTemp rendered without a task object.");
@@ -398,6 +429,13 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
                   <span className="flex items-center whitespace-nowrap">
                   <Clock className="h-3 w-3 ml-1" />
                   المدة: {durationFormatted}
+                  </span>
+              )}
+              {/* عرض المكلف بالمهمة للمؤسسات فقط */}
+              {task.organizationId && task.assignedToUserId && (
+                  <span className="flex items-center whitespace-nowrap text-blue-600 dark:text-blue-400">
+                  <User className="h-3 w-3 ml-1" />
+                  {assigneeName || 'جاري التحميل...'}
                   </span>
               )}
                {taskCategoryName && (

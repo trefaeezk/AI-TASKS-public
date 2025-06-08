@@ -153,6 +153,13 @@ export function subscribeToUserNotifications(
     organizationId?: string;
   }
 ): () => void {
+  // التحقق من صحة المعاملات
+  if (!userId) {
+    console.warn('subscribeToUserNotifications: No userId provided');
+    callback([]);
+    return () => {};
+  }
+
   // إنشاء الاستعلام الأساسي
   let notificationsQuery = query(
     collection(db, 'notifications'),
@@ -223,14 +230,25 @@ export function subscribeToUserNotifications(
     (error) => {
       console.error('Error subscribing to user notifications:', error);
 
-      // التعامل مع أخطاء الصلاحيات بعد تسجيل الخروج
-      if (error.code === 'permission-denied' || error.message?.includes('Missing or insufficient permissions')) {
-        console.warn('Notifications subscription: Permission denied, user may have been signed out.');
-        // لا نستدعي callback مع خطأ في هذه الحالة
+      // التعامل مع أخطاء الصلاحيات
+      if (error.code === 'permission-denied' ||
+          error.message?.includes('Missing or insufficient permissions') ||
+          error.message?.includes('insufficient permissions')) {
+        console.warn('Notifications subscription: Permission denied. User may not have access to notifications yet or has been signed out.');
+        // إرجاع مصفوفة فارغة بدلاً من عدم استدعاء callback
+        callback([]);
         return;
       }
 
-      // استدعاء callback مع مصفوفة فارغة في حالة الأخطاء الأخرى
+      // التعامل مع أخطاء الشبكة
+      if (error.code === 'unavailable' || error.message?.includes('network')) {
+        console.warn('Notifications subscription: Network error, will retry automatically.');
+        callback([]);
+        return;
+      }
+
+      // التعامل مع أخطاء أخرى
+      console.warn('Notifications subscription: Unknown error, returning empty array.');
       callback([]);
     }
   );

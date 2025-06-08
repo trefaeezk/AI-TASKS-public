@@ -22,21 +22,7 @@ import { Translate } from '@/components/Translate';
 import { ManagedUser } from '@/types/user';
 import { useToast } from '@/hooks/use-toast';
 
-// دالة لعرض أسماء الأدوار بالعربية
-const getRoleDisplayName = (role: string): string => {
-  const roleNames: Record<string, string> = {
-    'isSystemOwner': 'مالك النظام',
-    'isSystemAdmin': 'أدمن النظام العام',
-    'isIndependent': 'مستخدم مستقل',
-    'isOrgOwner': 'مالك المؤسسة',
-    'isOrgAdmin': 'أدمن المؤسسة',
-    'isOrgSupervisor': 'مشرف',
-    'isOrgEngineer': 'مهندس',
-    'isOrgTechnician': 'فني',
-    'isOrgAssistant': 'مساعد فني'
-  };
-  return roleNames[role] || role;
-};
+
 
 export default function UsersPage() {
   const { user, userClaims, refreshUserData } = useAuth();

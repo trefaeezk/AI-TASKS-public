@@ -129,14 +129,56 @@ export default function OrganizationTasksPage() {
                 return data.taskContext === 'organization' || (!data.taskContext && !data.departmentId && !data.assignedToUserId);
 
               case 'department':
-                // مهام القسم - للمشرفين والإدارة
-                if (!userClaims?.isOrgOwner && !userClaims?.isOrgAdmin && !userClaims?.isOrgSupervisor) return false;
-                return data.taskContext === 'department' || (data.departmentId && data.departmentId === userClaims?.departmentId);
+                // مهام القسم - لمالك المؤسسة وأدمن المؤسسة وأعضاء الأقسام
+
+                // مالك المؤسسة وأدمن المؤسسة يرون جميع مهام جميع الأقسام
+                if (userClaims?.isOrgOwner || userClaims?.isOrgAdmin) {
+                  console.log(`[DEPT FILTER] Owner/Admin access for task ${doc.id}`);
+                  // يرون مهام القسم العامة + جميع المهام الشخصية في الأقسام
+                  return data.taskContext === 'department' ||
+                         (data.departmentId && data.taskContext === 'individual');
+                }
+
+                // أعضاء الأقسام يرون مهام قسمهم فقط
+                if (!userClaims?.departmentId) return false; // يجب أن ينتمي لقسم
+                if (data.departmentId !== userClaims?.departmentId) return false; // نفس القسم فقط
+
+                // المهندسون والمشرفون يرون جميع مهام القسم (المهندس أعلى من المشرف)
+                if (userClaims?.isOrgEngineer || userClaims?.isOrgSupervisor) {
+                  console.log(`[DEPT FILTER] Engineer/Supervisor access for task ${doc.id}`);
+                  // يرون مهام القسم العامة + جميع المهام الشخصية في قسمهم
+                  return data.taskContext === 'department' ||
+                         (data.departmentId === userClaims?.departmentId && data.taskContext === 'individual');
+                }
+
+                // أعضاء القسم العاديون (فنيون، مساعدون فنيون) يرون:
+                // 1. مهام القسم العامة (taskContext === 'department')
+                // 2. مهامهم الشخصية المكلفين بها فقط (لا يرون مهام زملائهم)
+                if (userClaims?.isOrgTechnician || userClaims?.isOrgAssistant) {
+                  const isGeneralDeptTask = data.taskContext === 'department' && data.departmentId === userClaims?.departmentId;
+                  const isMyPersonalTask = data.taskContext === 'individual' &&
+                                          data.departmentId === userClaims?.departmentId &&
+                                          (data.assignedToUserId === user?.uid || data.createdBy === user?.uid);
+                  console.log(`[DEPT FILTER] Technician/Assistant access for task ${doc.id}:`, {
+                    isGeneralDeptTask,
+                    isMyPersonalTask,
+                    taskContext: data.taskContext,
+                    taskDeptId: data.departmentId,
+                    userDeptId: userClaims?.departmentId,
+                    assignedTo: data.assignedToUserId,
+                    createdBy: data.createdBy,
+                    currentUser: user?.uid
+                  });
+                  return isGeneralDeptTask || isMyPersonalTask;
+                }
+
+                // للأدوار الأخرى - لا يُسمح بالوصول
+                console.log(`[DEPT FILTER] No access for task ${doc.id} - unrecognized role`);
+                return false;
 
               case 'individual':
-                // المهام الفردية - المهام المسندة للمستخدم أو التي أنشأها
-                return data.taskContext === 'individual' ||
-                       data.assignedToUserId === user?.uid ||
+                // المهام الفردية - فقط المهام المسندة للمستخدم أو التي أنشأها
+                return data.assignedToUserId === user?.uid ||
                        data.userId === user?.uid ||
                        data.createdBy === user?.uid;
 
@@ -153,7 +195,15 @@ export default function OrganizationTasksPage() {
               userId: data.userId,
               createdBy: data.createdBy,
               userDepartmentId: userClaims?.departmentId,
-              currentUserId: user?.uid
+              currentUserId: user?.uid,
+              userRole: {
+                isOrgOwner: userClaims?.isOrgOwner,
+                isOrgAdmin: userClaims?.isOrgAdmin,
+                isOrgEngineer: userClaims?.isOrgEngineer,
+                isOrgSupervisor: userClaims?.isOrgSupervisor,
+                isOrgTechnician: userClaims?.isOrgTechnician,
+                isOrgAssistant: userClaims?.isOrgAssistant
+              }
             });
             return; // تخطي هذه المهمة
           }
@@ -183,6 +233,11 @@ export default function OrganizationTasksPage() {
             createdAt: data.createdAt ? data.createdAt.toDate() : new Date(),
             updatedAt: data.updatedAt ? data.updatedAt.toDate() : new Date(),
             order: data.order || 0,
+            // إضافة الحقول المفقودة
+            assignedToUserId: data.assignedToUserId,
+            taskContext: data.taskContext,
+            departmentId: data.departmentId,
+            createdBy: data.createdBy,
           };
 
           fetchedTasks.push(task);

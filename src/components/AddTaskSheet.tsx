@@ -3,7 +3,7 @@
 
 import type { FormEvent, MouseEvent } from 'react';
 import React, { useState, useCallback, useEffect } from 'react';
-import { Calendar as CalendarIcon, PlusCircle, Loader2, Wand2, Settings, ListChecks, Target } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Loader2, Wand2, Settings, ListChecks, Target, User as UserIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import type { User } from 'firebase/auth';
@@ -83,6 +83,12 @@ export function AddTaskSheet({ user, isOpen, onOpenChange, showTrigger = true }:
 
   // User's organization ID from claims
   const organizationIdFromClaims = userClaims?.organizationId;
+
+  // تحديد الأدوار المتدنية التي لا يمكنها إسناد مهام للآخرين أو تغيير مستوى المهمة
+  const isLowLevelRole = userClaims?.isOrgEngineer || userClaims?.isOrgTechnician || userClaims?.isOrgAssistant;
+
+  // إخفاء خيارات الإسناد ومستوى المهمة للأدوار المتدنية
+  const canAssignTasks = !isLowLevelRole;
 
   const [isSuggestingDate, setIsSuggestingDate] = useState(false);
   const [isSuggestingMilestones, setIsSuggestingMilestones] = useState(false);
@@ -264,7 +270,8 @@ export function AddTaskSheet({ user, isOpen, onOpenChange, showTrigger = true }:
         taskContext: organizationIdFromClaims ? taskContext.taskContext || 'individual' : 'individual',
         organizationId: organizationIdFromClaims || null,
         departmentId: (organizationIdFromClaims && taskContext.taskContext === 'department') ? taskContext.departmentId || null : null,
-        assignedToUserId: (organizationIdFromClaims && taskContext.taskContext === 'individual') ? taskContext.assignedToUserId || null : (!organizationIdFromClaims ? user.uid : null),
+        assignedToUserId: !canAssignTasks ? user.uid : ((organizationIdFromClaims && taskContext.taskContext === 'individual') ? taskContext.assignedToUserId || null : (!organizationIdFromClaims ? user.uid : null)),
+        createdBy: user.uid, // إضافة حقل createdBy للتأكد من ربط المهمة بالمستخدم
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
     };
@@ -396,7 +403,7 @@ export function AddTaskSheet({ user, isOpen, onOpenChange, showTrigger = true }:
             />
           </div>
 
-          {organizationIdFromClaims && (
+          {organizationIdFromClaims && canAssignTasks && (
             <>
               <Separator />
               <div className="space-y-4">
@@ -407,6 +414,17 @@ export function AddTaskSheet({ user, isOpen, onOpenChange, showTrigger = true }:
                   organizationId={organizationIdFromClaims}
                   disabled={isAddingTask}
                 />
+              </div>
+            </>
+          )}
+
+          {/* رسالة للأدوار المتدنية */}
+          {organizationIdFromClaims && !canAssignTasks && (
+            <>
+              <Separator />
+              <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md">
+                <UserIcon className="inline ml-1 h-4 w-4" />
+                ستتم إضافة هذه المهمة إلى مهامك الشخصية
               </div>
             </>
           )}
@@ -495,23 +513,25 @@ export function AddTaskSheet({ user, isOpen, onOpenChange, showTrigger = true }:
             </div>
           </div>
 
-          <div className="flex pt-1">
-            <Button
-              type="button"
-              onClick={handleSuggestDueDate}
-              disabled={isSuggestingDate || !newTaskDescription.trim()}
-              variant="outline"
-              size="sm"
-              className="text-primary hover:bg-primary/10 hover:text-primary border-primary/30"
-            >
-              {isSuggestingDate ? (
-                <Loader2 className="h-4 w-4 animate-spin ml-2" />
-              ) : (
-                <Wand2 className="h-4 w-4 ml-2" />
-              )}
-              اقترح تاريخ الاستحقاق
-            </Button>
-          </div>
+          {canAssignTasks && (
+            <div className="flex pt-1">
+              <Button
+                type="button"
+                onClick={handleSuggestDueDate}
+                disabled={isSuggestingDate || !newTaskDescription.trim()}
+                variant="outline"
+                size="sm"
+                className="text-primary hover:bg-primary/10 hover:text-primary border-primary/30"
+              >
+                {isSuggestingDate ? (
+                  <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                ) : (
+                  <Wand2 className="h-4 w-4 ml-2" />
+                )}
+                اقترح تاريخ الاستحقاق
+              </Button>
+            </div>
+          )}
 
            <Separator />
             <div className="space-y-4">

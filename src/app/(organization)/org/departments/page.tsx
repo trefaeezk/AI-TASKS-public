@@ -6,7 +6,28 @@ export const dynamic = 'force-dynamic';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { FolderTree, Plus, Users, Calendar, BarChart3 } from 'lucide-react';
+import {
+  FolderTree,
+  Plus,
+  Users,
+  Calendar,
+  BarChart3,
+  Search,
+  Filter,
+  Grid3X3,
+  List,
+  Building2,
+  TrendingUp,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  MoreVertical,
+  Edit,
+  Trash2,
+  Eye,
+  Building,
+  ListTodo
+} from 'lucide-react';
 import { db } from '@/config/firebase';
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -16,6 +37,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Translate } from '@/components/Translate';
 import Link from 'next/link';
 
@@ -26,26 +51,63 @@ interface Department {
   membersCount: number;
   tasksCount: number;
   meetingsCount: number;
+  completedTasks: number;
+  overdueTasks: number;
+  activeMembers: number;
+  createdAt?: Date;
+  lastActivity?: Date;
+  supervisor?: {
+    name: string;
+    email: string;
+  };
 }
+
+type ViewMode = 'grid' | 'list';
+type SortBy = 'name' | 'members' | 'tasks' | 'activity' | 'created';
+type FilterBy = 'all' | 'active' | 'inactive' | 'high-activity' | 'low-activity';
 
 export default function DepartmentsPage() {
   const { user, userClaims } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [filteredDepartments, setFilteredDepartments] = useState<Department[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newDepartmentName, setNewDepartmentName] = useState('');
   const [newDepartmentDescription, setNewDepartmentDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // UI State
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<SortBy>('name');
+  const [filterBy, setFilterBy] = useState<FilterBy>('all');
+  const [activeTab, setActiveTab] = useState('all');
+
   const organizationId = userClaims?.organizationId;
-  // استخدام أسماء الحقول الصحيحة من قاعدة البيانات
+  const userDepartmentId = userClaims?.departmentId;
+
+  // تحديد الصلاحيات
   const isSystemOwner = userClaims?.isSystemOwner === true;
   const isSystemAdmin = userClaims?.isSystemAdmin === true;
-  const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOwner === true;
-  const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isAdmin === true;
-  // مالك النظام يملك صلاحيات كاملة على جميع المؤسسات
-  const canCreateDepartment = isSystemOwner || isSystemAdmin || isOwner || isAdmin;
+  const isOrgOwner = userClaims?.isOrgOwner === true;
+  const isOrgAdmin = userClaims?.isOrgAdmin === true;
+  const isOrgSupervisor = userClaims?.isOrgSupervisor === true;
+  const isOrgEngineer = userClaims?.isOrgEngineer === true;
+  const isOrgTechnician = userClaims?.isOrgTechnician === true;
+  const isOrgAssistant = userClaims?.isOrgAssistant === true;
+
+  // مالك ومدير المؤسسة بدون قسم محدد (وصول كامل)
+  const hasFullAccess = (isOrgOwner || isOrgAdmin) && !userDepartmentId;
+
+  // الأدوار العليا التي يمكنها رؤية جميع الأقسام
+  const canViewAllDepartments = isSystemOwner || isSystemAdmin || hasFullAccess;
+
+  // أعضاء الأقسام (يرون قسمهم فقط) - باستثناء مالك/مدير المؤسسة بدون قسم
+  const isDepartmentMember = userDepartmentId && (isOrgSupervisor || isOrgEngineer || isOrgTechnician || isOrgAssistant || isOrgOwner || isOrgAdmin) && !hasFullAccess;
+
+  // صلاحية إنشاء الأقسام للأدوار العليا فقط
+  const canCreateDepartment = canViewAllDepartments;
 
   // تحميل الأقسام
   useEffect(() => {
@@ -189,6 +251,37 @@ export default function DepartmentsPage() {
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-40 w-full" />
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  // منع أعضاء الأقسام من الوصول لصفحة جميع الأقسام
+  if (isDepartmentMember) {
+    return (
+      <div className="container mx-auto p-4">
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+          <Building2 className="h-16 w-16 text-orange-500 mb-4" />
+          <h2 className="text-xl font-semibold mb-2 text-orange-600">
+            الوصول محدود
+          </h2>
+          <p className="text-muted-foreground mb-4 max-w-md">
+            كعضو في القسم، يمكنك الوصول إلى قسمك فقط. استخدم رابط "إدارة القسم" في الشريط الجانبي.
+          </p>
+          <div className="flex space-x-2 space-x-reverse">
+            <Button asChild>
+              <Link href={`/org/departments/${userDepartmentId}`}>
+                <Building className="ml-2 h-4 w-4" />
+                إدارة قسمي
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/org/tasks">
+                <ListTodo className="ml-2 h-4 w-4" />
+                المهام
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
     );

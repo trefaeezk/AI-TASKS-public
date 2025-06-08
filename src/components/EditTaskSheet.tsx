@@ -53,6 +53,12 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
   const { categories: userCategories, loading: categoriesLoading, addCategory, deleteCategory, editCategory, getCategoryColor } = useTaskCategories(user.uid);
   const { userClaims } = useAuth(); // Get userClaims to determine context for new tasks
 
+  // تحديد الأدوار المتدنية التي لا يمكنها إسناد مهام للآخرين أو تغيير مستوى المهمة
+  const isLowLevelRole = userClaims?.isOrgEngineer || userClaims?.isOrgTechnician || userClaims?.isOrgAssistant;
+
+  // إخفاء خيارات الإسناد ومستوى المهمة للأدوار المتدنية
+  const canAssignTasks = !isLowLevelRole;
+
   const [description, setDescription] = useState('');
   const [details, setDetails] = useState('');
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
@@ -471,8 +477,8 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                     />
                 </div>
 
-                {/* Show TaskContextSelector only if the task being edited has an organizationId */}
-                {task.organizationId && (
+                {/* Show TaskContextSelector only if the task being edited has an organizationId and user can assign tasks */}
+                {task.organizationId && canAssignTasks && (
                   <>
                     <Separator />
                     <div className="space-y-4">
@@ -483,6 +489,17 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                         organizationId={task.organizationId} // Pass task's orgId
                         disabled={isUpdatingTask}
                       />
+                    </div>
+                  </>
+                )}
+
+                {/* رسالة للأدوار المتدنية */}
+                {task.organizationId && !canAssignTasks && (
+                  <>
+                    <Separator />
+                    <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md">
+                      <UserIcon className="inline ml-1 h-4 w-4" />
+                      هذه مهمة شخصية - لا يمكن تغيير الإسناد
                     </div>
                   </>
                 )}
@@ -571,23 +588,25 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                     </div>
                  </div>
 
-                 <div className="flex pt-1">
-                    <Button
-                    type="button"
-                    onClick={handleSuggestDueDate}
-                    disabled={isSuggestingDate || !description.trim()}
-                    variant="outline"
-                    size="sm"
-                    className="text-primary hover:bg-primary/10 hover:text-primary border-primary/30"
-                    >
-                    {isSuggestingDate ? (
-                        <Loader2 className="h-4 w-4 animate-spin ml-2" />
-                    ) : (
-                        <Wand2 className="h-4 w-4 ml-2" />
-                    )}
-                    اقترح تاريخ الاستحقاق
-                    </Button>
-                </div>
+                 {canAssignTasks && (
+                   <div className="flex pt-1">
+                      <Button
+                      type="button"
+                      onClick={handleSuggestDueDate}
+                      disabled={isSuggestingDate || !description.trim()}
+                      variant="outline"
+                      size="sm"
+                      className="text-primary hover:bg-primary/10 hover:text-primary border-primary/30"
+                      >
+                      {isSuggestingDate ? (
+                          <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                      ) : (
+                          <Wand2 className="h-4 w-4 ml-2" />
+                      )}
+                      اقترح تاريخ الاستحقاق
+                      </Button>
+                  </div>
+                 )}
 
                  <Separator />
                 <div className="space-y-4">

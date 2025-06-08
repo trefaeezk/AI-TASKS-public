@@ -143,8 +143,15 @@ service cloud.firestore {
       // السماح للجميع بالقراءة
       allow read: if isAuthenticated();
 
-      // السماح للأدمن بالكتابة
-      allow write: if hasAdminAccess();
+      // المستخدمون المستقلون لهم حرية كاملة في فئاتهم
+      allow create, update, delete: if isAuthenticated() && (
+        hasAdminAccess() ||
+        isIndependent() ||  // المستخدمون المستقلون لهم حرية كاملة
+        isIndividualAccount() ||  // أصحاب الحسابات الفردية
+        canCreateTasks() ||
+        resource.data.createdBy == request.auth.uid ||
+        request.resource.data.createdBy == request.auth.uid
+      );
     }
 
     // ===== قواعد المستخدمين (النمط الموحد) =====
@@ -154,20 +161,32 @@ service cloud.firestore {
         request.auth.uid == userId ||
         canManageUsers() ||
         hasCustomPermission('users:view') ||
-        hasAdminAccess() ||
-        isRegularUser() || // السماح لجميع المستخدمين المسجلين بقراءة بياناتهم
-        isNewUser() // السماح للمستخدمين الجدد
+        hasAdminAccess()
       );
 
-      // كتابة البيانات الشخصية
-      allow write: if isAuthenticated() && (
-        request.auth.uid == userId ||
+      // إنشاء وثيقة المستخدم الأولى - للمستخدمين الجدد فقط
+      allow create: if isAuthenticated() &&
+        request.auth.uid == userId &&
+        // التأكد من أن هذه وثيقة جديدة وليس تحديث
+        !exists(/databases/$(database)/documents/users/$(userId));
+
+      // تحديث البيانات الشخصية (مع منع تعديل الأدوار الحساسة)
+      allow update: if isAuthenticated() && (
+        (request.auth.uid == userId && (
+          // منع المستخدم من تعديل أدواره الحساسة بنفسه
+          !('isSystemOwner' in request.resource.data) &&
+          !('isSystemAdmin' in request.resource.data) &&
+          !('isOrgOwner' in request.resource.data) &&
+          !('isOrgAdmin' in request.resource.data) &&
+          !('role' in request.resource.data)
+        )) ||
         canManageUsers() ||
         hasCustomPermission('users:edit') ||
-        hasAdminAccess() ||
-        (request.auth.uid == userId && isRegularUser()) || // السماح للمستخدمين بتعديل بياناتهم
-        (request.auth.uid == userId && isNewUser()) // السماح للمستخدمين الجدد بإنشاء بياناتهم
+        hasAdminAccess()
       );
+
+      // حذف المستخدمين - للأدمن فقط
+      allow delete: if canManageUsers() || hasAdminAccess();
     }
 
     // ===== قواعد المهام (النمط الموحد) =====
@@ -177,10 +196,12 @@ service cloud.firestore {
         hasCustomPermission('tasks:view') ||
         canCreateTasks() ||
         hasAdminAccess() ||
-        isIndividualUser() ||
-        isRegularUser() ||
         resource.data.createdBy == request.auth.uid ||
-        resource.data.assignedTo == request.auth.uid
+        resource.data.assignedTo == request.auth.uid ||
+        // للمهام الفردية
+        (resource.data.organizationId == null && resource.data.userId == request.auth.uid) ||
+        // للمهام المؤسسية - التحقق من العضوية
+        (resource.data.organizationId != null && getUserToken().organizationId == resource.data.organizationId)
       );
 
       // إنشاء المهام
@@ -188,27 +209,29 @@ service cloud.firestore {
         hasCustomPermission('tasks:create') ||
         canCreateTasks() ||
         hasAdminAccess() ||
-        isIndividualUser() ||
-        isRegularUser()
+        // التأكد من أن المستخدم ينشئ مهمة لنفسه أو لمؤسسته
+        (request.resource.data.organizationId == null && request.resource.data.userId == request.auth.uid) ||
+        (request.resource.data.organizationId != null && getUserToken().organizationId == request.resource.data.organizationId)
       );
 
       // تعديل المهام
       allow update: if isAuthenticated() && (
         hasCustomPermission('tasks:edit') ||
-        canCreateTasks() ||
         hasAdminAccess() ||
-        isIndividualUser() ||
-        isRegularUser() ||
-        resource.data.createdBy == request.auth.uid
+        resource.data.createdBy == request.auth.uid ||
+        // للمهام الفردية
+        (resource.data.organizationId == null && resource.data.userId == request.auth.uid) ||
+        // للمهام المؤسسية - أعضاء المؤسسة فقط
+        (resource.data.organizationId != null && getUserToken().organizationId == resource.data.organizationId && hasAdminAccess())
       );
 
       // حذف المهام
       allow delete: if isAuthenticated() && (
         hasCustomPermission('tasks:delete') ||
         hasAdminAccess() ||
-        isIndividualUser() ||
-        isRegularUser() ||
-        resource.data.createdBy == request.auth.uid
+        resource.data.createdBy == request.auth.uid ||
+        // للمهام الفردية
+        (resource.data.organizationId == null && resource.data.userId == request.auth.uid)
       );
     }
 
@@ -275,15 +298,103 @@ service cloud.firestore {
       allow delete: if hasSystemAccess() || isOrgOwner();
     }
 
+    // ===== قواعد الإشعارات =====
+    match /notifications/{notificationId} {
+      // قراءة الإشعارات - المستخدم يمكنه قراءة إشعاراته فقط
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        hasSystemAccess() ||
+        hasAdminAccess()
+      );
+
+      // إنشاء الإشعارات - النظام والأدمن فقط
+      allow create: if isAuthenticated() && (
+        hasSystemAccess() ||
+        hasAdminAccess()
+      );
+
+      // تحديث الإشعارات - المستخدم يمكنه تحديث إشعاراته (مثل تعليمها كمقروءة)
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        hasSystemAccess() ||
+        hasAdminAccess()
+      );
+
+      // حذف الإشعارات - المستخدم يمكنه حذف إشعاراته
+      allow delete: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        hasSystemAccess() ||
+        hasAdminAccess()
+      );
+    }
+
+    // ===== قواعد إعدادات الإشعارات =====
+    match /notificationSettings/{userId} {
+      // قراءة إعدادات الإشعارات - المستخدم يمكنه قراءة إعداداته فقط
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        hasSystemAccess() ||
+        hasAdminAccess()
+      );
+
+      // كتابة إعدادات الإشعارات - المستخدم يمكنه تعديل إعداداته
+      allow write: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        hasSystemAccess() ||
+        hasAdminAccess()
+      );
+    }
+
+
+
+    // ===== قواعد خاصة للمستخدمين المستقلين - حرية كاملة =====
+    match /userReports/{userId}/{document=**} {
+      // المستخدمون المستقلون لهم حرية كاملة في تقاريرهم
+      allow read, write: if isAuthenticated() && (
+        request.auth.uid == userId && (isIndependent() || isIndividualAccount()) ||
+        hasSystemAccess() ||
+        hasAdminAccess()
+      );
+    }
+
+    match /userSettings/{userId}/{document=**} {
+      // المستخدمون المستقلون لهم حرية كاملة في إعداداتهم
+      allow read, write: if isAuthenticated() && (
+        request.auth.uid == userId && (isIndependent() || isIndividualAccount()) ||
+        hasSystemAccess() ||
+        hasAdminAccess()
+      );
+    }
+
+    match /userCategories/{userId}/{document=**} {
+      // المستخدمون المستقلون لهم حرية كاملة في فئاتهم المخصصة
+      allow read, write: if isAuthenticated() && (
+        request.auth.uid == userId && (isIndependent() || isIndividualAccount()) ||
+        hasSystemAccess() ||
+        hasAdminAccess()
+      );
+    }
+
+    match /userTemplates/{userId}/{document=**} {
+      // المستخدمون المستقلون لهم حرية كاملة في قوالبهم
+      allow read, write: if isAuthenticated() && (
+        request.auth.uid == userId && (isIndependent() || isIndividualAccount()) ||
+        hasSystemAccess() ||
+        hasAdminAccess()
+      );
+    }
+
     // ===== قواعد عامة للمجموعات الأخرى (النمط الموحد) =====
     match /{document=**} {
-      // قاعدة احتياطية - السماح للمستخدمين المسجلين بالقراءة والأدمن بالكتابة
+      // المستخدمون المستقلون لهم حرية في بياناتهم الشخصية
       allow read: if isAuthenticated() && (
+        hasSystemAccess() ||
         hasAdminAccess() ||
-        isIndividualUser() ||
-        isRegularUser()
+        (isIndependent() || isIndividualAccount())  // المستخدمون المستقلون يمكنهم القراءة
       );
-      allow write: if hasAdminAccess() || isIndividualUser() || isRegularUser();
+
+      // الكتابة محدودة للأدمن والمستخدمين المستقلين لبياناتهم
+      allow write: if hasSystemAccess() || hasAdminAccess();
     }
   }
 }

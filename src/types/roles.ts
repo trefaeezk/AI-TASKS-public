@@ -191,11 +191,11 @@ export const ROLE_HIERARCHY: UserRole[] = [
   'isSystemOwner',
   'isSystemAdmin',
 
-  // أدوار المؤسسات (حسب المستوى)
+  // أدوار المؤسسات (حسب المستوى - الهيكل الشرق أوسطي)
   'isOrgOwner',
   'isOrgAdmin',
-  'isOrgSupervisor',
-  'isOrgEngineer',
+  'isOrgEngineer',      // المهندس أعلى من المشرف
+  'isOrgSupervisor',    // المشرف
   'isOrgTechnician',
   'isOrgAssistant',
 

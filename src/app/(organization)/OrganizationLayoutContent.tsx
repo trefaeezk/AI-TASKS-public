@@ -6,7 +6,7 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 import {
   Home, FileText, Settings, Menu, UserCircle,
   BarChart3, Users, Database, Building, FolderTree, ListTodo,
-  Calendar, Wand2, Target
+  Calendar, Wand2, Target, CalendarDays
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { format } from 'date-fns';
@@ -221,10 +221,10 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
   const getDefaultTaskType = () => {
     if (userClaims?.isOrgOwner || userClaims?.isOrgAdmin) {
       return 'organization'; // الإدارة العليا تبدأ بمهام المؤسسة
-    } else if (userClaims?.isOrgSupervisor) {
-      return 'department'; // المشرفين يبدؤون بمهام القسم
+    } else if (userClaims?.departmentId) {
+      return 'department'; // أعضاء الأقسام (مهندسين، مشرفين، فنيين، مساعدين) يبدؤون بمهام القسم
     } else {
-      return 'individual'; // باقي الأدوار تبدأ بالمهام الفردية
+      return 'individual'; // المستخدمون بدون قسم يبدؤون بالمهام الفردية
     }
   };
 
@@ -245,8 +245,58 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
   }, []);
 
   const organizationName = userClaims?.organizationName || t('organization.organization');
-  const isOwner = userClaims?.isOrgOwner === true;
-  const isAdmin = userClaims?.isOrgAdmin === true;
+
+  // تحديد الصلاحيات
+  const isSystemOwner = userClaims?.isSystemOwner === true;
+  const isSystemAdmin = userClaims?.isSystemAdmin === true;
+  const isOrgOwner = userClaims?.isOrgOwner === true;
+  const isOrgAdmin = userClaims?.isOrgAdmin === true;
+  const isOrgSupervisor = userClaims?.isOrgSupervisor === true;
+  const isOrgEngineer = userClaims?.isOrgEngineer === true;
+  const isOrgTechnician = userClaims?.isOrgTechnician === true;
+  const isOrgAssistant = userClaims?.isOrgAssistant === true;
+
+  // معرف القسم للمستخدم
+  const userDepartmentId = userClaims?.departmentId;
+
+  // الأدوار العليا فقط (يمكنها رؤية لوحة الإدارة وجميع الأقسام)
+  const canAccessDashboard = isSystemOwner || isSystemAdmin || isOrgOwner || isOrgAdmin;
+
+  // مالك ومدير المؤسسة بدون قسم محدد (وصول كامل لجميع البيانات)
+  const hasFullAccess = (isOrgOwner || isOrgAdmin) && !userDepartmentId;
+
+  // الأدوار العليا التي يمكنها رؤية صفحة الأقسام العامة
+  const canAccessAllDepartments = canAccessDashboard && (!userDepartmentId || hasFullAccess);
+
+  // المهندس أو المشرف أو المدير الذي ينتمي لقسم محدد (يرى قسمه فقط)
+  const hasSpecificDepartment = userDepartmentId && (isOrgEngineer || isOrgSupervisor || isOrgAdmin || isOrgOwner) && !hasFullAccess;
+
+  // أعضاء الأقسام العاديين فقط (المساعدين الفنيين) - يرون قسمهم فقط
+  const isDepartmentMember = userDepartmentId && isOrgAssistant && !hasFullAccess;
+
+  // جميع أعضاء الأقسام (مهندسين، فنيين، مساعدين) - يرون قسمهم فقط
+  const isAnyDepartmentMember = userDepartmentId && (isOrgEngineer || isOrgTechnician || isOrgAssistant) && !hasFullAccess;
+
+  // المهندسون والمشرفون والأدوار العليا (يمكنها رؤية الأعضاء والتقارير)
+  const canAccessManagement = canAccessDashboard || isOrgEngineer || isOrgSupervisor;
+
+
+
+  // الأدوار العليا فقط (إعدادات المؤسسة)
+  const canAccessSettings = isOrgOwner || isOrgAdmin;
+
+  // تحديد المستخدمين ذوي الأدوار المنخفضة الذين لا ينتمون لقسم
+  const isLowRoleWithoutDepartment = !userDepartmentId &&
+    (isOrgAssistant || isOrgTechnician || isOrgEngineer || isOrgSupervisor);
+
+  // توجيه المستخدمين ذوي الأدوار المنخفضة بدون قسم إلى صفحة المهام
+  React.useEffect(() => {
+    if (user && isLowRoleWithoutDepartment && pathname === '/org') {
+      console.log('[OrganizationLayout] Redirecting low-role user without department to tasks page');
+      window.location.href = '/org/tasks';
+      return;
+    }
+  }, [user, isLowRoleWithoutDepartment, pathname]);
 
   return (
     <TaskTypeFilterContext.Provider value={{ taskTypeFilter, setTaskTypeFilter }}>
@@ -275,61 +325,101 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
 
         <SidebarContent>
           <SidebarMenu>
-            <SidebarMenuLink href="/org" active={pathname === '/org'}>
-              <Home className="ml-2 h-5 w-5" />
-              <span><Translate text="sidebar.dashboard" /></span>
-            </SidebarMenuLink>
+            {/* لوحة الإدارة - للأدوار العليا فقط */}
+            {canAccessDashboard && (
+              <SidebarMenuLink href="/org" active={pathname === '/org'}>
+                <Home className="ml-2 h-5 w-5" />
+                <span><Translate text="sidebar.dashboard" /></span>
+              </SidebarMenuLink>
+            )}
 
+            {/* إدارة القسم - للمشرف والمدير مع قسم محدد وجميع أعضاء الأقسام */}
+            {(isAnyDepartmentMember || hasSpecificDepartment) && userDepartmentId && (
+              <SidebarMenuLink href={`/org/departments/${userDepartmentId}`} active={pathname?.startsWith(`/org/departments/${userDepartmentId}`) || false}>
+                <Building className="ml-2 h-5 w-5" />
+                <span><Translate text="sidebar.departmentManagement" defaultValue="إدارة القسم" /></span>
+              </SidebarMenuLink>
+            )}
+
+            {/* إدارة أعضاء القسم - لأعضاء الأقسام العاديين فقط */}
+            {isDepartmentMember && (
+              <SidebarMenuLink href={`/org/departments/${userDepartmentId}/members`} active={pathname?.startsWith(`/org/departments/${userDepartmentId}/members`) || false}>
+                <Users className="ml-2 h-5 w-5" />
+                <span><Translate text="sidebar.departmentMembers" defaultValue="أعضاء القسم" /></span>
+              </SidebarMenuLink>
+            )}
+
+            {/* المهام - للجميع */}
             <SidebarMenuLink href="/org/tasks" active={pathname === '/org/tasks'}>
               <ListTodo className="ml-2 h-5 w-5" />
               <span><Translate text="sidebar.tasks" /></span>
             </SidebarMenuLink>
 
-            <SidebarMenuLink href="/org/reports" active={pathname?.startsWith('/org/reports') || false}>
-              <FileText className="ml-2 h-5 w-5" />
-              <span><Translate text="sidebar.reports" /></span>
-            </SidebarMenuLink>
+            {/* التقارير - للأدوار العليا والمشرفين */}
+            {canAccessManagement && (
+              <SidebarMenuLink href="/org/reports" active={pathname?.startsWith('/org/reports') || false}>
+                <FileText className="ml-2 h-5 w-5" />
+                <span><Translate text="sidebar.reports" /></span>
+              </SidebarMenuLink>
+            )}
 
+            {/* الاجتماعات - للجميع */}
             <SidebarMenuLink href="/org/meetings" active={pathname?.startsWith('/org/meetings') || false}>
               <Calendar className="ml-2 h-5 w-5" />
               <span><Translate text="sidebar.meetings" /></span>
             </SidebarMenuLink>
 
-            <SidebarMenuLink href="/org/kpi" active={pathname === '/org/kpi'}>
-              <BarChart3 className="ml-2 h-5 w-5" />
-              <span><Translate text="sidebar.kpi" /></span>
-            </SidebarMenuLink>
+            {/* مؤشرات الأداء - للأدوار العليا فقط */}
+            {canAccessDashboard && (
+              <SidebarMenuLink href="/org/kpi" active={pathname === '/org/kpi'}>
+                <BarChart3 className="ml-2 h-5 w-5" />
+                <span><Translate text="sidebar.kpi" /></span>
+              </SidebarMenuLink>
+            )}
 
-            <SidebarMenuLink href="/org/okr" active={pathname?.startsWith('/org/okr') || false}>
-              <Target className="ml-2 h-5 w-5" />
-              <span><Translate text="sidebar.okr" /></span>
-            </SidebarMenuLink>
+            {/* الأهداف والنتائج الرئيسية - للأدوار العليا فقط */}
+            {canAccessDashboard && (
+              <SidebarMenuLink href="/org/okr" active={pathname?.startsWith('/org/okr') || false}>
+                <Target className="ml-2 h-5 w-5" />
+                <span><Translate text="sidebar.okr" /></span>
+              </SidebarMenuLink>
+            )}
 
-            <SidebarSeparator />
+            {canAccessManagement && <SidebarSeparator />}
 
-            <SidebarMenuLink href="/org/members" active={pathname === '/org/members'}>
-              <Users className="ml-2 h-5 w-5" />
-              <span><Translate text="sidebar.members" /></span>
-            </SidebarMenuLink>
+            {/* الأعضاء - للأدوار العليا والمشرفين */}
+            {canAccessManagement && (
+              <SidebarMenuLink href="/org/members" active={pathname === '/org/members'}>
+                <Users className="ml-2 h-5 w-5" />
+                <span><Translate text="sidebar.members" /></span>
+              </SidebarMenuLink>
+            )}
 
-            <SidebarMenuLink href="/org/departments" active={pathname?.startsWith('/org/departments') || false}>
-              <FolderTree className="ml-2 h-5 w-5" />
-              <span><Translate text="sidebar.departments" /></span>
-            </SidebarMenuLink>
+            {/* الأقسام - للأدوار العليا والمشرفين فقط (ليس لأعضاء الأقسام العاديين) */}
+            {canAccessAllDepartments && (
+              <SidebarMenuLink href="/org/departments" active={pathname === '/org/departments'}>
+                <FolderTree className="ml-2 h-5 w-5" />
+                <span><Translate text="sidebar.departments" /></span>
+              </SidebarMenuLink>
+            )}
 
-            {(isOwner || isAdmin) && (
+            {/* إعدادات المؤسسة - للأدوار العليا فقط */}
+            {canAccessSettings && (
               <SidebarMenuLink href="/org/settings" active={pathname?.startsWith('/org/settings') || false}>
                 <Settings className="ml-2 h-5 w-5" />
                 <span><Translate text="sidebar.organizationSettings" /></span>
               </SidebarMenuLink>
             )}
 
-            <SidebarSeparator />
+            {canAccessDashboard && <SidebarSeparator />}
 
-            <SidebarMenuLink href="/org/data" active={pathname === '/org/data'}>
-              <Database className="ml-2 h-5 w-5" />
-              <span><Translate text="sidebar.organizationDataManagement" /></span>
-            </SidebarMenuLink>
+            {/* إدارة بيانات المؤسسة - للأدوار العليا فقط */}
+            {canAccessDashboard && (
+              <SidebarMenuLink href="/org/data" active={pathname === '/org/data'}>
+                <Database className="ml-2 h-5 w-5" />
+                <span><Translate text="sidebar.organizationDataManagement" /></span>
+              </SidebarMenuLink>
+            )}
           </SidebarMenu>
         </SidebarContent>
 
@@ -361,12 +451,12 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
               >
                 {userClaims?.isOrgOwner && <Translate text="roles.isOrgOwner" defaultValue="مالك المؤسسة" />}
                 {userClaims?.isOrgAdmin && <Translate text="roles.isOrgAdmin" defaultValue="أدمن المؤسسة" />}
-                {userClaims?.isOrgSupervisor && <Translate text="roles.isOrgSupervisor" defaultValue="مشرف" />}
                 {userClaims?.isOrgEngineer && <Translate text="roles.isOrgEngineer" defaultValue="مهندس" />}
+                {userClaims?.isOrgSupervisor && <Translate text="roles.isOrgSupervisor" defaultValue="مشرف" />}
                 {userClaims?.isOrgTechnician && <Translate text="roles.isOrgTechnician" defaultValue="فني" />}
                 {userClaims?.isOrgAssistant && <Translate text="roles.isOrgAssistant" defaultValue="مساعد فني" />}
-                {!userClaims?.isOrgOwner && !userClaims?.isOrgAdmin && !userClaims?.isOrgSupervisor &&
-                 !userClaims?.isOrgEngineer && !userClaims?.isOrgTechnician && !userClaims?.isOrgAssistant && (
+                {!userClaims?.isOrgOwner && !userClaims?.isOrgAdmin && !userClaims?.isOrgEngineer &&
+                 !userClaims?.isOrgSupervisor && !userClaims?.isOrgTechnician && !userClaims?.isOrgAssistant && (
                   <Translate text="roles.member" defaultValue="عضو" />
                 )}
               </Badge>
@@ -437,8 +527,8 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
                       </DropdownMenuItem>
                     )}
 
-                    {/* مهام القسم - للمشرفين والإدارة */}
-                    {(userClaims?.isOrgOwner || userClaims?.isOrgAdmin || userClaims?.isOrgSupervisor) && (
+                    {/* مهام القسم - لمالك المؤسسة وأدمن المؤسسة وأعضاء الأقسام */}
+                    {(userClaims?.isOrgOwner || userClaims?.isOrgAdmin || userClaims?.departmentId) && (
                       <DropdownMenuItem
                         onClick={() => setTaskTypeFilter('department')}
                         className={taskTypeFilter === 'department' ? 'bg-accent' : ''}

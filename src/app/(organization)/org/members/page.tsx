@@ -44,6 +44,8 @@ import { collection, query, where, getDocs, doc, getDoc, addDoc, updateDoc, dele
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
 
+
+
 interface Member {
   uid: string;
   email: string;
@@ -75,12 +77,38 @@ export default function MembersPage() {
   const [activeTab, setActiveTab] = useState('all');
 
   const organizationId = userClaims?.organizationId;
+  const userDepartmentId = userClaims?.departmentId;
+
   // النمط الموحد is* فقط (بدون توافق مع القديم)
   const isOwner = userClaims?.isOrgOwner === true;
   const isAdmin = userClaims?.isOrgAdmin === true;
+  const isOrgSupervisor = userClaims?.isOrgSupervisor === true;
+  const isOrgEngineer = userClaims?.isOrgEngineer === true;
+  const isOrgTechnician = userClaims?.isOrgTechnician === true;
+  const isOrgAssistant = userClaims?.isOrgAssistant === true;
 
-  // 📊 تصفية الأعضاء حسب التبويب
+  // مالك ومدير المؤسسة بدون قسم محدد (وصول كامل)
+  const hasFullAccess = (isOwner || isAdmin) && !userDepartmentId;
+
+  // تحديد نوع المستخدم
+  const canViewAllMembers = isOwner || isAdmin || hasFullAccess; // الإدارة العليا ترى جميع الأعضاء
+  const isDepartmentMember = userDepartmentId && (isOrgSupervisor || isOrgEngineer || isOrgTechnician || isOrgAssistant || isOwner || isAdmin) && !hasFullAccess;
+
+  // 📊 تصفية الأعضاء حسب الصلاحيات والتبويب
   const filteredMembers = members.filter(member => {
+    // أولاً: تطبيق فلتر الصلاحيات
+    if (hasFullAccess) {
+      // مالك/مدير المؤسسة بدون قسم - وصول كامل لجميع الأعضاء
+      // لا فلتر إضافي
+    } else if (isDepartmentMember) {
+      // أعضاء الأقسام يرون أعضاء قسمهم فقط
+      if (member.departmentId !== userDepartmentId) {
+        return false;
+      }
+    }
+    // الإدارة العليا الأخرى ترى جميع الأعضاء (لا فلتر إضافي)
+
+    // ثانياً: تطبيق فلتر التبويب
     switch (activeTab) {
       case 'individuals':
         return !member.departmentId; // الأفراد (بدون قسم)
@@ -91,11 +119,17 @@ export default function MembersPage() {
     }
   });
 
-  // 📊 إحصائيات الأعضاء
+  // 📊 إحصائيات الأعضاء (مع مراعاة الصلاحيات)
+  const visibleMembers = hasFullAccess
+    ? members // وصول كامل لجميع الأعضاء
+    : isDepartmentMember
+      ? members.filter(m => m.departmentId === userDepartmentId) // أعضاء القسم فقط
+      : members; // الإدارة العليا الأخرى
+
   const membersStats = {
-    total: members.length,
-    individuals: members.filter(m => !m.departmentId).length,
-    inDepartments: members.filter(m => m.departmentId).length
+    total: visibleMembers.length,
+    individuals: visibleMembers.filter(m => !m.departmentId).length,
+    inDepartments: visibleMembers.filter(m => m.departmentId).length
   };
 
   // 🔍 تسجيل للتحقق من البيانات
@@ -298,6 +332,15 @@ export default function MembersPage() {
         description: 'تم تعديل بيانات العضو بنجاح.',
       });
 
+      // تحديث البيانات المحلية للعضو المحدد
+      if (selectedMember) {
+        setSelectedMember({
+          ...selectedMember,
+          role: formData.role,
+          departmentId: formData.departmentId === 'none' ? null : formData.departmentId
+        });
+      }
+
       setIsEditDialogOpen(false);
     } catch (error: any) {
       console.error('Error updating member:', error);
@@ -367,6 +410,11 @@ export default function MembersPage() {
         <h1 className="text-2xl font-bold flex items-center">
           <Users className="ml-2 h-6 w-6" />
           <Translate text="organization.members" />
+          {isDepartmentMember && !hasFullAccess && (
+            <Badge variant="outline" className="mr-2">
+              قسمي فقط
+            </Badge>
+          )}
         </h1>
         {(isOwner || isAdmin) && (
           <Button onClick={() => setIsAddDialogOpen(true)} className="flex items-center">
@@ -375,6 +423,21 @@ export default function MembersPage() {
           </Button>
         )}
       </div>
+
+      {/* رسالة توضيحية لأعضاء الأقسام */}
+      {isDepartmentMember && !hasFullAccess && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-2 text-blue-800">
+            <Building className="h-5 w-5" />
+            <span className="font-medium">
+              عرض محدود - أعضاء قسمك فقط
+            </span>
+          </div>
+          <p className="text-sm text-blue-600 mt-1">
+            كعضو في القسم، يمكنك رؤية أعضاء قسمك فقط. الإدارة العليا يمكنها رؤية جميع الأعضاء.
+          </p>
+        </div>
+      )}
 
       {/* 📋 تبويبات الأعضاء */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -398,13 +461,13 @@ export default function MembersPage() {
 
         {/* 📋 جميع الأعضاء */}
         <TabsContent value="all" className="mt-6">
-          {members.length === 0 ? (
+          {filteredMembers.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Translate text="organization.noMembers" />
             </div>
           ) : (
             <div className="space-y-4">
-              {members.map((member) => (
+              {filteredMembers.map((member) => (
             <Card key={member.uid}>
               <CardContent className="p-4 flex justify-between items-center">
                 <div>
@@ -439,7 +502,7 @@ export default function MembersPage() {
                         setSelectedMember(member);
                         setIsDeleteDialogOpen(true);
                       }}
-                      disabled={member.role === 'org_owner' && !isOwner}
+                      disabled={member.role === 'isOrgOwner' && !isOwner}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -483,7 +546,7 @@ export default function MembersPage() {
                     <div>
                       <h3 className="font-medium">{member.email}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {member.name} • {member.role}
+                        {member.name} • <Translate text={`roles.${member.role}`} defaultValue={member.role} />
                       </p>
                       <Badge variant="outline" className="mt-1">
                         <Translate text="organization.unassigned" />
@@ -560,7 +623,7 @@ export default function MembersPage() {
                       <div>
                         <h3 className="font-medium">{member.email}</h3>
                         <p className="text-sm text-muted-foreground">
-                          {member.name} • {member.role}
+                          {member.name} • <Translate text={`roles.${member.role}`} defaultValue={member.role} />
                         </p>
                         <Badge variant="default" className="mt-1">
                           {department?.name || (
@@ -723,7 +786,7 @@ export default function MembersPage() {
               <Select
                 value={formData.role}
                 onValueChange={(value) => setFormData({ ...formData, role: value })}
-                disabled={selectedMember?.role === 'org_owner' && !isOwner}
+                disabled={selectedMember?.role === 'isOrgOwner' && !isOwner}
               >
                 <SelectTrigger>
                   <SelectValue />

@@ -42,8 +42,13 @@ export function TaskContextSelector({
   organizationId,
   disabled = false
 }: TaskContextSelectorProps) {
-  // We don't need user here as we're using organizationId directly
-  const { } = useAuth();
+  const { userClaims } = useAuth();
+
+  // تحديد الأدوار المتدنية التي لا يمكنها إسناد مهام للآخرين أو تغيير مستوى المهمة
+  const isLowLevelRole = userClaims?.isOrgEngineer || userClaims?.isOrgTechnician || userClaims?.isOrgAssistant;
+
+  // إخفاء خيارات الإسناد ومستوى المهمة للأدوار المتدنية
+  const canAssignToOthers = !isLowLevelRole;
   const [departments, setDepartments] = useState<Department[]>([]);
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [loadingDepartments, setLoadingDepartments] = useState(false);
@@ -177,18 +182,22 @@ export function TaskContextSelector({
                 <span>فرد</span>
               </div>
             </SelectItem>
-            <SelectItem value="department">
-              <div className="flex items-center">
-                <Users className="ml-2 h-4 w-4" />
-                <span>قسم</span>
-              </div>
-            </SelectItem>
-            <SelectItem value="organization">
-              <div className="flex items-center">
-                <Building className="ml-2 h-4 w-4" />
-                <span>مؤسسة</span>
-              </div>
-            </SelectItem>
+            {canAssignToOthers && (
+              <SelectItem value="department">
+                <div className="flex items-center">
+                  <Users className="ml-2 h-4 w-4" />
+                  <span>قسم</span>
+                </div>
+              </SelectItem>
+            )}
+            {canAssignToOthers && (
+              <SelectItem value="organization">
+                <div className="flex items-center">
+                  <Building className="ml-2 h-4 w-4" />
+                  <span>مؤسسة</span>
+                </div>
+              </SelectItem>
+            )}
           </SelectContent>
         </Select>
       </div>
@@ -223,8 +232,8 @@ export function TaskContextSelector({
         </div>
       )}
 
-      {/* User Selector (visible only when context is individual) */}
-      {value.taskContext === 'individual' && (
+      {/* User Selector (visible only when context is individual and user can assign to others) */}
+      {value.taskContext === 'individual' && canAssignToOthers && (
         <div className="space-y-2">
           <Label htmlFor="user-select" className="flex items-center">
             <User className="ml-1 h-4 w-4 text-muted-foreground" />
@@ -250,6 +259,14 @@ export function TaskContextSelector({
               </SelectContent>
             </Select>
           )}
+        </div>
+      )}
+
+      {/* رسالة للأدوار المتدنية */}
+      {value.taskContext === 'individual' && !canAssignToOthers && (
+        <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md">
+          <User className="inline ml-1 h-4 w-4" />
+          ستتم إضافة هذه المهمة إلى مهامك الشخصية
         </div>
       )}
     </div>

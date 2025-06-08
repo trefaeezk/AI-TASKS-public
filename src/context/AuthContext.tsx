@@ -86,22 +86,55 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const userDocSnap = await getDoc(userDocRef);
 
       if (!userDocSnap.exists()) {
-        console.log("[AuthContext] ⚠️ بيانات المستخدم غير موجودة، إنشاء حساب فردي جديد");
+        console.log("[AuthContext] 🆕 مستخدم جديد - انتظار إنشاء الوثيقة عبر Cloud Function");
+        console.log("[AuthContext] 📝 createUserDocument Cloud Function ستنشئ الوثيقة تلقائياً");
 
-        // إنشاء حساب فردي جديد
-        const userName = currentUser.displayName || currentUser.email?.split('@')[0] || 'مستخدم';
+        // محاولة انتظار وإعادة المحاولة عدة مرات
+        let retryCount = 0;
+        const maxRetries = 5;
+        const retryDelay = 2000; // 2 ثانية بين كل محاولة
 
-        const newUserData = {
-          uid: currentUser.uid,
-          name: userName,
-          email: currentUser.email,
-          displayName: userName,
+        while (retryCount < maxRetries) {
+          console.log(`[AuthContext] ⏳ محاولة ${retryCount + 1}/${maxRetries} - انتظار ${retryDelay/1000} ثانية...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+
+          try {
+            const retryUserDocSnap = await getDoc(userDocRef);
+
+            if (retryUserDocSnap.exists()) {
+              console.log(`[AuthContext] ✅ تم العثور على الوثيقة في المحاولة ${retryCount + 1}`);
+              const userData = retryUserDocSnap.data();
+
+              return {
+                accountType: userData.accountType || 'individual',
+                role: userData.role || 'isIndependent',
+                isSystemOwner: userData.isSystemOwner || false,
+                isSystemAdmin: userData.isSystemAdmin || false,
+                isOrgOwner: userData.isOrgOwner || false,
+                isOrgAdmin: userData.isOrgAdmin || false,
+                isOrgSupervisor: userData.isOrgSupervisor || false,
+                isOrgEngineer: userData.isOrgEngineer || false,
+                isOrgTechnician: userData.isOrgTechnician || false,
+                isOrgAssistant: userData.isOrgAssistant || false,
+                isIndependent: userData.isIndependent || true,
+                customPermissions: userData.customPermissions || [],
+                departmentId: userData.departmentId || null,
+                organizationId: userData.organizationId || null
+              };
+            }
+
+            retryCount++;
+          } catch (retryError) {
+            console.error(`[AuthContext] ❌ خطأ في المحاولة ${retryCount + 1}:`, retryError);
+            retryCount++;
+          }
+        }
+
+        console.log("[AuthContext] ⚠️ فشل في العثور على الوثيقة بعد جميع المحاولات - استخدام البيانات الافتراضية");
+        // نعيد البيانات الافتراضية للمستخدم الجديد
+        return {
           accountType: 'individual',
           role: 'isIndependent',
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          disabled: false,
-          // النمط الجديد is* فقط
           isSystemOwner: false,
           isSystemAdmin: false,
           isOrgOwner: false,
@@ -111,21 +144,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           isOrgTechnician: false,
           isOrgAssistant: false,
           isIndependent: true,
-          // معلومات المؤسسة
-          organizationId: null,
-          departmentId: null,
-          // صلاحيات مخصصة
           customPermissions: [],
-          // من أنشأ المستخدم
-          createdBy: currentUser.uid
-        };
-
-        await setDoc(userDocRef, newUserData);
-        console.log("[AuthContext] ✅ تم إنشاء حساب فردي جديد:", newUserData);
-
-        return {
-          accountType: 'individual',
-          role: 'isIndependent'
+          departmentId: null
         };
       }
 
@@ -194,6 +214,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         let userRole: UserRole = userData.role || 'assistant';
         let isOwner = false;
         let isAdmin = false;
+        let userDepartmentId = userData.departmentId;
 
         console.log("  - userData.role (الدور الأولي):", userData.role);
         console.log("  - userRole (الدور المحدد):", userRole);
@@ -222,6 +243,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const memberData = memberDocSnap.data();
             console.log("  - memberData:", memberData);
             userRole = memberData.role || userData.role || 'assistant';
+
+            // تحديث departmentId من memberData
+            userDepartmentId = memberData.departmentId || userData.departmentId;
 
             // تحديد الأدوار بناءً على الدور المحفوظ
             isAdmin = userRole === 'isOrgAdmin';
@@ -254,6 +278,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         }
 
+
+
         const finalClaims = {
           accountType: 'organization' as SystemType,
           role: userRole,
@@ -269,7 +295,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           isOrgAssistant: userRole === 'isOrgAssistant',
           isIndependent: false,
           customPermissions: userData.customPermissions || [],
-          departmentId: userData.departmentId
+          departmentId: userDepartmentId
         };
 
         console.log("[AuthContext] ✅ البيانات النهائية للمؤسسة:");
@@ -277,6 +303,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log("  - الدور:", finalClaims.role);
         console.log("  - معرف المؤسسة:", finalClaims.organizationId);
         console.log("  - اسم المؤسسة:", finalClaims.organizationName);
+        console.log("  - معرف القسم:", finalClaims.departmentId);
         console.log("  - مالك النظام:", finalClaims.isSystemOwner);
         console.log("  - أدمن النظام:", finalClaims.isSystemAdmin);
         console.log("  - مالك المؤسسة:", finalClaims.isOrgOwner);
@@ -390,11 +417,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.log("[AuthContext] 🔍 ROUTING DEBUG - Account type:", finalProcessedClaims.accountType);
           console.log("[AuthContext] 🔍 ROUTING DEBUG - Organization ID:", finalProcessedClaims.organizationId);
           console.log("[AuthContext] 🔍 ROUTING DEBUG - Role:", finalProcessedClaims.role);
+          console.log("[AuthContext] 🔍 ROUTING DEBUG - Department ID:", finalProcessedClaims.departmentId);
 
           if (finalProcessedClaims.accountType === 'organization' && finalProcessedClaims.organizationId) {
+            // تحديد الأدوار
+            const isSystemOwner = finalProcessedClaims.isSystemOwner === true;
+            const isSystemAdmin = finalProcessedClaims.isSystemAdmin === true;
+            const isOrgOwner = finalProcessedClaims.isOrgOwner === true;
+            const isOrgAdmin = finalProcessedClaims.isOrgAdmin === true;
+            const isOrgSupervisor = finalProcessedClaims.isOrgSupervisor === true;
+            const isOrgEngineer = finalProcessedClaims.isOrgEngineer === true;
+            const isOrgTechnician = finalProcessedClaims.isOrgTechnician === true;
+            const isOrgAssistant = finalProcessedClaims.isOrgAssistant === true;
+
+            // الأدوار العليا التي يمكنها الوصول للوحة الإدارة
+            const canAccessDashboard = isSystemOwner || isSystemAdmin || isOrgOwner || isOrgAdmin;
+
+            // أعضاء الأقسام (باستثناء الأدوار العليا بدون قسم)
+            const hasFullAccess = (isOrgOwner || isOrgAdmin) && !finalProcessedClaims.departmentId;
+            const isDepartmentMember = finalProcessedClaims.departmentId &&
+              (isOrgSupervisor || isOrgEngineer || isOrgTechnician || isOrgAssistant ||
+               ((isOrgOwner || isOrgAdmin) && finalProcessedClaims.departmentId)) &&
+              !hasFullAccess;
+
             if (!currentPath.startsWith('/org')) {
-              console.log("[AuthContext] ✅ Redirecting to /org for organization user.");
-              router.replace('/org');
+              // تحديد المسار المناسب بناءً على الدور
+              if (isDepartmentMember && finalProcessedClaims.departmentId) {
+                console.log("[AuthContext] ✅ Redirecting department member to their department page:", `/org/departments/${finalProcessedClaims.departmentId}`);
+                router.replace(`/org/departments/${finalProcessedClaims.departmentId}`);
+              } else if (canAccessDashboard) {
+                console.log("[AuthContext] ✅ Redirecting to /org dashboard for high-level user.");
+                router.replace('/org');
+              } else {
+                console.log("[AuthContext] ✅ Redirecting to /org for organization user.");
+                router.replace('/org');
+              }
             } else {
               console.log("[AuthContext] ✅ Organization user already on /org path, no redirect needed.");
             }

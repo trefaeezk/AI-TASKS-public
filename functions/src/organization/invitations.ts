@@ -514,7 +514,17 @@ export const acceptOrganizationInvitation = createCallableFunction<AcceptOrganiz
 
         console.log(`[${functionName}] Updating user document for ${uid} in 'users' collection`);
         const userDocRef = db.collection('users').doc(uid);
+
+        // إنشاء اسم المستخدم من displayName أو email
+        const userName = displayName || userRecord.displayName ||
+                        (userRecord.email ? userRecord.email.split('@')[0] : '') ||
+                        'مستخدم جديد';
+
         await userDocRef.set({
+            uid: uid,
+            name: userName,
+            email: userRecord.email || '',
+            displayName: userName,
             role: invitationData.role,
             accountType: 'organization',
             organizationId: invitationData.organizationId,

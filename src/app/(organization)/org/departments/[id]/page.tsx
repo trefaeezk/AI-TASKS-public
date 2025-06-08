@@ -54,8 +54,23 @@ export default function DepartmentDetailsPage() {
   const [isAssignMemberDialogOpen, setIsAssignMemberDialogOpen] = useState(false); // State for new dialog
 
   const organizationId = userClaims?.organizationId;
+  const userDepartmentId = userClaims?.departmentId;
   const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOwner === true;
   const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isAdmin === true;
+  const isOrgSupervisor = userClaims?.isOrgSupervisor === true;
+  const isOrgEngineer = userClaims?.isOrgEngineer === true;
+  const isOrgTechnician = userClaims?.isOrgTechnician === true;
+  const isOrgAssistant = userClaims?.isOrgAssistant === true;
+
+  // مالك ومدير المؤسسة بدون قسم محدد (وصول كامل)
+  const hasFullAccess = (isOwner || isAdmin) && !userDepartmentId;
+
+  // التحقق من صلاحية الوصول لهذا القسم
+  const canAccessThisDepartment = hasFullAccess || // مالك/مدير بدون قسم
+    (isOwner || isAdmin) || // مالك/مدير المؤسسة (حتى لو كان لديه قسم)
+    (userDepartmentId && userDepartmentId === departmentId &&
+     (isOrgSupervisor || isOrgEngineer || isOrgTechnician || isOrgAssistant)); // أعضاء القسم
+
   const canManageMembers = isOwner || isAdmin; // Permission to manage members
 
   // Renamed and memoized for stability
@@ -165,12 +180,38 @@ export default function DepartmentDetailsPage() {
     );
   }
 
+  // فحص صلاحية الوصول
+  if (!canAccessThisDepartment) {
+    return (
+      <div className="container mx-auto p-4">
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <p className="text-destructive">ليس لديك صلاحية الوصول إلى هذا القسم.</p>
+            <p className="text-muted-foreground mt-2">يمكنك الوصول إلى قسمك فقط.</p>
+            <div className="flex justify-center gap-2 mt-4">
+              {userDepartmentId && (
+                <Button asChild>
+                  <Link href={`/org/departments/${userDepartmentId}`}>
+                    الذهاب إلى قسمي
+                  </Link>
+                </Button>
+              )}
+              <Button asChild variant="outline">
+                <Link href="/org/tasks">المهام</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!department) {
     return (
       <div className="container mx-auto p-4">
         <Card>
           <CardContent className="pt-6 text-center">
-            <p className="text-destructive">القسم غير موجود أو ليس لديك صلاحية الوصول إليه.</p>
+            <p className="text-destructive">القسم غير موجود.</p>
             <Button asChild className="mt-4">
               <Link href="/org/departments">العودة إلى الأقسام</Link>
             </Button>
