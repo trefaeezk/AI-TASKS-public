@@ -125,14 +125,7 @@ export default function OrganizationDashboard() {
   const isLowRoleWithoutDepartment = !userClaims?.departmentId &&
     (userClaims?.isOrgAssistant || userClaims?.isOrgTechnician || userClaims?.isOrgEngineer || userClaims?.isOrgSupervisor);
 
-  // توجيه المستخدمين ذوي الأدوار المنخفضة بدون قسم إلى صفحة المهام
-  useEffect(() => {
-    if (!loading && user && isLowRoleWithoutDepartment) {
-      console.log('[OrgDashboard] Redirecting low-role user without department to tasks page');
-      window.location.href = '/org/tasks';
-      return;
-    }
-  }, [loading, user, isLowRoleWithoutDepartment]);
+  // تم نقل منطق التوجيه إلى AuthContext لتجنب التوجيه المتكرر
 
   useEffect(() => {
     const fetchOrganizationData = async () => {

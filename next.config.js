@@ -68,10 +68,10 @@ const nextConfig = {
     position: 'bottom-right',
   },
 
-  // إعدادات إضافية لحل مشاكل chunk loading
-  experimental: {
-    esmExternals: 'loose',
-  },
+  // إعدادات تجريبية - تم إزالة esmExternals لتجنب التحذيرات
+  // experimental: {
+  //   esmExternals: 'loose', // تم إزالته لأنه لا يُنصح بتعديله
+  // },
 
   // تكوين لتحسين الأداء في بيئة الإنتاج
   productionBrowserSourceMaps: false,

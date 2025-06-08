@@ -22,6 +22,12 @@ export * from './auth';
 // تصدير وظائف البريد الإلكتروني والتشخيص
 export * from './email';
 
+// تصدير وظائف حذف المستخدمين
+export * from './userDeletion';
+
+// تصدير وظائف المستخدمين الفرديين
+export * from './individual';
+
 // تم حذف دالة fixUserPermissions - لم تعد مطلوبة
 
 /**

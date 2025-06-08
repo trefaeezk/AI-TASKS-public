@@ -449,8 +449,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 console.log("[AuthContext] ✅ Redirecting to /org dashboard for high-level user.");
                 router.replace('/org');
               } else {
-                console.log("[AuthContext] ✅ Redirecting to /org for organization user.");
-                router.replace('/org');
+                // المستخدمون ذوو الأدوار المنخفضة بدون قسم يذهبون مباشرة للمهام
+                const isLowRoleWithoutDepartment = !finalProcessedClaims.departmentId &&
+                  (finalProcessedClaims.isOrgAssistant || finalProcessedClaims.isOrgTechnician ||
+                   finalProcessedClaims.isOrgEngineer || finalProcessedClaims.isOrgSupervisor);
+
+                if (isLowRoleWithoutDepartment) {
+                  console.log("[AuthContext] ✅ Redirecting low-role user without department directly to tasks page.");
+                  router.replace('/org/tasks');
+                } else {
+                  console.log("[AuthContext] ✅ Redirecting to /org for organization user.");
+                  router.replace('/org');
+                }
               }
             } else {
               console.log("[AuthContext] ✅ Organization user already on /org path, no redirect needed.");

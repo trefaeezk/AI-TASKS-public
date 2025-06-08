@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { PermissionsManager } from '@/components/PermissionsManager';
@@ -16,6 +16,8 @@ import { Badge } from '../ui/badge';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { Translate } from '../Translate';
+import { DeleteUserDialog } from './DeleteUserDialog';
+import { useUserDeletion } from '@/hooks/useUserDeletion';
 
 
 
@@ -26,6 +28,7 @@ interface UserDetailsDialogProps {
   onUpdateRole: (userId: string, role: UserRole) => Promise<void>;
   onUpdatePermissions: (userId: string, permissions: PermissionKey[]) => Promise<void>;
   onToggleDisabled: (userId: string, disabled: boolean) => Promise<void>;
+  onUserDeleted?: () => void;
   loading: boolean;
 }
 
@@ -36,6 +39,7 @@ export function UserDetailsDialog({
   onUpdateRole,
   onUpdatePermissions,
   onToggleDisabled,
+  onUserDeleted,
   loading
 }: UserDetailsDialogProps) {
   const { toast } = useToast();
@@ -45,6 +49,8 @@ export function UserDetailsDialog({
   const [customPermissions, setCustomPermissions] = useState<PermissionKey[]>([]);
   const [isDisabled, setIsDisabled] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { confirmUserDeletion } = useUserDeletion();
 
   // Update state when user changes
   useEffect(() => {
@@ -218,20 +224,52 @@ export function UserDetailsDialog({
           </TabsContent>
         </Tabs>
 
-        <DialogFooter className="mt-4">
-          <DialogClose asChild>
-            <Button type="button" variant="outline">إغلاق</Button>
-          </DialogClose>
+        <DialogFooter className="mt-4 flex justify-between">
           <Button
-            onClick={handleSaveChanges}
+            type="button"
+            variant="destructive"
+            onClick={() => setShowDeleteDialog(true)}
             disabled={loading || isSaving}
             className="gap-2"
           >
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            حفظ التغييرات
+            <Trash2 className="h-4 w-4" />
+            حذف المستخدم
           </Button>
+
+          <div className="flex gap-2">
+            <DialogClose asChild>
+              <Button type="button" variant="outline">إغلاق</Button>
+            </DialogClose>
+            <Button
+              onClick={handleSaveChanges}
+              disabled={loading || isSaving}
+              className="gap-2"
+            >
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              حفظ التغييرات
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
+
+      {/* مربع حوار حذف المستخدم */}
+      <DeleteUserDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        user={user ? {
+          uid: user.uid,
+          name: user.name || user.email || 'مستخدم غير معروف',
+          email: user.email || '',
+          role: user.role,
+          accountType: user.accountType,
+          organizationId: user.organizationId
+        } : null}
+        onUserDeleted={() => {
+          setShowDeleteDialog(false);
+          onOpenChange(false);
+          onUserDeleted?.();
+        }}
+      />
     </Dialog>
   );
 }

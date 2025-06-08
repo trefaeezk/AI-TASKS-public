@@ -105,3 +105,42 @@ export const isIndividualUser = async (userId: string, createIfNotExists: boolea
         return false;
     }
 };
+
+/**
+ * التحقق من صلاحية الوصول للمستخدم الفردي
+ * يسمح للمستخدم بالوصول لبياناته الخاصة أو لمدراء النظام
+ */
+export const ensureIndividualAccess = async (context: any, targetUserId: string): Promise<void> => {
+    // التحقق من المصادقة
+    if (!context.auth) {
+        throw new functions.https.HttpsError(
+            'unauthenticated',
+            'يجب تسجيل الدخول لاستخدام هذه الوظيفة.'
+        );
+    }
+
+    const currentUserId = context.auth.uid;
+    const token = context.auth.token || {};
+
+    // السماح لمدراء النظام بالوصول لجميع البيانات
+    const isSystemOwner = token.isSystemOwner === true || token.role === 'isSystemOwner';
+    const isSystemAdmin = token.isSystemAdmin === true || token.role === 'isSystemAdmin';
+
+    if (isSystemOwner || isSystemAdmin) {
+        console.log(`[ensureIndividualAccess] ✅ System admin ${currentUserId} accessing user ${targetUserId} data`);
+        return;
+    }
+
+    // السماح للمستخدم بالوصول لبياناته الخاصة فقط
+    if (currentUserId === targetUserId) {
+        console.log(`[ensureIndividualAccess] ✅ User ${currentUserId} accessing own data`);
+        return;
+    }
+
+    // رفض الوصول في جميع الحالات الأخرى
+    console.error(`[ensureIndividualAccess] ❌ User ${currentUserId} attempted to access user ${targetUserId} data without permission`);
+    throw new functions.https.HttpsError(
+        'permission-denied',
+        'ليس لديك صلاحية للوصول لبيانات هذا المستخدم.'
+    );
+};

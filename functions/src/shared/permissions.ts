@@ -300,3 +300,84 @@ export function calculateDynamicPermissions(role: string) {
         canCreateTasks: !['isOrgAssistant'].includes(role)
     };
 }
+
+/**
+ * التحقق من أن المستخدم مدير نظام
+ * يرمي خطأ إذا لم يكن لديه صلاحيات مدير النظام
+ */
+export const ensureSystemAdmin = async (context: any): Promise<void> => {
+    // التحقق من المصادقة
+    if (!context.auth) {
+        throw new functions.https.HttpsError(
+            'unauthenticated',
+            'يجب تسجيل الدخول لاستخدام هذه الوظيفة.'
+        );
+    }
+
+    const userId = context.auth.uid;
+    const token = context.auth.token || {};
+
+    // التحقق من الأدوار المسموحة لمدراء النظام
+    const isSystemOwner = token.isSystemOwner === true || token.role === 'isSystemOwner';
+    const isSystemAdmin = token.isSystemAdmin === true || token.role === 'isSystemAdmin';
+
+    if (!isSystemOwner && !isSystemAdmin) {
+        console.error(`[ensureSystemAdmin] User ${userId} attempted to access system admin function without proper permissions`);
+        console.error(`[ensureSystemAdmin] User role: ${token.role}`);
+        console.error(`[ensureSystemAdmin] User claims:`, token);
+
+        throw new functions.https.HttpsError(
+            'permission-denied',
+            'ليس لديك صلاحيات مدير النظام المطلوبة لهذه العملية.'
+        );
+    }
+
+    console.log(`[ensureSystemAdmin] ✅ User ${userId} has system admin permissions (${token.role})`);
+};
+
+/**
+ * التحقق من أن المستخدم مدير مؤسسة
+ * يرمي خطأ إذا لم يكن لديه صلاحيات مدير المؤسسة
+ */
+export const ensureOrgAdmin = async (context: any, organizationId?: string): Promise<void> => {
+    // التحقق من المصادقة
+    if (!context.auth) {
+        throw new functions.https.HttpsError(
+            'unauthenticated',
+            'يجب تسجيل الدخول لاستخدام هذه الوظيفة.'
+        );
+    }
+
+    const userId = context.auth.uid;
+    const token = context.auth.token || {};
+
+    // مدراء النظام لديهم صلاحيات على جميع المؤسسات
+    const isSystemOwner = token.isSystemOwner === true || token.role === 'isSystemOwner';
+    const isSystemAdmin = token.isSystemAdmin === true || token.role === 'isSystemAdmin';
+
+    if (isSystemOwner || isSystemAdmin) {
+        console.log(`[ensureOrgAdmin] ✅ User ${userId} has system admin permissions`);
+        return;
+    }
+
+    // التحقق من أدوار المؤسسة
+    const isOrgOwner = token.isOrgOwner === true || token.role === 'isOrgOwner';
+    const isOrgAdmin = token.isOrgAdmin === true || token.role === 'isOrgAdmin';
+
+    if (!isOrgOwner && !isOrgAdmin) {
+        throw new functions.https.HttpsError(
+            'permission-denied',
+            'ليس لديك صلاحيات مدير المؤسسة المطلوبة لهذه العملية.'
+        );
+    }
+
+    // إذا تم تحديد معرف المؤسسة، تحقق من أن المستخدم ينتمي لنفس المؤسسة
+    if (organizationId && token.organizationId !== organizationId) {
+        throw new functions.https.HttpsError(
+            'permission-denied',
+            'ليس لديك صلاحية على هذه المؤسسة.'
+        );
+    }
+
+    console.log(`[ensureOrgAdmin] ✅ User ${userId} has organization admin permissions`);
+};

@@ -39,6 +39,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Translate } from '@/components/Translate';
+import { DeleteUserDialog } from '@/components/admin/DeleteUserDialog';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
@@ -67,6 +68,7 @@ export default function MembersPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleteUserDialogOpen, setIsDeleteUserDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [formData, setFormData] = useState({
     email: '',
@@ -354,7 +356,7 @@ export default function MembersPage() {
     }
   };
 
-  // حذف عضو
+  // حذف عضو (إزالة من المؤسسة فقط)
   const handleDeleteMember = async () => {
     if (!user || !organizationId || !selectedMember) return;
 
@@ -386,6 +388,18 @@ export default function MembersPage() {
     } finally {
       setFormLoading(false);
     }
+  };
+
+  // حذف المستخدم بشكل شامل (حساب + بيانات)
+  const handleDeleteUserCompletely = (member: Member) => {
+    setSelectedMember(member);
+    setIsDeleteUserDialogOpen(true);
+  };
+
+  const handleUserDeleted = () => {
+    // إعادة تحميل قائمة الأعضاء
+    // سيتم تحديثها تلقائياً عبر onSnapshot
+    setSelectedMember(null);
   };
 
   if (loading) {
@@ -503,6 +517,16 @@ export default function MembersPage() {
                         setIsDeleteDialogOpen(true);
                       }}
                       disabled={member.role === 'isOrgOwner' && !isOwner}
+                      title="إزالة من المؤسسة"
+                    >
+                      <UserX className="h-4 w-4 text-orange-600" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteUserCompletely(member)}
+                      disabled={member.role === 'isOrgOwner' && !isOwner}
+                      title="حذف المستخدم نهائياً"
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -571,14 +595,23 @@ export default function MembersPage() {
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button
-                            variant="destructive"
+                            variant="outline"
                             size="sm"
                             onClick={() => {
                               setSelectedMember(member);
                               setIsDeleteDialogOpen(true);
                             }}
+                            title="إزالة من المؤسسة"
                           >
-                            <UserX className="h-4 w-4" />
+                            <UserX className="h-4 w-4 text-orange-600" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteUserCompletely(member)}
+                            title="حذف المستخدم نهائياً"
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </>
                       )}
@@ -650,14 +683,23 @@ export default function MembersPage() {
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button
-                              variant="destructive"
+                              variant="outline"
                               size="sm"
                               onClick={() => {
                                 setSelectedMember(member);
                                 setIsDeleteDialogOpen(true);
                               }}
+                              title="إزالة من المؤسسة"
                             >
-                              <UserX className="h-4 w-4" />
+                              <UserX className="h-4 w-4 text-orange-600" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteUserCompletely(member)}
+                              title="حذف المستخدم نهائياً"
+                            >
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </>
                         )}
@@ -871,6 +913,21 @@ export default function MembersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* مربع حوار حذف المستخدم نهائياً */}
+      <DeleteUserDialog
+        isOpen={isDeleteUserDialogOpen}
+        onClose={() => setIsDeleteUserDialogOpen(false)}
+        user={selectedMember ? {
+          uid: selectedMember.uid,
+          name: selectedMember.name || selectedMember.email || 'مستخدم غير معروف',
+          email: selectedMember.email || '',
+          role: selectedMember.role,
+          accountType: 'organization',
+          organizationId: organizationId
+        } : null}
+        onUserDeleted={handleUserDeleted}
+      />
     </div>
   );
 }

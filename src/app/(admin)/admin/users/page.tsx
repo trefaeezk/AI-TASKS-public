@@ -18,6 +18,7 @@ import { httpsCallable, connectFunctionsEmulator } from 'firebase/functions';
 import { UserRole } from '@/types/roles';
 import { CreateUserDialog } from '@/components/admin/CreateUserDialog';
 import { UserDetailsDialog } from '@/components/admin/UserDetailsDialog';
+import { DeleteUserDialog } from '@/components/admin/DeleteUserDialog';
 import { Translate } from '@/components/Translate';
 import { ManagedUser } from '@/types/user';
 import { useToast } from '@/hooks/use-toast';
@@ -34,6 +35,8 @@ export default function UsersPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<ManagedUser | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<ManagedUser | null>(null);
 
   // التحقق من صلاحيات المستخدم
   const hasViewPermission = checkPermission('users.view');
@@ -229,6 +232,17 @@ export default function UsersPage() {
     setShowDetailsDialog(true);
   };
 
+  const handleDeleteUser = (user: ManagedUser) => {
+    setUserToDelete(user);
+    setShowDeleteDialog(true);
+  };
+
+  const handleUserDeleted = () => {
+    // إعادة تحميل قائمة المستخدمين
+    fetchUsers();
+    setUserToDelete(null);
+  };
+
   const handleCreateUser = async (userData: any) => {
     const result = await secureCreateUser(userData);
 
@@ -316,15 +330,30 @@ export default function UsersPage() {
       ) : (
         <div className="space-y-3">
           {users.map((user) => (
-            <Card key={user.uid} className="cursor-pointer hover:bg-accent/10" onClick={() => handleUserClick(user)}>
+            <Card key={user.uid} className="hover:bg-accent/10">
               <CardContent className="p-4 flex justify-between items-center">
-                <div>
+                <div className="cursor-pointer flex-1" onClick={() => handleUserClick(user)}>
                   <h3 className="font-medium">{user.email}</h3>
                   <p className="text-sm text-muted-foreground">
                     <Translate text={`roles.${user.role}`} defaultValue={user.role} />
                   </p>
                 </div>
-                <Button variant="ghost" size="sm">عرض التفاصيل</Button>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => handleUserClick(user)}>
+                    عرض التفاصيل
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteUser(user);
+                    }}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    حذف
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -354,9 +383,25 @@ export default function UsersPage() {
           onToggleDisabled={async (userId, disabled) => {
             await handleUpdateUser(userId, { disabled });
           }}
+          onUserDeleted={handleUserDeleted}
           loading={userManagementLoading}
         />
       )}
+
+      {/* مربع حوار حذف المستخدم */}
+      <DeleteUserDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        user={userToDelete ? {
+          uid: userToDelete.uid,
+          name: userToDelete.name || userToDelete.email || 'مستخدم غير معروف',
+          email: userToDelete.email || '',
+          role: userToDelete.role,
+          accountType: userToDelete.accountType,
+          organizationId: userToDelete.organizationId
+        } : null}
+        onUserDeleted={handleUserDeleted}
+      />
     </div>
   );
 }

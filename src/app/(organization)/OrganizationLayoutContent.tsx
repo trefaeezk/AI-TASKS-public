@@ -289,14 +289,7 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
   const isLowRoleWithoutDepartment = !userDepartmentId &&
     (isOrgAssistant || isOrgTechnician || isOrgEngineer || isOrgSupervisor);
 
-  // توجيه المستخدمين ذوي الأدوار المنخفضة بدون قسم إلى صفحة المهام
-  React.useEffect(() => {
-    if (user && isLowRoleWithoutDepartment && pathname === '/org') {
-      console.log('[OrganizationLayout] Redirecting low-role user without department to tasks page');
-      window.location.href = '/org/tasks';
-      return;
-    }
-  }, [user, isLowRoleWithoutDepartment, pathname]);
+  // تم نقل منطق التوجيه إلى AuthContext لتجنب التوجيه المتكرر
 
   return (
     <TaskTypeFilterContext.Provider value={{ taskTypeFilter, setTaskTypeFilter }}>
