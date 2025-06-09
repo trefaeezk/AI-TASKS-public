@@ -145,7 +145,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           isOrgAssistant: false,
           isIndependent: true,
           customPermissions: [],
-          departmentId: null
+          departmentId: undefined
         };
       }
 

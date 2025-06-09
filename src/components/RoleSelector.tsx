@@ -9,7 +9,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { ROLE_DESCRIPTIONS, ROLE_HIERARCHY, UserRole } from '@/types/roles';
+import { ROLE_DESCRIPTION_KEYS, ROLE_HIERARCHY, UserRole } from '@/types/roles';
 import { useLanguage } from '@/context/LanguageContext';
 
 interface RoleSelectorProps {

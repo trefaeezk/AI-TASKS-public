@@ -38,7 +38,12 @@ export default function OrganizationPage() {
   const isSystemOwner = userClaims?.isSystemOwner === true;
   const isSystemAdmin = userClaims?.isSystemAdmin === true;
   const isOrgOwner = userClaims?.isOrgOwner === true;
+  const isOrgAdmin = userClaims?.isOrgAdmin === true;
   const organizationId = userClaims?.organizationId;
+
+  // متغيرات للتوافق مع المكونات الفرعية
+  const isOwner = isOrgOwner;
+  const isAdmin = isOrgAdmin;
 
   useEffect(() => {
     const fetchOrganizationData = async () => {
@@ -119,7 +124,7 @@ export default function OrganizationPage() {
   // التحقق من وجود معرف المؤسسة
   if (!organizationId) {
     return (
-      <div className="container mx-auto p-4">
+      <div className="px-4 md:px-6 py-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-xl flex items-center">
@@ -136,7 +141,9 @@ export default function OrganizationPage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 md:px-6 py-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold flex items-center">
           <Building className="ml-2 h-6 w-6" />
@@ -185,6 +192,8 @@ export default function OrganizationPage() {
           />
         </TabsContent>
       </Tabs>
+        </div>
+      </div>
     </div>
   );
 }

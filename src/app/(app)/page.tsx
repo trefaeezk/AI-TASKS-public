@@ -126,7 +126,7 @@ import { Button } from '@/components/ui/button';
           await updateDoc(taskDocRef, { status: newStatus });
           toast({
               title: t('tasks.statusUpdated'),
-              description: t('tasks.taskStatusUpdatedTo', { status: categoryInfo[newStatus]?.title ?? newStatus }),
+              description: `${t('tasks.taskStatusUpdatedTo')} ${categoryInfo[newStatus as TaskCategory]?.title ?? newStatus}`,
           });
           // No need to manually change category here, stay on the current one
           // const newCategory = getTaskCategory({ ...originalTask, status: newStatus });
@@ -263,7 +263,7 @@ import { Button } from '@/components/ui/button';
                         await updateDoc(taskDocRef, { status: newStatus });
                         toast({
                             title: t('tasks.taskMoved'),
-                            description: t('tasks.taskMovedTo', { category: categoryInfo[targetCategoryKey]?.title ?? targetCategoryKey }),
+                            description: `${t('tasks.taskMovedTo')} ${categoryInfo[targetCategoryKey]?.title ?? targetCategoryKey}`,
                         });
                     } catch (error) {
                         console.error("Error updating task status in Firestore after DND:", error);
@@ -340,7 +340,7 @@ import { Button } from '@/components/ui/button';
                          <FileText className="w-16 h-16 mb-4" />
                          <p className="text-lg">{t('tasks.noTasksToDisplay')}</p>
                          <p className="text-sm mt-2">
-                             {t('tasks.useButtonToAddNewTask', { button: <kbd className="px-2 py-1 text-xs font-semibold text-foreground bg-muted border border-border rounded-md mx-1">+</kbd> })}
+                             {t('tasks.useButtonToAddNewTask')} <kbd className="px-2 py-1 text-xs font-semibold text-foreground bg-muted border border-border rounded-md mx-1">+</kbd>
                          </p>
                      </div>
                  ) : (
@@ -355,10 +355,9 @@ import { Button } from '@/components/ui/button';
                                      {/* Use currentCategoryTasks which is derived from filtered + categorized */}
                                      {categorizedTasks[categoryKey]?.length === 0 ? (
                                          <p className="text-center text-muted-foreground py-8 text-sm">
-                                             {t('tasks.noTasksInCategory', {
-                                                category: categoryFilter ? t('tasks.forCategory', { category: categoryFilter }) : '',
-                                                dateRange: dateFilter.startDate || dateFilter.endDate ? t('tasks.withinSpecifiedDateRange') : ''
-                                             })}
+                                             {t('tasks.noTasksInCategory')}
+                                             {categoryFilter ? ` ${t('tasks.forCategory')} ${categoryFilter}` : ''}
+                                             {dateFilter.startDate || dateFilter.endDate ? ` ${t('tasks.withinSpecifiedDateRange')}` : ''}
                                          </p>
                                      ) : (
                                          <ul className="space-y-3">

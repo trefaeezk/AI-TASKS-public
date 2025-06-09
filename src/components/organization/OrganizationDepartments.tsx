@@ -422,7 +422,7 @@ export function OrganizationDepartments({ organizationId, isOwner, isAdmin }: Or
             <AlertDialogTitle>هل أنت متأكد من حذف هذا القسم؟</AlertDialogTitle>
             <AlertDialogDescription>
               سيتم حذف القسم من المؤسسة. هذا الإجراء لا يمكن التراجع عنه.
-              {selectedDepartment?.membersCount > 0 && (
+              {(selectedDepartment?.membersCount ?? 0) > 0 && (
                 <div className="mt-2 text-destructive">
                   لا يمكن حذف القسم لأنه يحتوي على أعضاء. قم بنقل الأعضاء إلى قسم آخر أولاً.
                 </div>
@@ -434,7 +434,7 @@ export function OrganizationDepartments({ organizationId, isOwner, isAdmin }: Or
             <AlertDialogAction 
               onClick={handleDeleteDepartment} 
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={selectedDepartment?.membersCount > 0 || formLoading}
+              disabled={(selectedDepartment?.membersCount ?? 0) > 0 || formLoading}
             >
               {formLoading ? (
                 <>

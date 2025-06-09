@@ -377,13 +377,9 @@ export async function generateSmartSuggestions(input: GenerateSmartSuggestionsIn
         : `اقتراح ${input.suggestionType}`;
 
       return {
-        suggestion: {
-          title: suggestionTitle,
-          description: noTasksMessage,
-          content: noTasksMessage,
-          priority: 'normal',
-          actionItems: []
-        }
+        title: suggestionTitle,
+        content: noTasksMessage,
+        actionItems: []
       };
     }
 
@@ -403,31 +399,23 @@ export async function generateSmartSuggestions(input: GenerateSmartSuggestionsIn
     // إنشاء اقتراح بسيط في حالة الخطأ بناءً على اللغة المحددة
     if (input.language === 'en') {
       return {
-        suggestion: {
-          title: `${input.suggestionType} suggestion (locally generated)`,
-          description: 'An error occurred while generating the suggestion. This is a simple suggestion generated locally.',
-          content: 'An error occurred while generating the suggestion. Please try again later.',
-          priority: 'normal',
-          actionItems: [
-            { description: 'Check your internet connection' },
-            { description: 'Make sure you have enough tasks' },
-            { description: 'Try again later' }
-          ]
-        }
+        title: `${input.suggestionType} suggestion (locally generated)`,
+        content: 'An error occurred while generating the suggestion. Please try again later.',
+        actionItems: [
+          'Check your internet connection',
+          'Make sure you have enough tasks',
+          'Try again later'
+        ]
       };
     } else {
       return {
-        suggestion: {
-          title: `اقتراح ${input.suggestionType} (تم إنشاؤه محليًا)`,
-          description: 'حدث خطأ أثناء توليد الاقتراح. هذا اقتراح بسيط تم إنشاؤه محليًا.',
-          content: 'حدث خطأ أثناء توليد الاقتراح. يرجى المحاولة مرة أخرى لاحقًا.',
-          priority: 'normal',
-          actionItems: [
-            { description: 'التحقق من اتصال الإنترنت' },
-            { description: 'التحقق من وجود مهام كافية' },
-            { description: 'المحاولة مرة أخرى لاحقًا' }
-          ]
-        }
+        title: `اقتراح ${input.suggestionType} (تم إنشاؤه محليًا)`,
+        content: 'حدث خطأ أثناء توليد الاقتراح. يرجى المحاولة مرة أخرى لاحقًا.',
+        actionItems: [
+          'التحقق من اتصال الإنترنت',
+          'التحقق من وجود مهام كافية',
+          'المحاولة مرة أخرى لاحقًا'
+        ]
       };
     }
   }

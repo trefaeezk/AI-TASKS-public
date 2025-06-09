@@ -238,8 +238,8 @@ export default function KpiPage() {
   // حساب إجمالي عدد الأيام لإكمال المهام
   const totalCompletionDays = tasksWithCompletionTime.reduce((sum, t) => {
     // التأكد من أن التواريخ هي كائنات Date
-    const startDate = t.startDate instanceof Date ? t.startDate : new Date(t.startDate);
-    const completedDate = t.completedDate instanceof Date ? t.completedDate : new Date(t.completedDate);
+    const startDate = t.startDate instanceof Date ? t.startDate : new Date(t.startDate || new Date());
+    const completedDate = t.completedDate instanceof Date ? t.completedDate : new Date(t.completedDate || new Date());
 
     // حساب الفرق بالأيام (على الأقل يوم واحد)
     const days = Math.max(1, Math.ceil((completedDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
@@ -255,22 +255,19 @@ export default function KpiPage() {
   // الأولوية العالية: 1 أو 'high'
   const highPriorityTasks = tasks.filter(t =>
     t.priority === 1 ||
-    t.priority === 'high' ||
-    t.priority === '1'
+    t.priority === 'high'
   ).length;
 
   // الأولوية المتوسطة: 3 أو 'medium'
   const mediumPriorityTasks = tasks.filter(t =>
     t.priority === 3 ||
-    t.priority === 'medium' ||
-    t.priority === '3'
+    t.priority === 'medium'
   ).length;
 
   // الأولوية المنخفضة: 5 أو 'low'
   const lowPriorityTasks = tasks.filter(t =>
     t.priority === 5 ||
-    t.priority === 'low' ||
-    t.priority === '5'
+    t.priority === 'low'
   ).length;
 
   // بدون أولوية

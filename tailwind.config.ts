@@ -86,6 +86,38 @@ export default {
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out'
+  		},
+  		// إضافة Grid متجاوب تلقائياً
+  		gridTemplateColumns: {
+  			'auto-fit-sm': 'repeat(auto-fit, minmax(250px, 1fr))',
+  			'auto-fit-md': 'repeat(auto-fit, minmax(300px, 1fr))',
+  			'auto-fit-lg': 'repeat(auto-fit, minmax(350px, 1fr))',
+  			// تحسين للشاشات الصغيرة - تقليل الحد الأدنى للعرض
+  			'auto-fit-cards': 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))',
+  			'auto-fit-stats': 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))',
+  		},
+  		// إضافة أحجام متجاوبة
+  		fontSize: {
+  			'responsive-xs': 'clamp(0.625rem, 1.5vw, 0.75rem)',
+  			'responsive-sm': 'clamp(0.75rem, 2vw, 0.875rem)',
+  			'responsive-base': 'clamp(0.875rem, 2.5vw, 1rem)',
+  			'responsive-lg': 'clamp(1rem, 3vw, 1.125rem)',
+  			'responsive-xl': 'clamp(1.125rem, 3.5vw, 1.25rem)',
+  		},
+  		spacing: {
+  			'responsive-1': 'clamp(0.25rem, 1vw, 0.5rem)',
+  			'responsive-2': 'clamp(0.5rem, 1.5vw, 0.75rem)',
+  			'responsive-3': 'clamp(0.75rem, 2vw, 1rem)',
+  			'responsive-4': 'clamp(1rem, 2.5vw, 1.5rem)',
+  		},
+  		// إضافة breakpoints مخصصة للشاشات الصغيرة جداً
+  		screens: {
+  			'xs': '320px',
+  			'sm': '640px',
+  			'md': '768px',
+  			'lg': '1024px',
+  			'xl': '1280px',
+  			'2xl': '1536px',
   		}
   	}
   },

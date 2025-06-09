@@ -23,7 +23,7 @@ export const defaultLanguage = 'ar';
 // Get language direction
 export const getLanguageDirection = (languageCode: string): 'rtl' | 'ltr' => {
   const language = languageOptions.find(lang => lang.code === languageCode);
-  return language?.direction || 'rtl';
+  return (language?.direction as 'rtl' | 'ltr') || 'rtl';
 };
 
 // Get translation

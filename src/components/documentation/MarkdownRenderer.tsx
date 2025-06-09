@@ -68,7 +68,8 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = memo(({ content }) => 
               </div>
             );
           },
-          code: ({ node, inline, className, children, ...props }) => {
+          code: ({ node, className, children, ...props }: any) => {
+            const inline = props.inline;
             const match = /language-(\w+)/.exec(className || '');
             return !inline && match ? (
               <div className="my-4 overflow-auto">

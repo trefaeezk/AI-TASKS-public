@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       action: 'تم إنشاء رمز تحقق جديد',
       timestamp: serverTimestamp(),
       userAgent: request.headers.get('user-agent') || 'غير معروف',
-      ipAddress: request.headers.get('x-forwarded-for') || request.ip || 'غير معروف',
+      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'غير معروف',
     });
 
     // في بيئة الإنتاج، يمكن إرسال الرمز عبر البريد الإلكتروني أو الرسائل القصيرة

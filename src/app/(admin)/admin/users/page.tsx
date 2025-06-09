@@ -16,6 +16,7 @@ import { collection, getDocs, onSnapshot, query, orderBy } from 'firebase/firest
 import { db, functions, auth } from '@/lib/firebase';
 import { httpsCallable, connectFunctionsEmulator } from 'firebase/functions';
 import { UserRole } from '@/types/roles';
+import { SystemType } from '@/types/system';
 import { CreateUserDialog } from '@/components/admin/CreateUserDialog';
 import { UserDetailsDialog } from '@/components/admin/UserDetailsDialog';
 import { DeleteUserDialog } from '@/components/admin/DeleteUserDialog';
@@ -82,7 +83,7 @@ export default function UsersPage() {
           customPermissions: [],
           hasAdminAccess: member.role === 'isSystemAdmin' || member.role === 'isSystemOwner' ||
                          member.role === 'isOrgOwner' || member.role === 'isOrgAdmin',
-          accountType: 'organization',
+          accountType: 'organization' as SystemType,
           organizationId
         }));
 
@@ -140,7 +141,7 @@ export default function UsersPage() {
             customPermissions: user.customClaims?.customPermissions || [],
             hasAdminAccess: user.customClaims?.isSystemAdmin === true || user.customClaims?.isSystemOwner === true ||
                            user.customClaims?.isOrgOwner === true || user.customClaims?.isOrgAdmin === true,
-            accountType: user.customClaims?.accountType || 'individual',
+            accountType: (user.customClaims?.accountType as SystemType) || 'individual',
             organizationId: user.customClaims?.organizationId
           };
         });

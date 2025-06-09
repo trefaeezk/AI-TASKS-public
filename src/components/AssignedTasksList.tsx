@@ -149,7 +149,7 @@ export function AssignedTasksList({ className }: AssignedTasksListProps) {
                     completed: milestone.completed,
                     weight: milestone.weight || 0,
                     dueDate: milestone.dueDate ? milestone.dueDate.toDate() : undefined,
-                    assignedToUserId: milestone.assignedToUserId
+                    assignedToUserId: milestone.assignedToUserId || undefined
                   }
                 });
               }

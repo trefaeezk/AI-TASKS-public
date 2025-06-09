@@ -58,7 +58,7 @@ const DocumentationPage: React.FC<DocumentationPageProps> = ({
         description: 'شرح عام لصفحة التشخيص وكيفية استخدامها',
         category: 'debug',
         path: 'debug/README.md',
-        requiredPermission: org_owner ,
+        requiredPermission: 'org_owner',
       },
       {
         id: 'debug-access-control',
@@ -66,7 +66,7 @@ const DocumentationPage: React.FC<DocumentationPageProps> = ({
         description: 'شرح نظام الصلاحيات للوصول إلى صفحة التشخيص',
         category: 'debug',
         path: 'debug/access-control.md',
-        requiredPermission: org_owner ,
+        requiredPermission: 'org_owner',
       },
       {
         id: 'debug-email-system',
@@ -74,7 +74,7 @@ const DocumentationPage: React.FC<DocumentationPageProps> = ({
         description: 'شرح نظام البريد الإلكتروني المستخدم في صفحة التشخيص',
         category: 'debug',
         path: 'debug/email-system.md',
-        requiredPermission: org_owner ,
+        requiredPermission: 'org_owner',
       },
       {
         id: 'general-overview',

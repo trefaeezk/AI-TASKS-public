@@ -561,6 +561,6 @@ export async function updateOkrStats(periodId: string, departmentId?: string): P
   } else {
     // تحديث الوثيقة الحالية
     const docRef = doc(db, 'okrStats', querySnapshot.docs[0].id);
-    await updateDoc(docRef, statsData);
+    await updateDoc(docRef, statsData as any);
   }
 }

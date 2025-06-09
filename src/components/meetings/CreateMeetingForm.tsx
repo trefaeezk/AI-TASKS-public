@@ -185,8 +185,8 @@ export function CreateMeetingForm({ onSuccess, organizationId, departmentId }: C
         return {
           userId: memberId,
           name: member?.displayName || member?.email || '',
-          email: member?.email,
-          role: member?.role,
+          email: member?.email || '',
+          role: member?.role || '',
         };
       });
 
@@ -201,18 +201,17 @@ export function CreateMeetingForm({ onSuccess, organizationId, departmentId }: C
       }
 
       // إنشاء بيانات الاجتماع
-      const meetingData: Omit<Meeting, 'id'> = {
-        title,
-        description,
+      const meetingData: any = {
+        title: title || '',
+        description: description || '',
         type,
         status: 'scheduled',
         startDate: startDateTime,
         endDate: endDateTime,
-        location: isOnline ? '' : location,
+        location: isOnline ? '' : (location || ''),
         isOnline,
-        meetingLink: isOnline ? meetingLink : '',
+        meetingLink: isOnline ? (meetingLink || '') : '',
         organizationId,
-        departmentId: selectedDepartment === 'none' ? undefined : selectedDepartment,
         createdBy: user.uid,
         participants,
         agenda: [],
@@ -221,12 +220,21 @@ export function CreateMeetingForm({ onSuccess, organizationId, departmentId }: C
         notes: '',
         summary: '',
         isRecurring,
-        recurringPattern: isRecurring ? {
+      };
+
+      // إضافة departmentId فقط إذا لم يكن 'none'
+      if (selectedDepartment && selectedDepartment !== 'none') {
+        meetingData.departmentId = selectedDepartment;
+      }
+
+      // إضافة recurringPattern فقط إذا كان الاجتماع متكرر
+      if (isRecurring) {
+        meetingData.recurringPattern = {
           frequency: recurringFrequency,
           interval: recurringInterval,
           count: recurringCount,
-        } : undefined,
-      };
+        };
+      }
 
       // إنشاء الاجتماع
       await createMeeting(meetingData);
@@ -250,8 +258,9 @@ export function CreateMeetingForm({ onSuccess, organizationId, departmentId }: C
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
+    <div className="max-h-[70vh] overflow-y-auto mobile-scroll scrollbar-thin px-1">
+      <form onSubmit={handleSubmit} className="space-y-4 pb-4">
+        <div className="space-y-2">
         <Label htmlFor="title">عنوان الاجتماع</Label>
         <Input
           id="title"
@@ -441,7 +450,7 @@ export function CreateMeetingForm({ onSuccess, organizationId, departmentId }: C
           <Users className="ml-2 h-4 w-4" />
           المشاركون ({selectedMembers.length})
         </Label>
-        <div className="border rounded-md p-4 max-h-40 overflow-y-auto">
+        <div className="border rounded-md p-4 max-h-48 overflow-y-auto mobile-scroll scrollbar-thin">
           {members.length === 0 ? (
             <p className="text-center text-muted-foreground">لا يوجد أعضاء في المؤسسة</p>
           ) : (
@@ -476,14 +485,15 @@ export function CreateMeetingForm({ onSuccess, organizationId, departmentId }: C
         </div>
       </div>
 
-      <div className="flex justify-end space-x-2">
+      <div className="flex justify-end space-x-2 pt-4 border-t bg-background sticky bottom-0">
         <Button type="button" variant="outline" onClick={onSuccess} disabled={loading}>
           إلغاء
         </Button>
         <Button type="submit" disabled={loading}>
           {loading ? 'جاري الإنشاء...' : 'إنشاء الاجتماع'}
         </Button>
-      </div>
-    </form>
+        </div>
+      </form>
+    </div>
   );
 }

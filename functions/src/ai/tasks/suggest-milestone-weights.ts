@@ -110,7 +110,7 @@ ${milestones.map((m, i) => `${i + 1}. المعرف: ${m.id}\n   الوصف: ${m.
     }
 
     // التحقق من أن مجموع الأوزان يساوي 100
-    const totalWeight = result.weightedMilestones.reduce((sum, m) => sum + m.weight, 0);
+    const totalWeight = result.weightedMilestones.reduce((sum: any, m: any) => sum + m.weight, 0);
     if (Math.abs(totalWeight - 100) > 1) { // نسمح بهامش خطأ صغير
       console.warn(`[AI] Total weight (${totalWeight}) is not 100, adjusting...`);
       

@@ -28,7 +28,7 @@ export default function LoginPage() {
   // تعريف مخطط التحقق مع رسائل مترجمة
   const loginSchema = z.object({
     email: z.string().email({ message: t('auth.invalidEmail') }),
-    password: z.string().min(6, { message: t('auth.passwordMinLength', { length: '6' }) }),
+    password: z.string().min(6, { message: `${t('auth.passwordMinLength')} 6` }),
   });
 
   type LoginFormValues = z.infer<typeof loginSchema>;

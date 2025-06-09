@@ -422,7 +422,7 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
             <div className="flex items-center">
               <UserCircle className="h-4 w-4 text-primary flex-shrink-0 ml-2" />
               <div className="flex flex-col min-w-0">
-                <span className="text-xs font-medium truncate" title={user?.displayName || user?.email}>
+                <span className="text-xs font-medium truncate" title={user?.displayName || user?.email || undefined}>
                   {user?.displayName || user?.email?.split('@')[0] || 'مستخدم'}
                 </span>
                 {user?.displayName && user?.email && (
@@ -475,7 +475,8 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
       </Sidebar>
 
       <SidebarInset className="flex-1 flex flex-col relative">
-        <header className="sticky top-0 z-10 bg-background border-b min-h-[3.5rem] flex items-center justify-between px-4 py-2 flex-wrap">
+        <header className="sticky top-0 z-10 flex h-auto min-h-[3.5rem] flex-col border-b bg-background/80 backdrop-blur-sm sm:h-auto">
+          <div className="flex items-center justify-between gap-2 px-4 py-1 md:py-1.5 md:px-6 flex-wrap">
           <div className="flex items-center flex-wrap">
             {/* Mobile menu button in header */}
             <Button
@@ -568,12 +569,13 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
               </Button>
             )}
           </div>
+          </div>
         </header>
 
         {/* Task Tabs Header for tasks page */}
         {isTasksPage && taskPageContext && <TaskTabsHeader />}
 
-        <main className="flex-1 overflow-auto p-4 md:p-6">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
           {children}
         </main>
       </SidebarInset>

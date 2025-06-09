@@ -612,7 +612,6 @@ const en = {
     assignMembersToDepartments: "Assign members to departments",
     membersAssignedToDepartments: "Members assigned to organization departments",
     unknownDepartment: "Unknown Department",
-    departmentMembers: "Department Members",
     unassigned: "Unassigned",
     addMemberDescription: "Enter the member's email and role in the organization",
     selectRole: "Select Role",

@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
         action: 'محاولة فاشلة للتحقق من رمز التحقق',
         timestamp: serverTimestamp(),
         userAgent: request.headers.get('user-agent') || 'غير معروف',
-        ipAddress: request.headers.get('x-forwarded-for') || request.ip || 'غير معروف',
+        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'غير معروف',
       });
 
       return NextResponse.json(
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
         action: 'محاولة استخدام رمز تحقق منتهي الصلاحية',
         timestamp: serverTimestamp(),
         userAgent: request.headers.get('user-agent') || 'غير معروف',
-        ipAddress: request.headers.get('x-forwarded-for') || request.ip || 'غير معروف',
+        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'غير معروف',
       });
 
       return NextResponse.json(
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       action: 'تم التحقق من رمز التحقق بنجاح',
       timestamp: serverTimestamp(),
       userAgent: request.headers.get('user-agent') || 'غير معروف',
-      ipAddress: request.headers.get('x-forwarded-for') || request.ip || 'غير معروف',
+      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'غير معروف',
     });
 
     // إنشاء وقت انتهاء الصلاحية للجلسة (30 دقيقة من الآن)

@@ -39,7 +39,7 @@ export default function SignupPage() {
   const signupSchema = z.object({
     name: z.string().min(1, { message: t('auth.nameRequired') }),
     email: z.string().email({ message: t('auth.invalidEmail') }),
-    password: z.string().min(6, { message: t('auth.passwordMinLength', { length: '6' }) }),
+    password: z.string().min(6, { message: `${t('auth.passwordMinLength')} 6` }),
     confirmPassword: z.string().min(1, { message: t('auth.confirmPasswordRequired') }),
   }).refine((data) => data.password === data.confirmPassword, {
     message: t('auth.passwordsDoNotMatch'),

@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, Plus, Clock, Users, Video, MapPin, Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar, Plus, Clock, Users, Video, MapPin, Calendar as CalendarIcon, BarChart3 } from 'lucide-react';
 import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { db } from '@/config/firebase';
@@ -21,6 +21,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { CreateMeetingForm } from '@/components/meetings/CreateMeetingForm';
 import { MeetingDetails } from '@/components/meetings/MeetingDetails';
+import { MeetingsCalendar } from '@/components/meetings/MeetingsCalendar';
+import { DailyMeetingsView } from '@/components/meetings/DailyMeetingsView';
+import { MeetingsStats } from '@/components/meetings/MeetingsStats';
 
 export default function OrganizationMeetingsPage() {
   const { user, userClaims } = useAuth();
@@ -212,7 +215,7 @@ export default function OrganizationMeetingsPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-4">
+      <div className="px-4 md:px-6 py-4">
         <div className="flex justify-between items-center mb-6">
           <Skeleton className="h-8 w-40" />
           <Skeleton className="h-10 w-32" />
@@ -228,7 +231,9 @@ export default function OrganizationMeetingsPage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 md:px-6 py-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold flex items-center">
           <Calendar className="ml-2 h-6 w-6" />
@@ -242,37 +247,67 @@ export default function OrganizationMeetingsPage() {
                 إنشاء اجتماع
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>إنشاء اجتماع جديد</DialogTitle>
-                <DialogDescription>
+            <DialogContent className="w-[95vw] sm:max-w-[600px] max-h-[90vh] flex flex-col p-4 md:p-6">
+              <DialogHeader className="flex-shrink-0">
+                <DialogTitle className="text-lg md:text-xl">إنشاء اجتماع جديد</DialogTitle>
+                <DialogDescription className="text-sm">
                   أدخل تفاصيل الاجتماع الجديد. اضغط على حفظ عند الانتهاء.
                 </DialogDescription>
               </DialogHeader>
-              <CreateMeetingForm
-                onSuccess={() => setIsCreateDialogOpen(false)}
-                organizationId={organizationId || ''}
-              />
+              <div className="flex-1 overflow-hidden">
+                <CreateMeetingForm
+                  onSuccess={() => setIsCreateDialogOpen(false)}
+                  organizationId={organizationId || ''}
+                />
+              </div>
             </DialogContent>
           </Dialog>
         )}
       </div>
 
-      <Tabs defaultValue="upcoming" value={activeTab} onValueChange={setActiveTab} className="mb-6">
-        <TabsList className="grid grid-cols-3 mb-4">
-          <TabsTrigger value="upcoming">
-            <Clock className="ml-2 h-4 w-4" />
-            الاجتماعات القادمة
+      <Tabs defaultValue="calendar" value={activeTab} onValueChange={setActiveTab} className="mb-6">
+        <TabsList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 mb-4 h-auto p-1">
+          <TabsTrigger value="calendar" className="flex items-center justify-center text-xs md:text-sm px-2 py-2">
+            <CalendarIcon className="ml-1 h-3 w-3 md:h-4 md:w-4" />
+            <span className="hidden sm:inline">التقويم</span>
+            <span className="sm:hidden">تقويم</span>
           </TabsTrigger>
-          <TabsTrigger value="daily">
-            <CalendarIcon className="ml-2 h-4 w-4" />
-            اجتماعات اليوم
+          <TabsTrigger value="stats" className="flex items-center justify-center text-xs md:text-sm px-2 py-2">
+            <BarChart3 className="ml-1 h-3 w-3 md:h-4 md:w-4" />
+            <span className="hidden sm:inline">الإحصائيات</span>
+            <span className="sm:hidden">إحصائيات</span>
           </TabsTrigger>
-          <TabsTrigger value="past">
-            <Clock className="ml-2 h-4 w-4" />
-            الاجتماعات السابقة
+          <TabsTrigger value="upcoming" className="flex items-center justify-center text-xs md:text-sm px-2 py-2">
+            <Clock className="ml-1 h-3 w-3 md:h-4 md:w-4" />
+            <span className="hidden sm:inline">القادمة</span>
+            <span className="sm:hidden">قادمة</span>
+          </TabsTrigger>
+          <TabsTrigger value="daily" className="flex items-center justify-center text-xs md:text-sm px-2 py-2">
+            <CalendarIcon className="ml-1 h-3 w-3 md:h-4 md:w-4" />
+            <span className="hidden sm:inline">اليوم</span>
+            <span className="sm:hidden">اليوم</span>
+          </TabsTrigger>
+          <TabsTrigger value="past" className="flex items-center justify-center text-xs md:text-sm px-2 py-2">
+            <Clock className="ml-1 h-3 w-3 md:h-4 md:w-4" />
+            <span className="hidden sm:inline">السابقة</span>
+            <span className="sm:hidden">سابقة</span>
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="calendar" className="space-y-4">
+          <MeetingsCalendar
+            meetings={meetings}
+            onSelectMeeting={handleViewMeeting}
+            onCreateMeeting={(date) => {
+              setIsCreateDialogOpen(true);
+              // يمكن تمرير التاريخ المحدد إلى النموذج لاحقاً
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="stats" className="space-y-4">
+          <MeetingsStats meetings={meetings} />
+        </TabsContent>
 
         <TabsContent value="upcoming" className="space-y-4">
           {filteredMeetings.length === 0 ? (
@@ -282,39 +317,44 @@ export default function OrganizationMeetingsPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {filteredMeetings.map((meeting) => (
                 <Card key={meeting.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleViewMeeting(meeting)}>
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">{meeting.title}</CardTitle>
-                      <Badge variant="outline" className={getStatusColor(meeting.status)}>
+                  <CardHeader className="pb-2 p-3 md:p-4">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                      <CardTitle className="text-base md:text-lg line-clamp-2">{meeting.title}</CardTitle>
+                      <Badge variant="outline" className={`${getStatusColor(meeting.status)} text-xs flex-shrink-0`}>
                         {formatMeetingStatus(meeting.status)}
                       </Badge>
                     </div>
-                    <CardDescription>
-                      {format(meeting.startDate, 'EEEE, d MMMM yyyy - HH:mm', { locale: ar })}
+                    <CardDescription className="text-xs md:text-sm">
+                      <div className="flex flex-col gap-1">
+                        <span>{format(meeting.startDate, 'EEEE, d MMMM yyyy', { locale: ar })}</span>
+                        <span className="font-medium">{format(meeting.startDate, 'HH:mm', { locale: ar })}</span>
+                      </div>
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="pb-2">
-                    <div className="flex items-center text-sm text-muted-foreground mb-2">
-                      <Users className="ml-2 h-4 w-4" />
-                      <span>{meeting.participants.length} مشارك</span>
+                  <CardContent className="pb-2 p-3 md:p-4 pt-0">
+                    <div className="space-y-1">
+                      <div className="flex items-center text-xs md:text-sm text-muted-foreground">
+                        <Users className="ml-2 h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+                        <span>{meeting.participants.length} مشارك</span>
+                      </div>
+                      {meeting.isOnline ? (
+                        <div className="flex items-center text-xs md:text-sm text-muted-foreground">
+                          <Video className="ml-2 h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+                          <span>اجتماع عبر الإنترنت</span>
+                        </div>
+                      ) : meeting.location ? (
+                        <div className="flex items-center text-xs md:text-sm text-muted-foreground">
+                          <MapPin className="ml-2 h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+                          <span className="truncate">{meeting.location}</span>
+                        </div>
+                      ) : null}
                     </div>
-                    {meeting.isOnline ? (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Video className="ml-2 h-4 w-4" />
-                        <span>اجتماع عبر الإنترنت</span>
-                      </div>
-                    ) : meeting.location ? (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <MapPin className="ml-2 h-4 w-4" />
-                        <span>{meeting.location}</span>
-                      </div>
-                    ) : null}
                   </CardContent>
-                  <CardFooter>
-                    <Badge variant="outline">{formatMeetingType(meeting.type)}</Badge>
+                  <CardFooter className="p-3 md:p-4 pt-0">
+                    <Badge variant="outline" className="text-xs">{formatMeetingType(meeting.type)}</Badge>
                   </CardFooter>
                 </Card>
               ))}
@@ -323,50 +363,12 @@ export default function OrganizationMeetingsPage() {
         </TabsContent>
 
         <TabsContent value="daily">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center justify-between">
-                <div className="flex items-center">
-                  <CalendarIcon className="ml-2 h-5 w-5" />
-                  اجتماعات {format(selectedDate, 'EEEE, d MMMM yyyy', { locale: ar })}
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => setSelectedDate(new Date())}>
-                    اليوم
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setSelectedDate(addDays(selectedDate, -1))}>
-                    السابق
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>
-                    التالي
-                  </Button>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-7 gap-2">
-                {weekDays.map((day, index) => (
-                  <div
-                    key={index}
-                    className={`border rounded p-2 min-h-[100px] ${
-                      isSameDay(day, new Date()) ? 'bg-primary/10 border-primary' : ''
-                    } ${
-                      isSameDay(day, selectedDate) ? 'ring-2 ring-primary' : ''
-                    }`}
-                    onClick={() => setSelectedDate(day)}
-                  >
-                    <div className="text-center font-medium">
-                      {format(day, 'EEEE', { locale: ar })}
-                    </div>
-                    <div className="text-center text-sm text-muted-foreground">
-                      {format(day, 'd MMM', { locale: ar })}
-                    </div>
-                    {renderCalendarMeetings(day)}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <DailyMeetingsView
+            meetings={meetings}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            onSelectMeeting={handleViewMeeting}
+          />
         </TabsContent>
 
         <TabsContent value="past" className="space-y-4">
@@ -377,23 +379,26 @@ export default function OrganizationMeetingsPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {filteredMeetings.map((meeting) => (
                 <Card key={meeting.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleViewMeeting(meeting)}>
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">{meeting.title}</CardTitle>
-                      <Badge variant="outline" className={getStatusColor(meeting.status)}>
+                  <CardHeader className="pb-2 p-3 md:p-4">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                      <CardTitle className="text-base md:text-lg line-clamp-2">{meeting.title}</CardTitle>
+                      <Badge variant="outline" className={`${getStatusColor(meeting.status)} text-xs flex-shrink-0`}>
                         {formatMeetingStatus(meeting.status)}
                       </Badge>
                     </div>
-                    <CardDescription>
-                      {format(meeting.startDate, 'EEEE, d MMMM yyyy - HH:mm', { locale: ar })}
+                    <CardDescription className="text-xs md:text-sm">
+                      <div className="flex flex-col gap-1">
+                        <span>{format(meeting.startDate, 'EEEE, d MMMM yyyy', { locale: ar })}</span>
+                        <span className="font-medium">{format(meeting.startDate, 'HH:mm', { locale: ar })}</span>
+                      </div>
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center text-sm text-muted-foreground mb-2">
-                      <Users className="ml-2 h-4 w-4" />
+                  <CardContent className="p-3 md:p-4 pt-0">
+                    <div className="flex items-center text-xs md:text-sm text-muted-foreground">
+                      <Users className="ml-2 h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
                       <span>{meeting.participants.length} مشارك</span>
                     </div>
                   </CardContent>
@@ -406,12 +411,14 @@ export default function OrganizationMeetingsPage() {
 
       {/* Dialog for Meeting Details */}
       <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-[700px] max-h-[90vh] overflow-y-auto p-4 md:p-6">
           {selectedMeeting && (
             <MeetingDetails meeting={selectedMeeting} onClose={() => setIsDetailsDialogOpen(false)} />
           )}
         </DialogContent>
       </Dialog>
+        </div>
+      </div>
     </div>
   );
 }

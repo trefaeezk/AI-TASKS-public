@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* استيراد CSS للتقويم */
+@import 'react-big-calendar/lib/css/react-big-calendar.css';
+
 body {
   font-family: 'Cairo', sans-serif; /* Using a font that supports Arabic */
 }
@@ -208,6 +211,220 @@ body {
     .priority-3 { @apply bg-[hsl(var(--priority-3))]; }
     .priority-4 { @apply bg-[hsl(var(--priority-4))]; }
     .priority-5 { @apply bg-[hsl(var(--priority-5))]; }
+
+    /* إخفاء شريط التمرير */
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* تحسين شريط التمرير */
+    .scrollbar-thin {
+        scrollbar-width: thin;
+    }
+    .scrollbar-thin::-webkit-scrollbar {
+        width: 6px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+
+    /* تحسين التمرير للأجهزة المحمولة */
+    .mobile-scroll {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+
+    /* تنسيق react-big-calendar */
+    .rbc-calendar {
+        direction: rtl;
+        font-family: inherit;
+    }
+
+    .rbc-header {
+        background-color: hsl(var(--muted));
+        color: hsl(var(--muted-foreground));
+        font-weight: 600;
+        padding: 8px;
+        border-bottom: 1px solid hsl(var(--border));
+    }
+
+    .rbc-month-view {
+        border: 1px solid hsl(var(--border));
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .rbc-date-cell {
+        padding: 8px;
+        border-right: 1px solid hsl(var(--border));
+    }
+
+    .rbc-date-cell.rbc-off-range {
+        color: hsl(var(--muted-foreground));
+        background-color: hsl(var(--muted) / 0.3);
+    }
+
+    .rbc-date-cell.rbc-today {
+        background-color: hsl(var(--primary) / 0.1);
+        font-weight: 600;
+    }
+
+    .rbc-day-bg {
+        border-right: 1px solid hsl(var(--border));
+        border-bottom: 1px solid hsl(var(--border));
+    }
+
+    .rbc-day-bg.rbc-today {
+        background-color: hsl(var(--primary) / 0.05);
+    }
+
+    .rbc-event {
+        border-radius: 4px;
+        padding: 2px 4px;
+        font-size: 12px;
+        line-height: 1.2;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .rbc-event:hover {
+        opacity: 0.8;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .rbc-event-label {
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    .rbc-show-more {
+        background-color: hsl(var(--secondary));
+        color: hsl(var(--secondary-foreground));
+        border: 1px solid hsl(var(--border));
+        border-radius: 4px;
+        padding: 2px 4px;
+        font-size: 11px;
+        cursor: pointer;
+    }
+
+    .rbc-show-more:hover {
+        background-color: hsl(var(--secondary) / 0.8);
+    }
+
+    /* تنسيق عرض الأسبوع واليوم */
+    .rbc-time-view {
+        border: 1px solid hsl(var(--border));
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .rbc-time-header {
+        border-bottom: 1px solid hsl(var(--border));
+    }
+
+    .rbc-time-content {
+        border-top: 1px solid hsl(var(--border));
+    }
+
+    .rbc-timeslot-group {
+        border-bottom: 1px solid hsl(var(--border) / 0.3);
+    }
+
+    .rbc-time-slot {
+        border-top: 1px solid hsl(var(--border) / 0.2);
+    }
+
+    .rbc-current-time-indicator {
+        background-color: hsl(var(--destructive));
+        height: 2px;
+        z-index: 10;
+    }
+
+    /* تحسين الاستجابة للأجهزة المحمولة */
+    @media (max-width: 768px) {
+        .rbc-calendar {
+            font-size: 12px;
+        }
+
+        .rbc-event {
+            font-size: 10px;
+            padding: 1px 2px;
+            line-height: 1.1;
+        }
+
+        .rbc-header {
+            padding: 2px 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .rbc-date-cell {
+            padding: 2px;
+            font-size: 11px;
+        }
+
+        .rbc-month-view .rbc-row {
+            min-height: 60px;
+        }
+
+        .rbc-show-more {
+            font-size: 9px;
+            padding: 1px 2px;
+        }
+
+        /* تحسين عرض الأسبوع واليوم للشاشات الصغيرة */
+        .rbc-time-view .rbc-time-gutter {
+            width: 40px;
+            font-size: 10px;
+        }
+
+        .rbc-time-view .rbc-time-content {
+            margin-left: 40px;
+        }
+
+        .rbc-time-header-content {
+            font-size: 11px;
+        }
+    }
+
+    /* تحسين إضافي للشاشات الصغيرة جداً */
+    @media (max-width: 480px) {
+        .rbc-calendar {
+            font-size: 11px;
+        }
+
+        .rbc-event {
+            font-size: 9px;
+            padding: 0px 1px;
+        }
+
+        .rbc-header {
+            padding: 1px 2px;
+            font-size: 10px;
+        }
+
+        .rbc-date-cell {
+            padding: 1px;
+            font-size: 10px;
+        }
+
+        .rbc-month-view .rbc-row {
+            min-height: 50px;
+        }
+    }
 }
 
     

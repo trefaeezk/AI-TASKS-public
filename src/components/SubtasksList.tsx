@@ -76,9 +76,9 @@ export function SubtasksList({ parentTaskId }: SubtasksListProps) {
         setDepartments(departmentsMap);
         
         // تحويل بيانات المهام الفرعية إلى النوع المطلوب
-        const mappedSubtasks: SubtaskWithDepartment[] = subtasksData.map((data) => {
+        const mappedSubtasks: SubtaskWithDepartment[] = subtasksData.map((data, index) => {
           const subtask: SubtaskWithDepartment = {
-            id: data.id || '',
+            id: `subtask-${index}`, // استخدام index كمعرف مؤقت
             description: data.description || '',
             details: data.details || undefined,
             status: data.status || 'pending',
@@ -261,7 +261,7 @@ export function SubtasksList({ parentTaskId }: SubtasksListProps) {
                           subtask.status === 'completed' && "border-status-completed text-status-completed",
                           subtask.status === 'hold' && "border-muted-foreground/50 text-muted-foreground"
                         )}>
-                          {getStatusIcon(subtask.status, isOverdue)}
+                          {getStatusIcon(subtask.status, isOverdue || false)}
                           {subtask.status === 'pending' && isOverdue ? 'متأخرة' : 
                            subtask.status === 'completed' ? 'مكتملة' : 
                            subtask.status === 'hold' ? 'معلقة' : 'قيد التنفيذ'}

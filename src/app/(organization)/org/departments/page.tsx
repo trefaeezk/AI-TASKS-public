@@ -123,6 +123,11 @@ export default function DepartmentsPage() {
     }
 
     const fetchDepartments = async () => {
+      if (!organizationId) {
+        setLoading(false);
+        return;
+      }
+
       try {
         // 🏢 جلب الأقسام من المسار الموحد
         const departmentsQuery = query(
@@ -135,7 +140,7 @@ export default function DepartmentsPage() {
 
           // جلب عدد الأعضاء في القسم
           const membersQuery = query(
-            collection(db, 'organizations', organizationId, 'members'),
+            collection(db, 'organizations', organizationId!, 'members'),
             where('departmentId', '==', doc.id)
           );
           const membersSnapshot = await getDocs(membersQuery);
@@ -162,7 +167,10 @@ export default function DepartmentsPage() {
             description: departmentData.description || '',
             membersCount: membersSnapshot.size,
             tasksCount: tasksSnapshot.size,
-            meetingsCount: meetingsSnapshot.size
+            meetingsCount: meetingsSnapshot.size,
+            completedTasks: 0, // يمكن حسابها لاحقاً إذا لزم الأمر
+            overdueTasks: 0, // يمكن حسابها لاحقاً إذا لزم الأمر
+            activeMembers: membersSnapshot.size // نفترض أن جميع الأعضاء نشطون
           };
         });
 
@@ -242,7 +250,7 @@ export default function DepartmentsPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-4">
+      <div className="px-4 md:px-6 py-4">
         <div className="flex justify-between items-center mb-6">
           <Skeleton className="h-8 w-40" />
           <Skeleton className="h-10 w-32" />
@@ -259,7 +267,7 @@ export default function DepartmentsPage() {
   // منع أعضاء الأقسام من الوصول لصفحة جميع الأقسام
   if (isDepartmentMember) {
     return (
-      <div className="container mx-auto p-4">
+      <div className="px-4 md:px-6 py-4">
         <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
           <Building2 className="h-16 w-16 text-orange-500 mb-4" />
           <h2 className="text-xl font-semibold mb-2 text-orange-600">
@@ -290,7 +298,7 @@ export default function DepartmentsPage() {
   // عرض رسالة إذا لم يكن هناك organizationId
   if (!user || !organizationId) {
     return (
-      <div className="container mx-auto p-4">
+      <div className="px-4 md:px-6 py-4">
         <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
           <Building2 className="h-16 w-16 text-muted-foreground mb-4" />
           <h2 className="text-xl font-semibold mb-2">
@@ -310,7 +318,9 @@ export default function DepartmentsPage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 md:px-6 py-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold flex items-center">
           <FolderTree className="ml-2 h-6 w-6" />
@@ -438,6 +448,8 @@ export default function DepartmentsPage() {
           ))}
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }

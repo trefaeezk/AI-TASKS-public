@@ -6,6 +6,8 @@ import { useAuth as useAuthFromContext } from '@/context/AuthContext'; // Rename
 import {
   DEFAULT_ROLE_PERMISSIONS,
   PermissionKey,
+  PermissionArea,
+  PermissionAction,
   UserRole,
   isRoleAtLeast,
   permissionToKey // Assuming keyToPermission is not actively used here
@@ -18,7 +20,7 @@ import { db } from '@/lib/firebase';
  */
 export function usePermissions() {
   const { user, userClaims, loading: authContextLoading, refreshUserData } = useAuthFromContext(); // Use renamed import
-  const [role, setRole] = useState<UserRole>('assistant'); // Default role for new system
+  const [role, setRole] = useState<UserRole>('isOrgAssistant'); // Default role for new system
   const [customPermissions, setCustomPermissions] = useState<PermissionKey[]>([]);
   const [internalLoading, setInternalLoading] = useState(true); // Internal loading state for this hook
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +28,7 @@ export function usePermissions() {
   const determinePermissions = useCallback(async () => {
     if (!user) {
       console.log("[usePermissions] No user, setting default role and permissions, internalLoading false.");
-      setRole('assistant'); // Default role for new system
+      setRole('isOrgAssistant'); // Default role for new system
       setCustomPermissions([]);
       setInternalLoading(false);
       return;

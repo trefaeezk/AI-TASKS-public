@@ -112,23 +112,23 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
       membersRef,
       async (snapshot) => {
         try {
-          const membersPromises = snapshot.docs.map(async (doc) => {
-            const memberData = doc.data();
+          const membersPromises = snapshot.docs.map(async (memberDoc) => {
+            const memberData = memberDoc.data();
             let userName = 'مستخدم غير معروف';
             let userEmail = 'غير متاح';
 
             try {
               // Attempt to fetch user details from the top-level 'users' collection
-              const userDocRef = doc(db, 'users', doc.id);
+              const userDocRef = doc(db, 'users', memberDoc.id);
               const userDocSnap = await getDoc(userDocRef);
               if (userDocSnap.exists()) {
                 const specificUserData = userDocSnap.data();
-                userName = specificUserData.name || specificUserData.displayName || userName;
-                userEmail = specificUserData.email || userEmail;
+                userName = (specificUserData as any).name || (specificUserData as any).displayName || userName;
+                userEmail = (specificUserData as any).email || userEmail;
               } else {
                 // Fallback if not in 'users', try Firebase Auth (less reliable for display name)
                 const idToken = await user.getIdToken();
-                const response = await fetch(`https://europe-west1-tasks-intelligence.cloudfunctions.net/getUserHttp?uid=${doc.id}`, {
+                const response = await fetch(`https://europe-west1-tasks-intelligence.cloudfunctions.net/getUserHttp?uid=${memberDoc.id}`, {
                   method: 'GET',
                   headers: {
                     'Authorization': `Bearer ${idToken}`
@@ -141,15 +141,15 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
                 }
               }
             } catch (fetchError) {
-              console.error(`Error fetching details for user ${doc.id}:`, fetchError);
+              console.error(`Error fetching details for user ${memberDoc.id}:`, fetchError);
             }
 
             return {
-              uid: doc.id,
+              uid: memberDoc.id,
               email: userEmail,
               name: userName,
               role: memberData.role || 'isOrgAssistant',
-              departmentId: memberData.departmentId || null,
+              departmentId: memberData.departmentId || undefined,
               joinedAt: memberData.joinedAt?.toDate() || new Date()
             };
           });

@@ -27,7 +27,7 @@ interface Member {
   uid: string;
   email: string;
   displayName?: string;
-  name?: string; // Add name as it's used
+  name: string; // Required to match AssignMemberToDepartmentDialog
   role: string;
   departmentId?: string;
 }
@@ -94,7 +94,7 @@ export default function DepartmentDetailsPage() {
       }
 
       const departmentData = departmentDoc.data() as Department;
-      setDepartment({ id: departmentDoc.id, ...departmentData });
+      setDepartment({ ...departmentData, id: departmentDoc.id });
 
       const membersQuery = query(
         collection(db, 'organizations', organizationId, 'members'),
@@ -105,7 +105,7 @@ export default function DepartmentDetailsPage() {
       for (const memberDoc of membersSnapshot.docs) {
         const memberData = memberDoc.data();
         const userDetailsDoc = await getDoc(doc(db, 'users', memberDoc.id));
-        const userName = userDetailsDoc.exists() ? userDetailsDoc.data().name || userDetailsDoc.data().displayName : 'مستخدم غير معروف';
+        const userName = userDetailsDoc.exists() ? userDetailsDoc.data().name || userDetailsDoc.data().displayName || 'مستخدم غير معروف' : 'مستخدم غير معروف';
         membersList.push({
           uid: memberDoc.id,
           email: memberData.email || 'N/A',
@@ -222,7 +222,9 @@ export default function DepartmentDetailsPage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 md:px-6 py-4">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center">
@@ -417,16 +419,18 @@ export default function DepartmentDetailsPage() {
         </TabsContent>
       </Tabs>
 
-      {organizationId && (
-        <AssignMemberToDepartmentDialog
-          isOpen={isAssignMemberDialogOpen}
-          onOpenChange={setIsAssignMemberDialogOpen}
-          organizationId={organizationId}
-          departmentId={departmentId}
-          currentDepartmentMembers={members}
-          onMemberAssigned={() => refreshDepartmentData()} // Refresh members list after assignment
-        />
-      )}
+          {organizationId && (
+            <AssignMemberToDepartmentDialog
+              isOpen={isAssignMemberDialogOpen}
+              onOpenChange={setIsAssignMemberDialogOpen}
+              organizationId={organizationId}
+              departmentId={departmentId}
+              currentDepartmentMembers={members}
+              onMemberAssigned={() => refreshDepartmentData()} // Refresh members list after assignment
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }

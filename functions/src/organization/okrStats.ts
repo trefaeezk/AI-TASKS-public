@@ -98,7 +98,7 @@ export const getOkrStats = createCallableFunction(async (request: CallableReques
       .collection('departments')
       .get();
 
-    const departments = departmentsSnapshot.docs.reduce((acc, doc) => {
+    const departments: { [key: string]: string } = departmentsSnapshot.docs.reduce((acc: any, doc) => {
       acc[doc.id] = doc.data().name;
       return acc;
     }, {});
@@ -140,7 +140,7 @@ export const getOkrStats = createCallableFunction(async (request: CallableReques
         if (!acc[obj.departmentId]) {
           acc[obj.departmentId] = {
             objectives: [],
-            name: departments[obj.departmentId] || 'قسم غير معروف'
+            name: (departments as any)[obj.departmentId] || 'قسم غير معروف'
           };
         }
         acc[obj.departmentId].objectives.push(obj);
@@ -166,7 +166,7 @@ export const getOkrStats = createCallableFunction(async (request: CallableReques
       if (obj.departmentId) {
         return {
           ...obj,
-          departmentName: departments[obj.departmentId] || 'قسم غير معروف'
+          departmentName: (departments as any)[obj.departmentId] || 'قسم غير معروف'
         };
       }
       return obj;

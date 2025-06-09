@@ -84,9 +84,7 @@ export function DailyMeetingGenerator({ departmentId, onSuccess }: DailyMeetingG
             completedDate: data.completedDate ? (data.completedDate as Timestamp).toDate() : undefined,
             durationValue: data.durationValue,
             durationUnit: data.durationUnit,
-            categoryId: data.categoryId,
-            categoryName: data.categoryName,
-            userId: data.userId,
+            taskCategoryName: data.taskCategoryName,
             createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate() : new Date(),
             updatedAt: data.updatedAt ? (data.updatedAt as Timestamp).toDate() : new Date(),
           });
@@ -168,36 +166,37 @@ export function DailyMeetingGenerator({ departmentId, onSuccess }: DailyMeetingG
       );
 
       // استدعاء خدمة الذكاء الاصطناعي لتوليد جدول الأعمال
+      const allTasks = [...completedYesterday, ...overdueTasks, ...todayTasks, ...upcomingTasks];
       const result = await generateDailyMeetingAgenda({
         departmentName: departmentId ? 'القسم' : 'المؤسسة', // يمكن استبداله بالاسم الفعلي
         date: format(selectedDate, 'yyyy-MM-dd'),
-        completedYesterday: completedYesterday.map(task => ({
+        tasks: allTasks.map(task => ({
           id: task.id,
-          title: task.title,
-          description: task.description || '',
+          title: task.description, // TaskType uses description as title
+          description: task.details || '',
+          status: task.status,
+          priority: task.priority,
+          dueDate: task.dueDate,
         })),
-        overdueTasks: overdueTasks.map(task => ({
-          id: task.id,
-          title: task.title,
-          description: task.description || '',
-          dueDate: task.dueDate ? format(task.dueDate, 'yyyy-MM-dd') : undefined,
-        })),
-        todayTasks: todayTasks.map(task => ({
-          id: task.id,
-          title: task.title,
-          description: task.description || '',
-          dueDate: task.dueDate ? format(task.dueDate, 'yyyy-MM-dd') : undefined,
-        })),
-        upcomingTasks: upcomingTasks.map(task => ({
-          id: task.id,
-          title: task.title,
-          description: task.description || '',
-          dueDate: task.dueDate ? format(task.dueDate, 'yyyy-MM-dd') : undefined,
-        })),
-        customPrompt: customPrompt || undefined,
+        duration: 30, // 30 minutes default
+        focusAreas: customPrompt ? [customPrompt] : undefined,
       });
 
-      setGeneratedAgenda(result);
+      // تحويل النتيجة إلى التنسيق المطلوب
+      setGeneratedAgenda({
+        title: result.meetingTitle,
+        description: result.notes || '',
+        agenda: result.agenda.map(item => ({
+          id: item.id || uuidv4(),
+          title: item.title,
+          description: item.description,
+          duration: item.duration,
+          presenter: undefined,
+          status: 'pending' as const,
+          notes: undefined,
+        })),
+        summary: result.objectives.join('. '),
+      });
 
       toast({
         title: 'تم التوليد',
@@ -234,7 +233,7 @@ export function DailyMeetingGenerator({ departmentId, onSuccess }: DailyMeetingG
       meetingDate.setHours(9, 0, 0, 0);
 
       // إنشاء الاجتماع
-      const meetingData: Omit<Meeting, 'id'> = {
+      const meetingData: any = {
         title: generatedAgenda.title,
         description: generatedAgenda.description,
         type: 'daily',
@@ -242,8 +241,9 @@ export function DailyMeetingGenerator({ departmentId, onSuccess }: DailyMeetingG
         startDate: meetingDate,
         endDate: new Date(meetingDate.getTime() + 30 * 60000), // 30 دقيقة
         isOnline: false,
+        location: '',
+        meetingLink: '',
         organizationId,
-        departmentId,
         createdBy: user.uid,
         participants: [], // سيتم إضافة المشاركين لاحقًا
         agenda: generatedAgenda.agenda,
@@ -253,6 +253,11 @@ export function DailyMeetingGenerator({ departmentId, onSuccess }: DailyMeetingG
         summary: generatedAgenda.summary,
         isRecurring: false,
       };
+
+      // إضافة departmentId فقط إذا كان موجود
+      if (departmentId) {
+        meetingData.departmentId = departmentId;
+      }
 
       // إنشاء الاجتماع
       await createMeeting(meetingData);

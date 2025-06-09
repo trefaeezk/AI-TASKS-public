@@ -10,8 +10,6 @@ import { User as FirebaseUser } from 'firebase/auth';
 export interface ExtendedUser extends FirebaseUser {
   customClaims?: {
     role?: UserRole;
-
-    individual_
     accountType?: SystemType;
     organizationId?: string;
     departmentId?: string;

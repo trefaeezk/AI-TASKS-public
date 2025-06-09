@@ -6,7 +6,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, UserPlus, UserX, Shield, Edit, Trash2, AlertTriangle, Loader2, User, Building } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Users, UserPlus, UserX, Shield, Edit, Trash2, AlertTriangle, Loader2, User, Building, Search, Filter, ShieldAlert, ShieldCheck, ShieldQuestion, UserCog, Calendar, Activity, Crown, Settings } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -36,14 +37,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { Translate } from '@/components/Translate';
 import { DeleteUserDialog } from '@/components/admin/DeleteUserDialog';
+import { MembersStats, MembersFilters, MembersList } from '@/components/organization';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
+import { UserRole, ROLE_HIERARCHY } from '@/types/roles';
 
 
 
@@ -51,13 +52,15 @@ interface Member {
   uid: string;
   email: string;
   name: string;
-  role: string;
+  role: UserRole;
   departmentId: string | null;
   joinedAt: Date;
   isActive: boolean;
   lastActivity: Date | null;
   avatar: string | null;
 }
+
+
 
 export default function MembersPage() {
   const { user, userClaims } = useAuth();
@@ -72,11 +75,14 @@ export default function MembersPage() {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [formData, setFormData] = useState({
     email: '',
-    role: 'isOrgAssistant',
+    role: 'isOrgAssistant' as UserRole,
     departmentId: 'none',
   });
   const [formLoading, setFormLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRole, setSelectedRole] = useState<UserRole | 'all'>('all');
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
 
   const organizationId = userClaims?.organizationId;
   const userDepartmentId = userClaims?.departmentId;
@@ -96,7 +102,7 @@ export default function MembersPage() {
   const canViewAllMembers = isOwner || isAdmin || hasFullAccess; // الإدارة العليا ترى جميع الأعضاء
   const isDepartmentMember = userDepartmentId && (isOrgSupervisor || isOrgEngineer || isOrgTechnician || isOrgAssistant || isOwner || isAdmin) && !hasFullAccess;
 
-  // 📊 تصفية الأعضاء حسب الصلاحيات والتبويب
+  // 📊 تصفية الأعضاء حسب الصلاحيات والتبويب والبحث
   const filteredMembers = members.filter(member => {
     // أولاً: تطبيق فلتر الصلاحيات
     if (hasFullAccess) {
@@ -110,12 +116,36 @@ export default function MembersPage() {
     }
     // الإدارة العليا الأخرى ترى جميع الأعضاء (لا فلتر إضافي)
 
-    // ثانياً: تطبيق فلتر التبويب
+    // ثانياً: تطبيق فلتر البحث
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch =
+        member.email.toLowerCase().includes(searchLower) ||
+        member.name.toLowerCase().includes(searchLower) ||
+        (departments.find(d => d.id === member.departmentId)?.name.toLowerCase().includes(searchLower));
+
+      if (!matchesSearch) return false;
+    }
+
+    // ثالثاً: تطبيق فلتر الدور
+    if (selectedRole !== 'all' && member.role !== selectedRole) {
+      return false;
+    }
+
+    // رابعاً: تطبيق فلتر القسم
+    if (selectedDepartment !== 'all') {
+      if (selectedDepartment === 'none' && member.departmentId) return false;
+      if (selectedDepartment !== 'none' && member.departmentId !== selectedDepartment) return false;
+    }
+
+    // خامساً: تطبيق فلتر التبويب
     switch (activeTab) {
       case 'individuals':
         return !member.departmentId; // الأفراد (بدون قسم)
       case 'departments':
         return member.departmentId; // أعضاء الأقسام
+      case 'roles':
+        return true; // جميع الأعضاء مجمعين حسب الأدوار
       default:
         return true; // جميع الأعضاء
     }
@@ -131,8 +161,18 @@ export default function MembersPage() {
   const membersStats = {
     total: visibleMembers.length,
     individuals: visibleMembers.filter(m => !m.departmentId).length,
-    inDepartments: visibleMembers.filter(m => m.departmentId).length
+    inDepartments: visibleMembers.filter(m => m.departmentId).length,
+    active: visibleMembers.filter(m => m.isActive).length,
+    byRole: visibleMembers.reduce((acc, member) => {
+      acc[member.role] = (acc[member.role] || 0) + 1;
+      return acc;
+    }, {} as Record<UserRole, number>)
   };
+
+  // استخراج الأدوار الموجودة فعلاً في المؤسسة
+  const availableRoles = Array.from(new Set(visibleMembers.map(m => m.role))) as UserRole[];
+
+
 
   // 🔍 تسجيل للتحقق من البيانات
   console.log('📊 Members Stats:', membersStats);
@@ -158,7 +198,8 @@ export default function MembersPage() {
         const snapshot = await getDocs(departmentsQuery);
         const departmentsData = snapshot.docs.map(doc => ({
           id: doc.id,
-          name: doc.data().name
+          name: doc.data().name,
+          membersCount: 0 // سيتم تحديثه لاحقاً
         }));
         setDepartments(departmentsData);
       } catch (error) {
@@ -242,6 +283,15 @@ export default function MembersPage() {
 
           const membersData = await Promise.all(membersPromises);
           setMembers(membersData);
+
+          // تحديث عدد الأعضاء في كل قسم
+          setDepartments(prevDepartments =>
+            prevDepartments.map(dept => ({
+              ...dept,
+              membersCount: membersData.filter(member => member.departmentId === dept.id).length
+            }))
+          );
+
           setLoading(false);
         } catch (error) {
           console.error('Error processing members:', error);
@@ -404,350 +454,172 @@ export default function MembersPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-4">
-        <div className="flex justify-between items-center mb-6">
-          <Skeleton className="h-8 w-40" />
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-24 w-full" />
-          ))}
+      <div className="flex flex-col h-full w-full">
+        <div className="flex-1 overflow-y-auto w-full">
+          <div className="flex justify-between items-center mb-6">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-24 w-full" />
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold flex items-center">
-          <Users className="ml-2 h-6 w-6" />
-          <Translate text="organization.members" />
-          {isDepartmentMember && !hasFullAccess && (
-            <Badge variant="outline" className="mr-2">
-              قسمي فقط
-            </Badge>
-          )}
-        </h1>
-        {(isOwner || isAdmin) && (
-          <Button onClick={() => setIsAddDialogOpen(true)} className="flex items-center">
-            <UserPlus className="ml-2 h-4 w-4" />
-            <Translate text="organization.addMember" />
-          </Button>
-        )}
-      </div>
-
-      {/* رسالة توضيحية لأعضاء الأقسام */}
-      {isDepartmentMember && !hasFullAccess && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <div className="flex items-center gap-2 text-blue-800">
-            <Building className="h-5 w-5" />
-            <span className="font-medium">
-              عرض محدود - أعضاء قسمك فقط
-            </span>
-          </div>
-          <p className="text-sm text-blue-600 mt-1">
-            كعضو في القسم، يمكنك رؤية أعضاء قسمك فقط. الإدارة العليا يمكنها رؤية جميع الأعضاء.
-          </p>
-        </div>
-      )}
-
-      {/* 📋 تبويبات الأعضاء */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="all" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            <Translate text="general.all" />
-            <Badge variant="secondary">{membersStats.total}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="individuals" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            <Translate text="organization.individuals" />
-            <Badge variant="secondary">{membersStats.individuals}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="departments" className="flex items-center gap-2">
-            <Building className="h-4 w-4" />
-            <Translate text="organization.departments" />
-            <Badge variant="secondary">{membersStats.inDepartments}</Badge>
-          </TabsTrigger>
-        </TabsList>
-
-        {/* 📋 جميع الأعضاء */}
-        <TabsContent value="all" className="mt-6">
-          {filteredMembers.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Translate text="organization.noMembers" />
+    <div className="flex flex-col h-full min-h-screen">
+      <div className="flex-1 overflow-y-auto">
+        {/* Full width layout like tasks page */}
+        <div className="px-4 md:px-6 py-4 space-y-4 md:space-y-6">
+          {/* Header Section - Mobile First Design */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start">
+            <div className="flex flex-col gap-2">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold flex items-center flex-wrap gap-2">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
+                <span className="break-words"><Translate text="organization.members" /></span>
+                {isDepartmentMember && !hasFullAccess && (
+                  <Badge variant="outline" className="text-xs sm:text-sm">
+                    قسمي فقط
+                  </Badge>
+                )}
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                إدارة أعضاء المؤسسة والأدوار والصلاحيات
+              </p>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredMembers.map((member) => (
-            <Card key={member.uid}>
-              <CardContent className="p-4 flex justify-between items-center">
-                <div>
-                  <h3 className="font-medium">{member.email}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    <Translate text={`roles.${member.role}`} defaultValue={member.role} />
-                    {member.departmentId && departments.find(d => d.id === member.departmentId) &&
-                      ` - ${departments.find(d => d.id === member.departmentId)?.name}`}
+            {(isOwner || isAdmin) && (
+              <Button
+                onClick={() => setIsAddDialogOpen(true)}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 touch-manipulation"
+                size="sm"
+              >
+                <UserPlus className="h-4 w-4 flex-shrink-0" />
+                <span className="hidden sm:inline"><Translate text="organization.addMember" /></span>
+                <span className="sm:hidden">إضافة عضو</span>
+              </Button>
+            )}
+          </div>
+
+          {/* إحصائيات سريعة - Responsive Grid */}
+          <div className="w-full">
+            <MembersStats stats={membersStats} />
+          </div>
+
+          {/* شريط البحث والفلاتر - Enhanced Mobile Experience */}
+          <div className="w-full">
+            <MembersFilters
+              searchTerm={searchTerm}
+              selectedRole={selectedRole}
+              selectedDepartment={selectedDepartment}
+              departments={departments}
+              availableRoles={availableRoles}
+              roleStats={membersStats.byRole}
+              individualsCount={membersStats.individuals}
+              isOwner={isOwner}
+              filteredCount={filteredMembers.length}
+              totalCount={membersStats.total}
+              onSearchChange={setSearchTerm}
+              onRoleChange={setSelectedRole}
+              onDepartmentChange={setSelectedDepartment}
+              onReset={() => {
+                setSearchTerm('');
+                setSelectedRole('all');
+                setSelectedDepartment('all');
+              }}
+            />
+          </div>
+
+          {/* رسالة توضيحية لأعضاء الأقسام - Enhanced Mobile Design */}
+          {isDepartmentMember && !hasFullAccess && (
+            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4 w-full">
+              <div className="flex items-start sm:items-center gap-3 text-blue-800 dark:text-blue-200">
+                <Building className="h-5 w-5 flex-shrink-0 mt-0.5 sm:mt-0" />
+                <div className="flex-1 min-w-0">
+                  <span className="font-medium text-sm sm:text-base block">
+                    عرض محدود - أعضاء قسمك فقط
+                  </span>
+                  <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-300 mt-1 leading-relaxed">
+                    كعضو في القسم، يمكنك رؤية أعضاء قسمك فقط. الإدارة العليا يمكنها رؤية جميع الأعضاء.
                   </p>
                 </div>
-                {(isOwner || isAdmin) && (
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setSelectedMember(member);
-                        setFormData({
-                          email: member.email,
-                          role: member.role,
-                          departmentId: member.departmentId || 'none',
-                        });
-                        setIsEditDialogOpen(true);
-                      }}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setSelectedMember(member);
-                        setIsDeleteDialogOpen(true);
-                      }}
-                      disabled={member.role === 'isOrgOwner' && !isOwner}
-                      title="إزالة من المؤسسة"
-                    >
-                      <UserX className="h-4 w-4 text-orange-600" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteUserCompletely(member)}
-                      disabled={member.role === 'isOrgOwner' && !isOwner}
-                      title="حذف المستخدم نهائياً"
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* 👥 تبويب الأفراد */}
-        <TabsContent value="individuals" className="mt-6">
-          {filteredMembers.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <User className="mx-auto h-12 w-12 mb-4 opacity-50" />
-              <p className="text-lg font-medium mb-2">
-                <Translate text="organization.noIndividuals" />
-              </p>
-              <p className="text-sm">
-                <Translate text="organization.allMembersAssigned" />
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <div className="flex items-center gap-2 text-blue-800">
-                  <User className="h-5 w-5" />
-                  <span className="font-medium">
-                    <Translate text="organization.membersWithoutDepartment" />
-                  </span>
-                </div>
-                <p className="text-sm text-blue-600 mt-1">
-                  <Translate text="organization.canAssignToDepartment" />
-                </p>
               </div>
-              {filteredMembers.map((member) => (
-                <Card key={member.uid} className="border-l-4 border-l-blue-500">
-                  <CardContent className="p-4 flex justify-between items-center">
-                    <div>
-                      <h3 className="font-medium">{member.email}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {member.name} • <Translate text={`roles.${member.role}`} defaultValue={member.role} />
-                      </p>
-                      <Badge variant="outline" className="mt-1">
-                        <Translate text="organization.unassigned" />
-                      </Badge>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {(isOwner || isAdmin) && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedMember(member);
-                              setFormData({
-                                email: member.email,
-                                role: member.role,
-                                departmentId: member.departmentId || 'none',
-                              });
-                              setIsEditDialogOpen(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedMember(member);
-                              setIsDeleteDialogOpen(true);
-                            }}
-                            title="إزالة من المؤسسة"
-                          >
-                            <UserX className="h-4 w-4 text-orange-600" />
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteUserCompletely(member)}
-                            title="حذف المستخدم نهائياً"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
             </div>
           )}
-        </TabsContent>
 
-        {/* 🏢 تبويب أعضاء الأقسام */}
-        <TabsContent value="departments" className="mt-6">
-          {filteredMembers.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Building className="mx-auto h-12 w-12 mb-4 opacity-50" />
-              <p className="text-lg font-medium mb-2">
-                <Translate text="organization.noDepartmentMembers" />
-              </p>
-              <p className="text-sm">
-                <Translate text="organization.assignMembersToDepartments" />
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                <div className="flex items-center gap-2 text-green-800">
-                  <Building className="h-5 w-5" />
-                  <span className="font-medium">
-                    <Translate text="organization.departmentMembers" />
-                  </span>
-                </div>
-                <p className="text-sm text-green-600 mt-1">
-                  <Translate text="organization.membersAssignedToDepartments" />
-                </p>
-              </div>
-              {filteredMembers.map((member) => {
-                const department = departments.find(d => d.id === member.departmentId);
-                return (
-                  <Card key={member.uid} className="border-l-4 border-l-green-500">
-                    <CardContent className="p-4 flex justify-between items-center">
-                      <div>
-                        <h3 className="font-medium">{member.email}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {member.name} • <Translate text={`roles.${member.role}`} defaultValue={member.role} />
-                        </p>
-                        <Badge variant="default" className="mt-1">
-                          {department?.name || (
-                            <Translate text="organization.unknownDepartment" />
-                          )}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {(isOwner || isAdmin) && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedMember(member);
-                                setFormData({
-                                  email: member.email,
-                                  role: member.role,
-                                  departmentId: member.departmentId || 'none',
-                                });
-                                setIsEditDialogOpen(true);
-                              }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedMember(member);
-                                setIsDeleteDialogOpen(true);
-                              }}
-                              title="إزالة من المؤسسة"
-                            >
-                              <UserX className="h-4 w-4 text-orange-600" />
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDeleteUserCompletely(member)}
-                              title="حذف المستخدم نهائياً"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+          {/* قائمة الأعضاء - Full Width with Responsive Design */}
+          <div className="w-full">
+            <MembersList
+              members={filteredMembers}
+              departments={departments}
+              activeTab={activeTab}
+              isOwner={isOwner}
+              isAdmin={isAdmin}
+              searchTerm={searchTerm}
+              selectedRole={selectedRole}
+              selectedDepartment={selectedDepartment}
+              stats={membersStats}
+              onTabChange={setActiveTab}
+              onEditMember={(member) => {
+                setSelectedMember(member);
+                setFormData({
+                  email: member.email,
+                  role: member.role,
+                  departmentId: member.departmentId || 'none',
+                });
+                setIsEditDialogOpen(true);
+              }}
+              onRemoveMember={(member) => {
+                setSelectedMember(member);
+                setIsDeleteDialogOpen(true);
+              }}
+              onDeleteMember={handleDeleteUserCompletely}
+            />
+          </div>
+        </div>
+      </div>
 
-      {/* مربع حوار إضافة عضو */}
+      {/* مربع حوار إضافة عضو - Enhanced Mobile Experience */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="w-[95vw] max-w-md mx-auto max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="text-lg sm:text-xl">
               <Translate text="organization.addMember" />
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm sm:text-base">
               <Translate text="organization.addMemberDescription" />
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="email">
+              <Label htmlFor="email" className="text-sm font-medium">
                 <Translate text="auth.email" />
               </Label>
               <Input
                 id="email"
+                type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="example@example.com"
+                className="w-full touch-manipulation"
+                autoComplete="email"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role">
+              <Label htmlFor="role" className="text-sm font-medium">
                 <Translate text="organization.role" />
               </Label>
               <Select
                 value={formData.role}
-                onValueChange={(value) => setFormData({ ...formData, role: value })}
+                onValueChange={(value) => setFormData({ ...formData, role: value as UserRole })}
               >
-                <SelectTrigger>
-                  <SelectValue />
+                <SelectTrigger className="w-full touch-manipulation">
+                  <SelectValue placeholder="اختر الدور" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[200px] overflow-y-auto">
                   {isOwner && <SelectItem value="isOrgOwner"><Translate text="roles.isOrgOwner" /></SelectItem>}
                   <SelectItem value="isOrgAdmin"><Translate text="roles.isOrgAdmin" /></SelectItem>
                   <SelectItem value="isOrgEngineer"><Translate text="roles.isOrgEngineer" /></SelectItem>
@@ -758,17 +630,17 @@ export default function MembersPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="department">
+              <Label htmlFor="department" className="text-sm font-medium">
                 <Translate text="organization.department" />
               </Label>
               <Select
                 value={formData.departmentId}
                 onValueChange={(value) => setFormData({ ...formData, departmentId: value })}
               >
-                <SelectTrigger>
-                  <SelectValue />
+                <SelectTrigger className="w-full touch-manipulation">
+                  <SelectValue placeholder="اختر القسم" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[200px] overflow-y-auto">
                   <SelectItem value="none">
                     <Translate text="organization.noDepartment" />
                   </SelectItem>
@@ -781,11 +653,21 @@ export default function MembersPage() {
               </Select>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setIsAddDialogOpen(false)}
+              className="w-full sm:w-auto touch-manipulation"
+              size="sm"
+            >
               <Translate text="general.cancel" />
             </Button>
-            <Button onClick={handleAddMember} disabled={formLoading}>
+            <Button
+              onClick={handleAddMember}
+              disabled={formLoading}
+              className="w-full sm:w-auto touch-manipulation"
+              size="sm"
+            >
               {formLoading ? (
                 <>
                   <Loader2 className="ml-2 h-4 w-4 animate-spin" />
@@ -799,18 +681,18 @@ export default function MembersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* مربع حوار تعديل عضو */}
+      {/* مربع حوار تعديل عضو - Enhanced Mobile Experience */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="w-[95vw] max-w-md mx-auto max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="text-lg sm:text-xl">
               <Translate text="organization.editMember" />
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm sm:text-base">
               <Translate text="organization.editMemberDescription" />
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="email">
                 <Translate text="auth.email" />
@@ -827,7 +709,7 @@ export default function MembersPage() {
               </Label>
               <Select
                 value={formData.role}
-                onValueChange={(value) => setFormData({ ...formData, role: value })}
+                onValueChange={(value) => setFormData({ ...formData, role: value as UserRole })}
                 disabled={selectedMember?.role === 'isOrgOwner' && !isOwner}
               >
                 <SelectTrigger>
@@ -867,11 +749,21 @@ export default function MembersPage() {
               </Select>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+              className="w-full sm:w-auto touch-manipulation"
+              size="sm"
+            >
               <Translate text="general.cancel" />
             </Button>
-            <Button onClick={handleEditMember} disabled={formLoading}>
+            <Button
+              onClick={handleEditMember}
+              disabled={formLoading}
+              className="w-full sm:w-auto touch-manipulation"
+              size="sm"
+            >
               {formLoading ? (
                 <>
                   <Loader2 className="ml-2 h-4 w-4 animate-spin" />
@@ -885,22 +777,25 @@ export default function MembersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* مربع حوار تأكيد الحذف */}
+      {/* مربع حوار تأكيد الحذف - Enhanced Mobile Experience */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
+        <AlertDialogContent className="w-[95vw] max-w-md mx-auto">
+          <AlertDialogHeader className="space-y-3">
+            <AlertDialogTitle className="text-lg sm:text-xl">
               <Translate text="organization.confirmDeleteMember" />
             </AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescription className="text-sm sm:text-base leading-relaxed">
               <Translate text="organization.deleteMemberWarning" />
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>
+          <AlertDialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+            <AlertDialogCancel className="w-full sm:w-auto touch-manipulation">
               <Translate text="general.cancel" />
             </AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteMember} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleDeleteMember}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto touch-manipulation"
+            >
               {formLoading ? (
                 <>
                   <Loader2 className="ml-2 h-4 w-4 animate-spin" />

@@ -35,7 +35,8 @@ export function DebugAuthDialog({ isOpen, onAuthenticated }: DebugAuthDialogProp
       // استخدام Firebase Functions مباشرة
       const { httpsCallable } = await import('firebase/functions');
       const { getFunctions } = await import('firebase/functions');
-      const { app } = await import('@/config/firebase');
+      const firebaseConfig = await import('@/config/firebase');
+      const app = firebaseConfig.app as any;
 
       // تهيئة Firebase Functions
       const functions = getFunctions(app);
@@ -50,35 +51,35 @@ export function DebugAuthDialog({ isOpen, onAuthenticated }: DebugAuthDialogProp
       // @ts-ignore
       const data = result.data;
 
-      if (data.success) {
+      if ((data as any).success) {
         // إذا تم إرسال البريد الإلكتروني بنجاح، لا نعرض الرمز في الواجهة
-        if (data.emailSent) {
+        if ((data as any).emailSent) {
           setGeneratedOTP(null);
-          setOtpExpiryTime(data.expiryTime);
+          setOtpExpiryTime((data as any).expiryTime);
 
           toast({
             title: 'تم إرسال رمز التحقق',
-            description: data.message,
+            description: (data as any).message,
           });
         } else {
           // إذا فشل إرسال البريد الإلكتروني، نعرض الرمز في الواجهة مؤقتًا
           // هذا للتطوير فقط، يجب إزالته في الإنتاج
           setGeneratedOTP('******'); // لا نعرض الرمز الفعلي
-          setOtpExpiryTime(data.expiryTime);
+          setOtpExpiryTime((data as any).expiryTime);
 
           toast({
             title: 'تم إنشاء رمز التحقق',
             description: 'تم إنشاء رمز التحقق ولكن فشل إرساله عبر البريد الإلكتروني. يرجى التحقق من بريدك الإلكتروني أو الاتصال بمسؤول النظام.',
-            variant: 'warning',
+            variant: 'destructive',
           });
         }
       } else {
         setError(true);
-        setErrorMessage(data.error || 'فشل إنشاء رمز التحقق');
+        setErrorMessage((data as any).error || 'فشل إنشاء رمز التحقق');
 
         toast({
           title: 'خطأ',
-          description: data.error || 'فشل إنشاء رمز التحقق',
+          description: (data as any).error || 'فشل إنشاء رمز التحقق',
           variant: 'destructive',
         });
       }
@@ -114,7 +115,8 @@ export function DebugAuthDialog({ isOpen, onAuthenticated }: DebugAuthDialogProp
       // استخدام Firebase Functions مباشرة
       const { httpsCallable } = await import('firebase/functions');
       const { getFunctions } = await import('firebase/functions');
-      const { app } = await import('@/config/firebase');
+      const firebaseConfig = await import('@/config/firebase');
+      const app = firebaseConfig.app as any;
 
       // تهيئة Firebase Functions
       const functions = getFunctions(app);
@@ -126,9 +128,9 @@ export function DebugAuthDialog({ isOpen, onAuthenticated }: DebugAuthDialogProp
       // @ts-ignore
       const data = result.data;
 
-      if (data.success) {
+      if ((data as any).success) {
         // تخزين وقت انتهاء الصلاحية في التخزين المحلي
-        localStorage.setItem('debugAuthExpiry', data.sessionExpiryTime.toString());
+        localStorage.setItem('debugAuthExpiry', (data as any).sessionExpiryTime.toString());
 
         // إغلاق مربع الحوار وإعلام الصفحة الأم
         onAuthenticated();
@@ -142,7 +144,7 @@ export function DebugAuthDialog({ isOpen, onAuthenticated }: DebugAuthDialogProp
         });
       } else {
         setError(true);
-        setErrorMessage(data.error || 'رمز التحقق غير صحيح');
+        setErrorMessage((data as any).error || 'رمز التحقق غير صحيح');
         setAttempts(attempts + 1);
 
         if (attempts >= 3) {
@@ -154,7 +156,7 @@ export function DebugAuthDialog({ isOpen, onAuthenticated }: DebugAuthDialogProp
         } else {
           toast({
             title: 'خطأ',
-            description: data.error || 'رمز التحقق غير صحيح',
+            description: (data as any).error || 'رمز التحقق غير صحيح',
             variant: 'destructive',
           });
         }
@@ -225,7 +227,7 @@ export function DebugAuthDialog({ isOpen, onAuthenticated }: DebugAuthDialogProp
               </Alert>
 
               {generatedOTP && (
-                <Alert variant="success">
+                <Alert variant="default">
                   <KeyRound className="h-4 w-4" />
                   <AlertTitle>تم إرسال رمز التحقق</AlertTitle>
                   <AlertDescription>

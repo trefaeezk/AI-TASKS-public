@@ -170,7 +170,7 @@ ${milestones.map((m, i) => `${i + 1}. المعرف: ${m.id}\n   الوصف: ${m.
     }
 
     // ترتيب نقاط التتبع حسب التاريخ
-    result.milestonesWithDueDates.sort((a, b) => {
+    result.milestonesWithDueDates.sort((a: any, b: any) => {
       return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
     });
 

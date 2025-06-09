@@ -67,8 +67,8 @@ export default function DepartmentMeetingsPage() {
         // لا حاجة للتحقق من organizationId لأننا نجلب من مسار المؤسسة مباشرة
 
         setDepartment({
-          id: departmentDoc.id,
           ...departmentData,
+          id: departmentDoc.id,
         });
       } catch (error) {
         console.error('Error fetching department:', error);
@@ -119,7 +119,9 @@ export default function DepartmentMeetingsPage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 md:px-6 py-4">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center">
@@ -232,6 +234,8 @@ export default function DepartmentMeetingsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+        </div>
+      </div>
     </div>
   );
 }

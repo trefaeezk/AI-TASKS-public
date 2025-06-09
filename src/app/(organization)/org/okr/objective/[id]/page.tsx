@@ -686,7 +686,9 @@ export default function ObjectiveDetailPage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 md:px-6 py-4">
       {/* رأس الصفحة */}
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -1208,6 +1210,8 @@ export default function ObjectiveDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </div>
+      </div>
     </div>
   );
 }

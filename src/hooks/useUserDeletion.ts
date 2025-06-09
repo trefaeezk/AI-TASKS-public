@@ -195,10 +195,10 @@ export const useUserDeletion = () => {
 
       const result = await deleteIndividualDataFn({ userId });
 
-      if (result.data?.success) {
+      if ((result.data as any)?.success) {
         toast({
           title: 'تم حذف البيانات بنجاح',
-          description: result.data.message || 'تم حذف بيانات المستخدم الفردي',
+          description: (result.data as any).message || 'تم حذف بيانات المستخدم الفردي',
         });
 
         setDeleteProgress('تم الحذف بنجاح');

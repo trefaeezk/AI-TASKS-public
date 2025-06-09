@@ -213,7 +213,7 @@ export function TaskContextSelector({
             <Skeleton className="h-10 w-full" />
           ) : (
             <Select
-              value={value.departmentId || ''}
+              value={value.departmentId || 'none'}
               onValueChange={handleDepartmentChange}
               disabled={disabled || departments.length === 0}
             >
@@ -243,7 +243,7 @@ export function TaskContextSelector({
             <Skeleton className="h-10 w-full" />
           ) : (
             <Select
-              value={value.assignedToUserId || ''}
+              value={value.assignedToUserId || 'none'}
               onValueChange={handleAssignedUserChange}
               disabled={disabled || members.length === 0}
             >

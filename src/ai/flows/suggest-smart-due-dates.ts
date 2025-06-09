@@ -9,7 +9,7 @@
  */
 
 import { ai } from '@/ai/ai';
-import { z } from '@/ai/z';
+import { z } from 'zod';
 
 // Define Duration Unit type for Zod schema
 const DurationUnitSchema = z.enum(['hours', 'days', 'weeks']).optional();

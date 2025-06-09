@@ -32,31 +32,50 @@ import { addDays, addWeeks, addMonths, setHours, setMinutes, getDay } from 'date
 // إنشاء اجتماع جديد
 export async function createMeeting(meetingData: Omit<Meeting, 'id'>): Promise<string> {
   try {
-    // تحويل البيانات إلى صيغة Firestore
-    const firestoreData: Omit<MeetingFirestore, 'id'> = {
+    // تحويل البيانات إلى صيغة Firestore وإزالة القيم undefined
+    const firestoreData: any = {
       ...meetingData,
       startDate: Timestamp.fromDate(meetingData.startDate),
-      endDate: meetingData.endDate ? Timestamp.fromDate(meetingData.endDate) : undefined,
       participants: meetingData.participants.map(p => ({
-        ...p,
-        joinedAt: p.joinedAt ? Timestamp.fromDate(p.joinedAt) : undefined,
-        leftAt: p.leftAt ? Timestamp.fromDate(p.leftAt) : undefined,
+        userId: p.userId,
+        name: p.name || '',
+        email: p.email || '',
+        role: p.role || '',
+        ...(p.joinedAt && { joinedAt: Timestamp.fromDate(p.joinedAt) }),
+        ...(p.leftAt && { leftAt: Timestamp.fromDate(p.leftAt) }),
+        ...(p.attendanceStatus && { attendanceStatus: p.attendanceStatus }),
       })),
       decisions: meetingData.decisions.map(d => ({
         ...d,
-        dueDate: d.dueDate ? Timestamp.fromDate(d.dueDate) : undefined,
+        ...(d.dueDate && { dueDate: Timestamp.fromDate(d.dueDate) }),
       })),
       tasks: meetingData.tasks.map(t => ({
         ...t,
-        dueDate: t.dueDate ? Timestamp.fromDate(t.dueDate) : undefined,
+        ...(t.dueDate && { dueDate: Timestamp.fromDate(t.dueDate) }),
       })),
-      recurringPattern: meetingData.recurringPattern ? {
-        ...meetingData.recurringPattern,
-        endDate: meetingData.recurringPattern.endDate ? Timestamp.fromDate(meetingData.recurringPattern.endDate) : undefined,
-      } : undefined,
       createdAt: serverTimestamp() as Timestamp,
       updatedAt: serverTimestamp() as Timestamp,
     };
+
+    // إضافة endDate فقط إذا كان موجود
+    if (meetingData.endDate) {
+      firestoreData.endDate = Timestamp.fromDate(meetingData.endDate);
+    }
+
+    // إضافة departmentId فقط إذا كان موجود
+    if (meetingData.departmentId) {
+      firestoreData.departmentId = meetingData.departmentId;
+    }
+
+    // إضافة recurringPattern فقط إذا كان موجود
+    if (meetingData.recurringPattern) {
+      firestoreData.recurringPattern = {
+        ...meetingData.recurringPattern,
+        ...(meetingData.recurringPattern.endDate && {
+          endDate: Timestamp.fromDate(meetingData.recurringPattern.endDate)
+        }),
+      };
+    }
 
     // إضافة الاجتماع إلى Firestore
     const docRef = await addDoc(collection(db, 'meetings'), firestoreData);
@@ -311,30 +330,64 @@ export async function updateMeeting(meetingId: string, meetingData: Partial<Meet
   try {
     const docRef = doc(db, 'meetings', meetingId);
 
-    // تحويل البيانات إلى صيغة Firestore
-    const updateData: Partial<MeetingFirestore> = {
-      ...meetingData,
-      startDate: meetingData.startDate ? Timestamp.fromDate(meetingData.startDate) : undefined,
-      endDate: meetingData.endDate ? Timestamp.fromDate(meetingData.endDate) : undefined,
-      participants: meetingData.participants ? meetingData.participants.map(p => ({
-        ...p,
-        joinedAt: p.joinedAt ? Timestamp.fromDate(p.joinedAt) : undefined,
-        leftAt: p.leftAt ? Timestamp.fromDate(p.leftAt) : undefined,
-      })) : undefined,
-      decisions: meetingData.decisions ? meetingData.decisions.map(d => ({
-        ...d,
-        dueDate: d.dueDate ? Timestamp.fromDate(d.dueDate) : undefined,
-      })) : undefined,
-      tasks: meetingData.tasks ? meetingData.tasks.map(t => ({
-        ...t,
-        dueDate: t.dueDate ? Timestamp.fromDate(t.dueDate) : undefined,
-      })) : undefined,
-      recurringPattern: meetingData.recurringPattern ? {
-        ...meetingData.recurringPattern,
-        endDate: meetingData.recurringPattern.endDate ? Timestamp.fromDate(meetingData.recurringPattern.endDate) : undefined,
-      } : undefined,
+    // تحويل البيانات إلى صيغة Firestore وإزالة القيم undefined
+    const updateData: any = {
       updatedAt: serverTimestamp() as Timestamp,
     };
+
+    // إضافة الخصائص فقط إذا كانت موجودة
+    Object.keys(meetingData).forEach(key => {
+      const value = (meetingData as any)[key];
+      if (value !== undefined) {
+        switch (key) {
+          case 'startDate':
+            if (value) updateData.startDate = Timestamp.fromDate(value);
+            break;
+          case 'endDate':
+            if (value) updateData.endDate = Timestamp.fromDate(value);
+            break;
+          case 'participants':
+            if (value) {
+              updateData.participants = value.map((p: any) => ({
+                userId: p.userId,
+                name: p.name || '',
+                email: p.email || '',
+                role: p.role || '',
+                ...(p.joinedAt && { joinedAt: Timestamp.fromDate(p.joinedAt) }),
+                ...(p.leftAt && { leftAt: Timestamp.fromDate(p.leftAt) }),
+                ...(p.attendanceStatus && { attendanceStatus: p.attendanceStatus }),
+              }));
+            }
+            break;
+          case 'decisions':
+            if (value) {
+              updateData.decisions = value.map((d: any) => ({
+                ...d,
+                ...(d.dueDate && { dueDate: Timestamp.fromDate(d.dueDate) }),
+              }));
+            }
+            break;
+          case 'tasks':
+            if (value) {
+              updateData.tasks = value.map((t: any) => ({
+                ...t,
+                ...(t.dueDate && { dueDate: Timestamp.fromDate(t.dueDate) }),
+              }));
+            }
+            break;
+          case 'recurringPattern':
+            if (value) {
+              updateData.recurringPattern = {
+                ...value,
+                ...(value.endDate && { endDate: Timestamp.fromDate(value.endDate) }),
+              };
+            }
+            break;
+          default:
+            updateData[key] = value;
+        }
+      }
+    });
 
     await updateDoc(docRef, updateData);
   } catch (error) {
@@ -379,12 +432,22 @@ export async function updateParticipantAttendance(
       throw new Error('Participant not found');
     }
 
-    participants[participantIndex] = {
+    const updatedParticipant: any = {
       ...participants[participantIndex],
       attendanceStatus,
-      joinedAt: joinedAt ? Timestamp.fromDate(joinedAt) : undefined,
-      leftAt: leftAt ? Timestamp.fromDate(leftAt) : undefined,
     };
+
+    // إضافة joinedAt فقط إذا كان موجود
+    if (joinedAt) {
+      updatedParticipant.joinedAt = Timestamp.fromDate(joinedAt);
+    }
+
+    // إضافة leftAt فقط إذا كان موجود
+    if (leftAt) {
+      updatedParticipant.leftAt = Timestamp.fromDate(leftAt);
+    }
+
+    participants[participantIndex] = updatedParticipant;
 
     await updateDoc(docRef, {
       participants,

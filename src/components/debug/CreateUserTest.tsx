@@ -104,14 +104,14 @@ export function CreateUserTest() {
         // Step 5: Analyze result
         updateStep('تحليل النتيجة', 'running');
 
-        if (result.data?.error) {
-          updateStep('تحليل النتيجة', 'error', `خطأ من الدالة: ${result.data.error}`, result.data);
-        } else if (result.data?.uid) {
-          updateStep('تحليل النتيجة', 'success', `✅ تم إنشاء المستخدم بنجاح: ${result.data.uid}`, result.data);
+        if ((result.data as any)?.error) {
+          updateStep('تحليل النتيجة', 'error', `خطأ من الدالة: ${(result.data as any).error}`, result.data);
+        } else if ((result.data as any)?.uid) {
+          updateStep('تحليل النتيجة', 'success', `✅ تم إنشاء المستخدم بنجاح: ${(result.data as any).uid}`, result.data);
 
           // إضافة خطوة إضافية لعرض التفاصيل
           updateStep('عرض التفاصيل', 'success', `المستخدم: ${testData.email}, الدور: ${testData.role}, النوع: ${testData.accountType}`, {
-            uid: result.data.uid,
+            uid: (result.data as any).uid,
             email: testData.email,
             role: testData.role,
             accountType: testData.accountType

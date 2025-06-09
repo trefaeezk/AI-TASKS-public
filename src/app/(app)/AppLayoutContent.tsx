@@ -478,7 +478,7 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                 )}
               </div>
             <SidebarMenuItem>
-                    <SignOutButton tooltip={t('sidebar.signOutTooltip')} />
+                    <SignOutButton />
             </SidebarMenuItem>
             </SidebarFooter>
         </Sidebar>

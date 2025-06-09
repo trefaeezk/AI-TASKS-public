@@ -13,7 +13,9 @@ export const metadata: Metadata = {
 
 export default function DataManagementPage() {
   return (
-    <div className="container mx-auto px-4 py-4">
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 md:px-6 py-4">
       <PageHeader
         heading="إدارة البيانات"
         subheading="تصدير واستيراد بيانات المستخدمين والمهام"
@@ -25,8 +27,10 @@ export default function DataManagementPage() {
         <DataManagement />
       </div>
 
-      <div className="text-center text-sm text-muted-foreground mt-8 mb-4">
-        <p>يمكنك استخدام هذه الأدوات لعمل نسخة احتياطية من بياناتك أو نقلها إلى نظام آخر</p>
+          <div className="text-center text-sm text-muted-foreground mt-8 mb-4">
+            <p>يمكنك استخدام هذه الأدوات لعمل نسخة احتياطية من بياناتك أو نقلها إلى نظام آخر</p>
+          </div>
+        </div>
       </div>
     </div>
   );

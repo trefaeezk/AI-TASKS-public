@@ -614,7 +614,6 @@ const ar = {
     assignMembersToDepartments: "قم بتعيين الأعضاء إلى أقسام",
     membersAssignedToDepartments: "الأعضاء المعينون إلى أقسام المؤسسة",
     unknownDepartment: "قسم غير معروف",
-    departmentMembers: "أعضاء الأقسام",
     unassigned: "غير معين",
     addMemberDescription: "أدخل بريد العضو الإلكتروني ودوره في المؤسسة",
     selectRole: "اختر الدور",

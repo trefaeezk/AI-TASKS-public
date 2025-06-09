@@ -228,16 +228,15 @@ export default function OrganizationTasksPage() {
               weight: m.weight || 1,
               dueDate: m.dueDate ? m.dueDate.toDate() : undefined
             })) : [],
-            organizationId: data.organizationId,
-            userId: data.userId,
+            organizationId: data.organizationId || undefined,
             createdAt: data.createdAt ? data.createdAt.toDate() : new Date(),
             updatedAt: data.updatedAt ? data.updatedAt.toDate() : new Date(),
             order: data.order || 0,
-            // إضافة الحقول المفقودة
-            assignedToUserId: data.assignedToUserId,
-            taskContext: data.taskContext,
-            departmentId: data.departmentId,
-            createdBy: data.createdBy,
+            // إضافة الحقول المفقودة مع تحويل null إلى undefined
+            assignedToUserId: data.assignedToUserId || undefined,
+            taskContext: data.taskContext || undefined,
+            departmentId: data.departmentId || undefined,
+            createdBy: data.createdBy || undefined,
           };
 
           fetchedTasks.push(task);
@@ -248,7 +247,10 @@ export default function OrganizationTasksPage() {
           if (a.order !== undefined && b.order !== undefined) {
             return a.order - b.order;
           }
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          // التعامل مع حالة عدم وجود createdAt
+          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return aTime - bTime;
         });
 
         console.log('Fetched organization tasks:', fetchedTasks.length, fetchedTasks);
@@ -443,7 +445,7 @@ export default function OrganizationTasksPage() {
                           <TaskCardTemp
                             key={task.id}
                             task={task}
-                            onStatusChange={(taskId, newStatus) => {
+                            onStatusChange={(_, newStatus) => {
                               const updatedTask = { ...task, status: newStatus };
                               updateTaskOptimistic(task.id, updatedTask);
 

@@ -65,7 +65,7 @@ export default function OrganizationSettingsPage() {
   const [activeTab, setActiveTab] = useState('general');
 
   // Check permissions
-  const canEdit = role === 'org_owner'  || role === 'org_admin' || hasPermission('organization.edit');
+  const canEdit = role === 'isOrgOwner' || role === 'isOrgAdmin' || hasPermission('organization.edit');
 
   // Fetch organization settings
   useEffect(() => {
@@ -147,24 +147,26 @@ export default function OrganizationSettingsPage() {
   }
 
   return (
-    <div className="container py-6 space-y-6">
-      <div className="flex flex-col space-y-2">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold tracking-tight"><Translate text="organization.organizationSettings" /></h1>
-          <LanguageSwitcher variant="default" size="sm" />
-        </div>
-        <p className="text-muted-foreground">
-          <Translate text="settings.generalSettings" defaultValue="إدارة إعدادات المؤسسة والتفضيلات العامة" />
-        </p>
-      </div>
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 md:px-6 py-4 space-y-4 md:space-y-6">
+          <div className="flex flex-col space-y-2">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight"><Translate text="organization.organizationSettings" /></h1>
+              <LanguageSwitcher variant="default" size="sm" />
+            </div>
+            <p className="text-sm md:text-base text-muted-foreground">
+              <Translate text="settings.generalSettings" defaultValue="إدارة إعدادات المؤسسة والتفضيلات العامة" />
+            </p>
+          </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="general"><Translate text="general.general" defaultValue="عام" /></TabsTrigger>
-          <TabsTrigger value="permissions"><Translate text="organization.organizationPermissions" defaultValue="الصلاحيات" /></TabsTrigger>
-          <TabsTrigger value="features"><Translate text="settings.features" defaultValue="الميزات" /></TabsTrigger>
-          <TabsTrigger value="notifications"><Translate text="notifications.notifications" defaultValue="الإشعارات" /></TabsTrigger>
-        </TabsList>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="mb-4 grid w-full grid-cols-2 md:grid-cols-4 h-auto">
+              <TabsTrigger value="general" className="text-xs md:text-sm"><Translate text="general.general" defaultValue="عام" /></TabsTrigger>
+              <TabsTrigger value="permissions" className="text-xs md:text-sm"><Translate text="organization.organizationPermissions" defaultValue="الصلاحيات" /></TabsTrigger>
+              <TabsTrigger value="features" className="text-xs md:text-sm"><Translate text="settings.features" defaultValue="الميزات" /></TabsTrigger>
+              <TabsTrigger value="notifications" className="text-xs md:text-sm"><Translate text="notifications.notifications" defaultValue="الإشعارات" /></TabsTrigger>
+            </TabsList>
 
         <TabsContent value="general">
           <Card>
@@ -174,8 +176,8 @@ export default function OrganizationSettingsPage() {
                 {t('organization.basicInformationDescription')}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="space-y-3 md:space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">{t('organization.organizationName')}</Label>
                   <Input
@@ -208,7 +210,7 @@ export default function OrganizationSettingsPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="contactPhone">{t('organization.organizationPhone')}</Label>
                   <Input
@@ -261,7 +263,7 @@ export default function OrganizationSettingsPage() {
                 {t('organization.permissionsSettingsDescription')}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 md:space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>{t('organization.allowMemberInvites')}</Label>
@@ -329,7 +331,7 @@ export default function OrganizationSettingsPage() {
                 {t('organization.advancedFeaturesDescription')}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 md:space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>{t('organization.aiFeatures')}</Label>
@@ -365,7 +367,7 @@ export default function OrganizationSettingsPage() {
                 {t('notifications.notificationSettingsDescription')}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 md:space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>{t('notifications.notificationSettings')}</Label>
@@ -384,6 +386,8 @@ export default function OrganizationSettingsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+        </div>
+      </div>
     </div>
   );
 }

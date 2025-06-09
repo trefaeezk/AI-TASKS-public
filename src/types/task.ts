@@ -55,6 +55,12 @@ export interface TaskType {
   objectiveId?: string; // ID of the objective this task is linked to
   keyResultId?: string; // ID of the key result this task is linked to
   linkedToOkr?: boolean; // Whether this task is linked to any key result
+
+  // Additional fields for task management
+  createdBy?: string; // ID of the user who created the task
+  order?: number; // Order for sorting tasks
+  createdAt?: Date; // When the task was created
+  updatedAt?: Date; // When the task was last updated
 }
 
 // Interface for storing Firestore milestone data (with Firestore Timestamp)
@@ -94,6 +100,9 @@ export interface TaskFirestoreData {
     keyResultId?: string | null; // ID of the key result this task is linked to
     linkedToOkr?: boolean | null; // Whether this task is linked to any key result
 
+    // Additional fields for task management
+    createdBy?: string | null; // ID of the user who created the task
+    order?: number | null; // Order for sorting tasks
     createdAt?: Timestamp | null; // When the task was created
     updatedAt?: Timestamp | null; // When the task was last updated
 }

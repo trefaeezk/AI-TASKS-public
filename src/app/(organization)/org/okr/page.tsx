@@ -76,10 +76,10 @@ export default function OkrPage() {
 
   const organizationId = userClaims?.organizationId;
   // استخدام النظام الجديد الموحد
-  const isOwner = userClaims?.isOrgOwner === true || userClaims?.isOrgOwner === true;
-  const isAdmin = userClaims?.isOrgAdmin === true || userClaims?.isOrgAdmin === true;
-  const isEngineer = userClaims?.isOrgEngineer === true || userClaims?.isOrgEngineer === true;
-  const isSupervisor = userClaims?.isOrgSupervisor === true || userClaims?.isOrgSupervisor === true;
+  const isOwner = userClaims?.isOrgOwner === true;
+  const isAdmin = userClaims?.isOrgAdmin === true;
+  const isEngineer = userClaims?.isOrgEngineer === true;
+  const isSupervisor = userClaims?.isOrgSupervisor === true;
   const canManageOkrs = isOwner || isAdmin || isEngineer || isSupervisor;
 
   // تحميل الأهداف والأقسام
@@ -372,43 +372,49 @@ export default function OkrPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-4">
-        <div className="flex justify-between items-center mb-6">
-          <Skeleton className="h-8 w-40" />
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <Skeleton className="h-12 w-full mb-6" />
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-40 w-full" />
-          ))}
+      <div className="flex flex-col h-full">
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-4 md:px-6 py-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+              <Skeleton className="h-6 md:h-8 w-32 md:w-40" />
+              <Skeleton className="h-8 md:h-10 w-24 md:w-32" />
+            </div>
+            <Skeleton className="h-10 md:h-12 w-full mb-6" />
+            <div className="space-y-3 md:space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-32 md:h-40 w-full" />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold flex items-center">
-          <Target className="ml-2 h-6 w-6" />
-          الأهداف والنتائج الرئيسية (OKRs)
-        </h1>
-        <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link href="/org/okr/reports">
-              <BarChart3 className="ml-2 h-4 w-4" />
-              التقارير
-            </Link>
-          </Button>
-          {canManageOkrs && (
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="flex items-center">
-                  <Plus className="ml-2 h-4 w-4" />
-                  إنشاء هدف جديد
-                </Button>
-              </DialogTrigger>
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 md:px-6 py-4 space-y-4 md:space-y-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <h1 className="text-xl md:text-2xl font-bold flex items-center">
+              <Target className="ml-2 h-5 w-5 md:h-6 md:w-6" />
+              الأهداف والنتائج الرئيسية (OKRs)
+            </h1>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
+                <Link href="/org/okr/reports">
+                  <BarChart3 className="ml-2 h-4 w-4" />
+                  التقارير
+                </Link>
+              </Button>
+              {canManageOkrs && (
+                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="flex items-center w-full sm:w-auto" size="sm">
+                      <Plus className="ml-2 h-4 w-4" />
+                      إنشاء هدف جديد
+                    </Button>
+                  </DialogTrigger>
               <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
                   <DialogTitle>إنشاء هدف جديد</DialogTitle>
@@ -453,7 +459,7 @@ export default function OkrPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="startDate">تاريخ البدء</Label>
                       <Input
@@ -516,15 +522,15 @@ export default function OkrPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4 md:space-y-6">
               {filteredObjectives.map((objective) => (
                 <Collapsible key={objective.id} className="border rounded-lg">
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 md:p-4 hover:bg-muted/50">
                     <div className="flex items-center">
-                      <Target className="ml-2 h-5 w-5 text-primary" />
+                      <Target className="ml-2 h-4 w-4 md:h-5 md:w-5 text-primary" />
                       <div>
-                        <h3 className="text-lg font-medium">{objective.title}</h3>
-                        <p className="text-sm text-muted-foreground">
+                        <h3 className="text-base md:text-lg font-medium">{objective.title}</h3>
+                        <p className="text-xs md:text-sm text-muted-foreground">
                           {getDepartmentName(objective.departmentId)} |
                           {format(objective.startDate, ' d MMM yyyy', { locale: ar })} -
                           {format(objective.endDate, ' d MMM yyyy', { locale: ar })}
@@ -543,7 +549,7 @@ export default function OkrPage() {
                     </div>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <div className="p-4 pt-0 border-t">
+                    <div className="p-3 md:p-4 pt-0 border-t">
                       {objective.description && (
                         <div className="mb-4">
                           <p className="text-sm text-muted-foreground">{objective.description}</p>
@@ -640,6 +646,8 @@ export default function OkrPage() {
           )}
         </TabsContent>
       </Tabs>
+        </div>
+      </div>
     </div>
   );
 }

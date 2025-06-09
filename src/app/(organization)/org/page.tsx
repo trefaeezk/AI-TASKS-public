@@ -260,11 +260,11 @@ export default function OrganizationDashboard() {
         });
 
         setRecentActivity(activityData);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching organization data:', error);
 
         // معالجة أخطاء الصلاحيات
-        if (error.code === 'permission-denied') {
+        if (error?.code === 'permission-denied') {
           toast({
             title: 'خطأ في الصلاحيات',
             description: 'ليس لديك صلاحية للوصول إلى بيانات هذه المؤسسة.',
@@ -287,7 +287,7 @@ export default function OrganizationDashboard() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-4 space-y-6">
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-10 w-32" />
@@ -310,7 +310,7 @@ export default function OrganizationDashboard() {
   // فحص الصلاحيات - منع الوصول لغير الأدوار العليا
   if (!canAccessDashboard) {
     return (
-      <div className="container mx-auto p-4">
+      <div>
         <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
           <AlertCircle className="h-16 w-16 text-red-500 mb-4" />
           <h2 className="text-xl font-semibold mb-2 text-red-600">
@@ -405,33 +405,35 @@ export default function OrganizationDashboard() {
   };
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center">
-            <Building className="ml-3 h-8 w-8 text-primary" />
-            <Translate text="dashboard.title" defaultValue={`لوحة تحكم ${organizationName}`} />
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            <Translate text="dashboard.subtitle" defaultValue="نظرة عامة على أداء المؤسسة" />
-          </p>
-        </div>
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto">
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold flex items-center">
+                <Building className="ml-3 h-6 w-6 md:h-8 md:w-8 text-primary" />
+                <Translate text="dashboard.title" defaultValue={`لوحة تحكم ${organizationName}`} />
+              </h1>
+              <p className="text-muted-foreground mt-1 text-sm md:text-base">
+                <Translate text="dashboard.subtitle" defaultValue="نظرة عامة على أداء المؤسسة" />
+              </p>
+            </div>
 
-        <div className="flex items-center space-x-2 space-x-reverse">
-          {(isOrgOwner || isOrgAdmin) && (
-            <Button asChild>
-              <Link href="/org/settings">
-                <Settings className="ml-2 h-4 w-4" />
-                <Translate text="dashboard.settings" defaultValue="الإعدادات" />
-              </Link>
-            </Button>
-          )}
-        </div>
-      </div>
+            <div className="flex items-center space-x-2 space-x-reverse">
+              {(isOrgOwner || isOrgAdmin) && (
+                <Button asChild size="sm" className="w-full sm:w-auto">
+                  <Link href="/org/settings">
+                    <Settings className="ml-2 h-4 w-4" />
+                    <Translate text="dashboard.settings" defaultValue="الإعدادات" />
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </div>
 
-      {/* إحصائيات سريعة */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* إحصائيات سريعة */}
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <StatCard
           title="إجمالي الأعضاء"
           value={stats.members.total}
@@ -472,17 +474,17 @@ export default function OrganizationDashboard() {
         />
       </div>
 
-      {/* المحتوى التفصيلي */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
-          <TabsTrigger value="tasks">المهام</TabsTrigger>
-          <TabsTrigger value="members">الأعضاء</TabsTrigger>
-          <TabsTrigger value="analytics">التحليلات</TabsTrigger>
-        </TabsList>
+          {/* المحتوى التفصيلي */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto">
+              <TabsTrigger value="overview" className="text-xs md:text-sm">نظرة عامة</TabsTrigger>
+              <TabsTrigger value="tasks" className="text-xs md:text-sm">المهام</TabsTrigger>
+              <TabsTrigger value="members" className="text-xs md:text-sm">الأعضاء</TabsTrigger>
+              <TabsTrigger value="analytics" className="text-xs md:text-sm">التحليلات</TabsTrigger>
+            </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <TabsContent value="overview" className="space-y-4 md:space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
             {/* النشاط الأخير */}
             <Card className="lg:col-span-2">
               <CardHeader>
@@ -599,8 +601,8 @@ export default function OrganizationDashboard() {
           </div>
         </TabsContent>
 
-        <TabsContent value="tasks" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <TabsContent value="tasks" className="space-y-4 md:space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -711,8 +713,8 @@ export default function OrganizationDashboard() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="members" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <TabsContent value="members" className="space-y-4 md:space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">توزيع الأدوار</CardTitle>
@@ -791,8 +793,8 @@ export default function OrganizationDashboard() {
           </div>
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <TabsContent value="analytics" className="space-y-4 md:space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>أداء المهام</CardTitle>
@@ -806,7 +808,7 @@ export default function OrganizationDashboard() {
                   </div>
                   <Progress value={stats.tasks.completionRate} />
 
-                  <div className="grid grid-cols-2 gap-4 pt-4">
+                  <div className="grid grid-cols-2 gap-3 md:gap-4 pt-4">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-green-600">{stats.tasks.completed}</div>
                       <p className="text-xs text-muted-foreground">مكتملة</p>
@@ -854,7 +856,7 @@ export default function OrganizationDashboard() {
               <CardDescription>المؤشرات الرئيسية للمؤسسة</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                 <div className="text-center p-4 border rounded-lg">
                   <div className="text-3xl font-bold text-blue-600 mb-2">
                     {stats.members.total}
@@ -889,6 +891,8 @@ export default function OrganizationDashboard() {
           </Card>
         </TabsContent>
       </Tabs>
+        </div>
+      </div>
     </div>
   );
 }

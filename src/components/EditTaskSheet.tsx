@@ -212,7 +212,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
         setTaskContext({
           taskContext: 'individual',
           departmentId: undefined,
-          assignedToUserId: task.userId || user.uid, // Assign to task's user or current user
+          assignedToUserId: task.assignedToUserId || user.uid, // Assign to task's user or current user
         });
       }
 

@@ -251,7 +251,7 @@ export function EditObjectiveDialog({ open, onOpenChange, onSubmit, objective }:
                     <SelectValue placeholder="اختر القسم" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">المؤسسة (بدون قسم)</SelectItem>
+                    <SelectItem value="organization">المؤسسة (بدون قسم)</SelectItem>
                     {departments.map((dept) => (
                       <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
                     ))}

@@ -319,7 +319,7 @@ export function CreateTaskForKeyResult({
                   <SelectValue placeholder="اختر مستخدم" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">بدون تعيين</SelectItem>
+                  <SelectItem value="unassigned">بدون تعيين</SelectItem>
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.displayName || user.email}

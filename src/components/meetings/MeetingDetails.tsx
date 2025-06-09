@@ -191,7 +191,7 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
 
       const newDecision: Omit<MeetingDecision, 'id'> = {
         description: newDecisionDescription,
-        responsibleUserId: newDecisionResponsible || undefined,
+        responsibleUserId: (newDecisionResponsible && newDecisionResponsible !== 'none') ? newDecisionResponsible : undefined,
         responsibleUserName: responsible?.name,
         status: 'pending',
       };
@@ -199,7 +199,7 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
       await addMeetingDecision(meeting.id, newDecision);
 
       setNewDecisionDescription('');
-      setNewDecisionResponsible('');
+      setNewDecisionResponsible('none');
 
       toast({
         title: 'تمت الإضافة',
@@ -228,7 +228,7 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
 
       const newTask: Omit<MeetingTask, 'id'> = {
         description: newTaskDescription,
-        assignedToUserId: newTaskAssignee || undefined,
+        assignedToUserId: (newTaskAssignee && newTaskAssignee !== 'unassigned') ? newTaskAssignee : undefined,
         assignedToUserName: assignee?.name,
         status: 'pending',
       };
@@ -236,7 +236,7 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
       await addMeetingTask(meeting.id, newTask);
 
       setNewTaskDescription('');
-      setNewTaskAssignee('');
+      setNewTaskAssignee('unassigned');
 
       toast({
         title: 'تمت الإضافة',
@@ -270,11 +270,20 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
       </DialogHeader>
 
       <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab} className="mt-4">
-        <TabsList className="grid grid-cols-4">
-          <TabsTrigger value="details">التفاصيل</TabsTrigger>
-          <TabsTrigger value="agenda">جدول الأعمال</TabsTrigger>
-          <TabsTrigger value="decisions">القرارات</TabsTrigger>
-          <TabsTrigger value="tasks">المهام</TabsTrigger>
+        <TabsList className="grid grid-cols-2 md:grid-cols-4 h-auto p-1">
+          <TabsTrigger value="details" className="text-xs md:text-sm px-2 py-2">
+            التفاصيل
+          </TabsTrigger>
+          <TabsTrigger value="agenda" className="text-xs md:text-sm px-2 py-2">
+            <span className="hidden sm:inline">جدول الأعمال</span>
+            <span className="sm:hidden">الأعمال</span>
+          </TabsTrigger>
+          <TabsTrigger value="decisions" className="text-xs md:text-sm px-2 py-2">
+            القرارات
+          </TabsTrigger>
+          <TabsTrigger value="tasks" className="text-xs md:text-sm px-2 py-2">
+            المهام
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="details" className="space-y-4 mt-4">
@@ -631,7 +640,7 @@ export function MeetingDetails({ meeting, onClose }: MeetingDetailsProps) {
                         <SelectValue placeholder="اختر المسؤول" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">بدون تعيين</SelectItem>
+                        <SelectItem value="unassigned">بدون تعيين</SelectItem>
                         {meeting.participants.map((participant) => (
                           <SelectItem key={participant.userId} value={participant.userId}>
                             {participant.name}

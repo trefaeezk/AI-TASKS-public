@@ -251,84 +251,89 @@ export default function OrganizationReportsPage() {
   };
 
   return (
-    <div dir="rtl">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center">
-              <ListChecks className="ml-2 h-5 w-5 text-primary" />
-              خطة اليوم
-            </CardTitle>
-            <CardDescription>
-              خطة مقترحة لمهام المؤسسة اليومية بناءً على الأولويات والمواعيد
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              الحصول على خطة ذكية لمهام المؤسسة اليومية مع تنبيهات للمهام المتأخرة
-            </p>
-            <Button asChild className="w-full">
-              <Link href="#daily-plan">
-                عرض خطة اليوم
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+    <div dir="rtl" className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 md:px-6 py-4 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <Card className="shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base md:text-lg flex items-center">
+                  <ListChecks className="ml-2 h-4 w-4 md:h-5 md:w-5 text-primary" />
+                  خطة اليوم
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  خطة مقترحة لمهام المؤسسة اليومية بناءً على الأولويات والمواعيد
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">
+                  الحصول على خطة ذكية لمهام المؤسسة اليومية مع تنبيهات للمهام المتأخرة
+                </p>
+                <Button asChild className="w-full" size="sm">
+                  <Link href="#daily-plan">
+                    عرض خطة اليوم
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
 
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center">
-              <FileText className="ml-2 h-5 w-5 text-primary" />
-              التقارير الأسبوعية
-            </CardTitle>
-            <CardDescription>
-              تقارير أسبوعية شاملة عن مهام وإنجازات المؤسسة
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              الحصول على تقارير تفصيلية عن مهام المؤسسة المكتملة والجارية والقادمة
-            </p>
-            <Button asChild className="w-full">
-              <Link href="/org/reports/weekly">
-                عرض التقارير الأسبوعية
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card id="daily-plan" className="mb-8 shadow-lg bg-card border-border rounded-lg">
-        <CardHeader>
-          <CardTitle className="text-xl text-card-foreground flex items-center">
-            <ListChecks className="ml-2 h-5 w-5 text-primary" />
-            خطة اليوم المقترحة للمؤسسة
-          </CardTitle>
-          <CardDescription>
-            اقتراحات الذكاء الاصطناعي لمهام اليوم بناءً على التواريخ والأولويات، مع تنبيهات للمهام الفائتة.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Generate Plan Button (Manual trigger) */}
-          <div className="text-center">
-            <Button
-              onClick={() => handleGeneratePlan(false)} // Explicitly pass false for manual trigger
-              disabled={isGeneratingPlan || isLoadingTasks}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
-              {isGeneratingPlan ? (
-                <>
-                  <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                  جاري إنشاء الخطة...
-                </>
-              ) : (
-                <>
-                  <Wand2 className="ml-2 h-4 w-4" />
-                  إنشاء خطة اليوم
-                </>
-              )}
-            </Button>
+            <Card className="shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base md:text-lg flex items-center">
+                  <FileText className="ml-2 h-4 w-4 md:h-5 md:w-5 text-primary" />
+                  التقارير الأسبوعية
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  تقارير أسبوعية شاملة عن مهام وإنجازات المؤسسة
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">
+                  الحصول على تقارير تفصيلية عن مهام المؤسسة المكتملة والجارية والقادمة
+                </p>
+                <Button asChild className="w-full" size="sm">
+                  <Link href="/org/reports/weekly">
+                    عرض التقارير الأسبوعية
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
+
+          <Card id="daily-plan" className="shadow-sm bg-card border-border rounded-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg md:text-xl text-card-foreground flex items-center">
+                <ListChecks className="ml-2 h-5 w-5 text-primary" />
+                خطة اليوم المقترحة للمؤسسة
+              </CardTitle>
+              <CardDescription className="text-sm md:text-base">
+                اقتراحات الذكاء الاصطناعي لمهام اليوم بناءً على التواريخ والأولويات، مع تنبيهات للمهام الفائتة.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 md:space-y-6">
+              {/* Generate Plan Button (Manual trigger) */}
+              <div className="text-center">
+                <Button
+                  onClick={() => handleGeneratePlan(false)} // Explicitly pass false for manual trigger
+                  disabled={isGeneratingPlan || isLoadingTasks}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto"
+                  size="sm"
+                >
+                  {isGeneratingPlan ? (
+                    <>
+                      <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                      <span className="hidden sm:inline">جاري إنشاء الخطة...</span>
+                      <span className="sm:hidden">جاري الإنشاء...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="ml-2 h-4 w-4" />
+                      <span className="hidden sm:inline">إنشاء خطة اليوم</span>
+                      <span className="sm:hidden">إنشاء الخطة</span>
+                    </>
+                  )}
+                </Button>
+              </div>
 
           {/* Error Alert */}
           {error && (
@@ -339,104 +344,106 @@ export default function OrganizationReportsPage() {
             </Alert>
           )}
 
-          {/* Content Area */}
-          {isLoadingTasks ? (
-            <div className="space-y-4">
-              <Skeleton className="h-10 w-1/3 mx-auto rounded-md bg-muted" />
-              <Skeleton className="h-20 w-full rounded-md bg-muted" />
-              <Skeleton className="h-20 w-full rounded-md bg-muted" />
-            </div>
-          ) : isGeneratingPlan ? (
-            <div className="text-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
-              <p className="text-muted-foreground">جاري إنشاء الخطة بواسطة الذكاء الاصطناعي...</p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {/* Overdue Tasks Section */}
-              {overdueWarnings.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-destructive flex items-center">
-                    <AlertTriangle className="ml-2 h-5 w-5" />
-                    مهام فائتة تتطلب انتباهًا
-                  </h3>
-                  <ul className="space-y-3">
-                    {overdueWarnings.map((task) => (
-                      <TaskCardTemp
-                        key={task.id}
-                        id={task.id}
-                        task={task}
-                        getCategoryColor={getCategoryColor}
-                        aiReasoning={task.warningReason} // Pass warning reason
-                        onStatusChange={handleStatusChange} // Optional: Allow status change from reports
-                        onEdit={handleEditTask} // Optional: Allow edit from reports
-                        onDelete={handleDeleteTask} // Optional: Allow delete from reports
-                      />
-                    ))}
-                  </ul>
-                  <Separator />
+              {/* Content Area */}
+              {isLoadingTasks ? (
+                <div className="space-y-3 md:space-y-4">
+                  <Skeleton className="h-8 md:h-10 w-1/2 md:w-1/3 mx-auto rounded-md bg-muted" />
+                  <Skeleton className="h-16 md:h-20 w-full rounded-md bg-muted" />
+                  <Skeleton className="h-16 md:h-20 w-full rounded-md bg-muted" />
+                </div>
+              ) : isGeneratingPlan ? (
+                <div className="text-center py-6 md:py-8">
+                  <Loader2 className="h-6 w-6 md:h-8 md:w-8 animate-spin text-primary mx-auto mb-2" />
+                  <p className="text-sm md:text-base text-muted-foreground">جاري إنشاء الخطة بواسطة الذكاء الاصطناعي...</p>
+                </div>
+              ) : (
+                <div className="space-y-4 md:space-y-6">
+                  {/* Overdue Tasks Section */}
+                  {overdueWarnings.length > 0 && (
+                    <div className="space-y-3 md:space-y-4">
+                      <h3 className="text-base md:text-lg font-semibold text-destructive flex items-center">
+                        <AlertTriangle className="ml-2 h-4 w-4 md:h-5 md:w-5" />
+                        مهام فائتة تتطلب انتباهًا
+                      </h3>
+                      <ul className="space-y-2 md:space-y-3">
+                        {overdueWarnings.map((task) => (
+                          <TaskCardTemp
+                            key={task.id}
+                            id={task.id}
+                            task={task}
+                            getCategoryColor={getCategoryColor}
+                            aiReasoning={task.warningReason} // Pass warning reason
+                            onStatusChange={handleStatusChange} // Optional: Allow status change from reports
+                            onEdit={handleEditTask} // Optional: Allow edit from reports
+                            onDelete={handleDeleteTask} // Optional: Allow delete from reports
+                          />
+                        ))}
+                      </ul>
+                      <Separator />
+                    </div>
+                  )}
+
+                  {/* Daily Plan Section */}
+                  {dailyPlan.length > 0 && (
+                    <div className="space-y-3 md:space-y-4">
+                      <h3 className="text-base md:text-lg font-semibold text-primary flex items-center">
+                        <ListChecks className="ml-2 h-4 w-4 md:h-5 md:w-5" />
+                        مهام مقترحة لليوم
+                      </h3>
+                      <ul className="space-y-2 md:space-y-3">
+                        {dailyPlan.map((task) => (
+                          <TaskCardTemp
+                            key={task.id}
+                            id={task.id}
+                            task={task}
+                            getCategoryColor={getCategoryColor}
+                            aiReasoning={task.planReasoning} // Pass plan reason
+                            onStatusChange={handleStatusChange} // Optional: Allow status change from reports
+                            onEdit={handleEditTask} // Optional: Allow edit from reports
+                            onDelete={handleDeleteTask} // Optional: Allow delete from reports
+                          />
+                        ))}
+                      </ul>
+                      <Separator />
+                    </div>
+                  )}
+
+                  {/* AI Observations Section */}
+                  {observations.length > 0 && (
+                    <div className="space-y-3 md:space-y-4">
+                      <h3 className="text-base md:text-lg font-semibold text-muted-foreground flex items-center">
+                        <Info className="ml-2 h-4 w-4 md:h-5 md:w-5" />
+                        ملاحظات وتوصيات
+                      </h3>
+                      <ul className="space-y-2">
+                        {observations.map((observation, index) => (
+                          <li key={index} className="text-xs md:text-sm text-muted-foreground flex items-start">
+                            <span className="ml-2 mt-1">•</span>
+                            <span>{observation}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Message shown ONLY when loading is done, plan is generated, but there's nothing to show */}
+                  {!isLoadingTasks && planGenerated && dailyPlan.length === 0 && overdueWarnings.length === 0 && !error && observations.length === 0 && (
+                    <p className="text-center text-muted-foreground py-6 md:py-8 text-sm md:text-base">
+                      لم يتم العثور على مهام مقترحة أو فائتة لهذا اليوم.
+                    </p>
+                  )}
+                  {/* Specific message for no active tasks found after loading and plan generation attempt */}
+                  {!isLoadingTasks && planGenerated && tasks.length === 0 && (
+                    <p className="text-center text-muted-foreground py-6 md:py-8 text-sm md:text-base">
+                      لا توجد مهام قيد الانتظار أو معلقة لإنشاء خطة اليوم.
+                    </p>
+                  )}
                 </div>
               )}
-
-              {/* Daily Plan Section */}
-              {dailyPlan.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-primary flex items-center">
-                    <ListChecks className="ml-2 h-5 w-5" />
-                    مهام مقترحة لليوم
-                  </h3>
-                  <ul className="space-y-3">
-                    {dailyPlan.map((task) => (
-                      <TaskCardTemp
-                        key={task.id}
-                        id={task.id}
-                        task={task}
-                        getCategoryColor={getCategoryColor}
-                        aiReasoning={task.planReasoning} // Pass plan reason
-                        onStatusChange={handleStatusChange} // Optional: Allow status change from reports
-                        onEdit={handleEditTask} // Optional: Allow edit from reports
-                        onDelete={handleDeleteTask} // Optional: Allow delete from reports
-                      />
-                    ))}
-                  </ul>
-                  <Separator />
-                </div>
-              )}
-
-              {/* AI Observations Section */}
-              {observations.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-muted-foreground flex items-center">
-                    <Info className="ml-2 h-5 w-5" />
-                    ملاحظات وتوصيات
-                  </h3>
-                  <ul className="space-y-2">
-                    {observations.map((observation, index) => (
-                      <li key={index} className="text-sm text-muted-foreground flex items-start">
-                        <span className="ml-2 mt-1">•</span>
-                        <span>{observation}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Message shown ONLY when loading is done, plan is generated, but there's nothing to show */}
-              {!isLoadingTasks && planGenerated && dailyPlan.length === 0 && overdueWarnings.length === 0 && !error && observations.length === 0 && (
-                <p className="text-center text-muted-foreground py-8">
-                  لم يتم العثور على مهام مقترحة أو فائتة لهذا اليوم.
-                </p>
-              )}
-              {/* Specific message for no active tasks found after loading and plan generation attempt */}
-              {!isLoadingTasks && planGenerated && tasks.length === 0 && (
-                <p className="text-center text-muted-foreground py-8">
-                  لا توجد مهام قيد الانتظار أو معلقة لإنشاء خطة اليوم.
-                </p>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
