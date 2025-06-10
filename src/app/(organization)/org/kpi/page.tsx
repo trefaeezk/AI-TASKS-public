@@ -4,14 +4,16 @@
 export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { BarChart3, AlertTriangle, Target, CheckCircle2, Clock, PauseCircle } from 'lucide-react';
+import { BarChart3, AlertTriangle, Target, CheckCircle2, Clock, PauseCircle, FileText, TrendingUp, Calendar, CalendarDays } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, Timestamp, orderBy } from 'firebase/firestore';
 import { firestoreListenerManager, handleFirestoreError } from '@/utils/firestoreListenerManager';
+import { useSearchParams } from 'next/navigation';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from '@/components/ui/progress';
+
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { TaskType, PriorityLevel, TaskStatus, DurationUnit } from '@/types/task';
@@ -19,6 +21,11 @@ import { useAuth } from '@/context/AuthContext';
 import { useTaskCategories } from '@/hooks/useTaskCategories';
 import { ChartConfig } from '@/components/ui/chart';
 import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from "recharts";
+
+// Import report components for organized structure
+import { WeeklyReport } from '@/components/reports/WeeklyReport';
+import { MonthlyReportCard } from '@/components/MonthlyReportCard';
+import { YearlyReportCard } from '@/components/YearlyReportCard';
 
 // --- Chart Configuration ---
 const chartConfig = {
@@ -43,15 +50,26 @@ const statusIconMap: Record<string, React.ElementType> = {
 // Status icon mapping for chart tooltip
 // Removed unused CustomTooltip component
 
+type ReportView = 'kpi' | 'weekly-report' | 'monthly-report' | 'yearly-report';
+
 export default function OrganizationKpiPage() {
   const { user, userClaims } = useAuth();
   const { getCategoryColor } = useTaskCategories(user?.uid);
   const { toast } = useToast();
+  const searchParams = useSearchParams();
 
   const [tasks, setTasks] = useState<TaskType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const organizationId = userClaims?.organizationId;
+
+  // Get current view from URL params
+  const currentView = (searchParams.get('view') as ReportView) || 'kpi';
+
+  const handleBackToKpi = () => {
+    window.history.pushState({}, '', '/org/kpi');
+    window.location.reload();
+  };
 
   useEffect(() => {
     if (!user || !organizationId) {
@@ -129,9 +147,9 @@ export default function OrganizationKpiPage() {
   // --- KPI Calculations ---
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter(t => t.status === 'completed').length;
-  const pendingTasks = tasks.filter(t => t.status === 'pending').length;
+  const holdTasks = tasks.filter(t => t.status === 'hold').length;
   const onHoldTasks = tasks.filter(t => t.status === 'hold').length;
-  const overdueTasks = tasks.filter(t => t.status === 'pending' && t.dueDate && t.dueDate < new Date()).length;
+  const overdueTasks = tasks.filter(t => t.status === 'hold' && t.dueDate && t.dueDate < new Date()).length;
   const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   // --- Department-based KPI Calculations ---
@@ -150,13 +168,12 @@ export default function OrganizationKpiPage() {
 
       if (task.status === 'completed') {
         stats[deptId].completed++;
-      } else if (task.status === 'pending') {
+      } else if (task.status === 'hold') {
         stats[deptId].pending++;
+        stats[deptId].hold++;
         if (task.dueDate && task.dueDate < new Date()) {
           stats[deptId].overdue++;
         }
-      } else if (task.status === 'hold') {
-        stats[deptId].hold++;
       }
     });
 
@@ -165,17 +182,17 @@ export default function OrganizationKpiPage() {
 
   // --- Chart Data Preparation ---
   const chartData = useMemo(() => {
-    const pendingCount = tasks.filter(t => t.status === 'pending' && !(t.dueDate && t.dueDate < new Date())).length; // Exclude overdue from pending
+    const holdCount = tasks.filter(t => t.status === 'hold' && !(t.dueDate && t.dueDate < new Date())).length; // Exclude overdue from hold
     const data = [
       { status: 'مكتملة', count: completedTasks, fill: "hsl(var(--status-completed))" },
-      { status: 'قيد الانتظار', count: pendingCount, fill: "hsl(var(--primary))" },
+      { status: 'معلقة', count: holdCount, fill: "hsl(var(--primary))" },
       { status: 'فائتة', count: overdueTasks, fill: "hsl(var(--status-urgent))" },
-      { status: 'معلقة', count: onHoldTasks, fill: "hsl(var(--muted-foreground))" },
+
     ];
 
     // Filter out zero counts for cleaner chart
     return data.filter(item => item.count > 0);
-  }, [completedTasks, pendingTasks, onHoldTasks, overdueTasks]);
+  }, [completedTasks, holdTasks, onHoldTasks, overdueTasks]);
 
   if (isLoading) {
     return (
@@ -208,10 +225,12 @@ export default function OrganizationKpiPage() {
   }
 
   return (
-    <div className="space-y-4 md:space-y-6 px-3 md:px-6 overflow-x-hidden max-w-[100vw]" dir="rtl">
-      <h1 className="text-lg md:text-2xl font-semibold text-primary flex items-center mt-2">
-        <BarChart3 className="ml-2 h-5 w-5 md:h-6 md:w-6"/> مؤشرات الأداء
-      </h1>
+    <div className="container mx-auto p-6">
+      {currentView === 'kpi' && (
+        <div className="space-y-4 md:space-y-6 px-3 md:px-6 overflow-x-hidden max-w-[100vw]" dir="rtl">
+          <h1 className="text-lg md:text-2xl font-semibold text-primary flex items-center mt-2">
+            <BarChart3 className="ml-2 h-5 w-5 md:h-6 md:w-6"/> مؤشرات الأداء
+          </h1>
 
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
         {/* Total Tasks Card */}
@@ -244,8 +263,8 @@ export default function OrganizationKpiPage() {
             <Clock className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent className="p-3 pt-0">
-            <div className="text-lg md:text-xl font-bold">{pendingTasks}</div>
-            <Progress value={pendingTasks / totalTasks * 100} className="h-1 mt-1" />
+            <div className="text-lg md:text-xl font-bold">{holdTasks}</div>
+            <Progress value={holdTasks / totalTasks * 100} className="h-1 mt-1" />
           </CardContent>
         </Card>
 
@@ -349,6 +368,49 @@ export default function OrganizationKpiPage() {
           )}
         </CardContent>
       </Card>
+        </div>
+      )}
+
+      {currentView === 'weekly-report' && organizationId && (
+        <WeeklyReport
+          organizationId={organizationId}
+          onBack={handleBackToKpi}
+        />
+      )}
+
+      {currentView === 'monthly-report' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">التقرير الشهري</h2>
+            <button
+              onClick={handleBackToKpi}
+              className="text-primary hover:underline"
+            >
+              ← العودة إلى مؤشرات الأداء
+            </button>
+          </div>
+          {organizationId && <MonthlyReportCard organizationId={organizationId} />}
+        </div>
+      )}
+
+      {currentView === 'yearly-report' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">التقرير السنوي</h2>
+            <button
+              onClick={handleBackToKpi}
+              className="text-primary hover:underline"
+            >
+              ← العودة إلى مؤشرات الأداء
+            </button>
+          </div>
+          {organizationId && <YearlyReportCard organizationId={organizationId} />}
+        </div>
+      )}
+
+
+
+
     </div>
   );
 }

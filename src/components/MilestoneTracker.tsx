@@ -382,61 +382,35 @@ export function MilestoneTracker({
    const currentMilestonesArray = Array.isArray(milestones) ? milestones : [];
 
   return (
-     <div className="space-y-2 pt-3 border-t border-muted/30 mt-3">
-      <div className="flex justify-between items-center mb-1 gap-1 flex-wrap">
-         <h4 className="text-sm font-medium text-muted-foreground/80">
+     <div className="space-y-2">
+      {/* العنوان والأزرار الأساسية */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+         <h4 className="text-sm font-medium text-muted-foreground/80 flex-shrink-0">
              نقاط التتبع ({currentMilestonesArray.filter(m => m.description.trim()).length})
          </h4>
-        <div className="flex gap-1">
+
+        {/* الأزرار الأساسية */}
+        <div className="flex flex-wrap gap-1 justify-start sm:justify-end">
              <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 px-1.5 text-xs text-primary hover:bg-primary/10"
+                className="h-7 px-2 text-xs text-primary hover:bg-primary/10 flex-shrink-0"
                 onClick={handleSuggestMilestones}
                 disabled={isSuggestingMilestones || isEditing || isSuggestingWeights || isSuggestingDueDates || !taskDescription?.trim()}
                 aria-label="اقترح نقاط تتبع بالذكاء الاصطناعي"
             >
                  {isSuggestingMilestones ? <Loader2 className="h-3.5 w-3.5 animate-spin ml-1" /> : <Wand2 className="h-3.5 w-3.5 ml-1" />}
-                 اقترح نقاط
+                 <span className="hidden xs:inline">اقترح نقاط</span>
+                 <span className="xs:hidden">اقترح</span>
             </Button>
-
-            {isEditing && (
-                <>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-1.5 text-xs text-primary hover:bg-primary/10"
-                        onClick={handleSuggestWeights}
-                        disabled={isSuggestingWeights || isSuggestingMilestones || isSuggestingDueDates || currentMilestonesArray.length === 0}
-                        aria-label="اقترح أوزان نقاط التتبع بالذكاء الاصطناعي"
-                    >
-                        {isSuggestingWeights ? <Loader2 className="h-3.5 w-3.5 animate-spin ml-1" /> : <Percent className="h-3.5 w-3.5 ml-1" />}
-                        اقترح أوزان
-                    </Button>
-
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-1.5 text-xs text-primary hover:bg-primary/10"
-                        onClick={handleSuggestDueDates}
-                        disabled={isSuggestingDueDates || isSuggestingMilestones || isSuggestingWeights || currentMilestonesArray.length === 0}
-                        aria-label="اقترح تواريخ استحقاق لنقاط التتبع بالذكاء الاصطناعي"
-                    >
-                        {isSuggestingDueDates ? <Loader2 className="h-3.5 w-3.5 animate-spin ml-1" /> : <Calendar className="h-3.5 w-3.5 ml-1" />}
-                        اقترح تواريخ
-                    </Button>
-                </>
-            )}
 
              { (currentMilestonesArray.length > 0 || isEditing) && (
                 <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-7 px-1.5 text-xs text-muted-foreground hover:bg-accent"
+                    className="h-7 px-2 text-xs text-muted-foreground hover:bg-accent flex-shrink-0"
                     onClick={handleEditToggle}
                     disabled={isSuggestingMilestones || isSuggestingWeights || isSuggestingDueDates}
                     aria-label={isEditing ? 'تأكيد نقاط التتبع' : 'تعديل نقاط التتبع'}
@@ -447,6 +421,39 @@ export function MilestoneTracker({
             )}
         </div>
       </div>
+
+      {/* أزرار الذكاء الاصطناعي الإضافية في وضع التعديل */}
+      {isEditing && (
+        <div className="flex flex-wrap gap-1 justify-start">
+            <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-primary hover:bg-primary/10 flex-shrink-0"
+                onClick={handleSuggestWeights}
+                disabled={isSuggestingWeights || isSuggestingMilestones || isSuggestingDueDates || currentMilestonesArray.length === 0}
+                aria-label="اقترح أوزان نقاط التتبع بالذكاء الاصطناعي"
+            >
+                {isSuggestingWeights ? <Loader2 className="h-3.5 w-3.5 animate-spin ml-1" /> : <Percent className="h-3.5 w-3.5 ml-1" />}
+                <span className="hidden xs:inline">اقترح أوزان</span>
+                <span className="xs:hidden">أوزان</span>
+            </Button>
+
+            <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-primary hover:bg-primary/10 flex-shrink-0"
+                onClick={handleSuggestDueDates}
+                disabled={isSuggestingDueDates || isSuggestingMilestones || isSuggestingWeights || currentMilestonesArray.length === 0}
+                aria-label="اقترح تواريخ استحقاق لنقاط التتبع بالذكاء الاصطناعي"
+            >
+                {isSuggestingDueDates ? <Loader2 className="h-3.5 w-3.5 animate-spin ml-1" /> : <Calendar className="h-3.5 w-3.5 ml-1" />}
+                <span className="hidden xs:inline">اقترح تواريخ</span>
+                <span className="xs:hidden">تواريخ</span>
+            </Button>
+        </div>
+      )}
 
        {!isEditing && currentMilestonesArray.length > 0 && (
          <div className='py-1 mb-2'>

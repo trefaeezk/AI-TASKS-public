@@ -39,6 +39,7 @@ import { TaskContextSelector } from './TaskContextSelector';
 import { TaskContext } from '@/types/task';
 import { useAuth } from '@/context/AuthContext'; // Import useAuth
 import { TaskKeyResultsSection } from '@/components/okr/TaskKeyResultsSection';
+import { updateParentTaskComprehensive, updateSubtasksFromParent, calculateTaskStatusFromMilestones, resetMilestonesOnReopen } from '@/services/parentTaskUpdater';
 
 interface EditTaskSheetProps {
     user: User;
@@ -398,6 +399,32 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
 
     try {
         await updateDoc(taskDocRef, updatedData);
+
+        // تحديث المهام المرتبطة بعد تحديث المهمة
+        try {
+          // إذا كانت هذه مهمة فرعية، حدث المهمة الأم
+          if (task.parentTaskId) {
+            await updateParentTaskComprehensive(task.parentTaskId);
+            console.log(`Updated parent task ${task.parentTaskId} after editing subtask ${task.id}`);
+          }
+
+          // إذا كانت هذه مهمة أم، حدث المهام الفرعية
+          // تحقق من تغيير الحالة بناءً على نقاط التتبع الجديدة
+          const newTaskStatus = calculateTaskStatusFromMilestones(
+            validMilestones,
+            task.status
+          );
+
+          if (newTaskStatus !== task.status) {
+            await updateSubtasksFromParent(task.id, newTaskStatus);
+            console.log(`Updated subtasks for parent task ${task.id} due to status change from ${task.status} to ${newTaskStatus}`);
+          }
+
+        } catch (updateError) {
+          console.error('Error updating related tasks:', updateError);
+          // لا نوقف العملية إذا فشل تحديث المهام المرتبطة
+        }
+
         toast({
             title: 'تم تحديث المهمة',
             description: `تم تحديث "${trimmedDescription}" بنجاح.`,
@@ -794,15 +821,17 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                  </div>
 
                  <Separator />
-                 <div className="space-y-3 pt-2">
+                 <div className="space-y-2 pt-2">
                      <h3 className="text-sm font-medium text-muted-foreground">نقاط التتبع (اختياري)</h3>
-                     <MilestoneTracker
-                         taskId={task.id}
-                         taskDescription={description}
-                         taskDetails={details}
-                         initialMilestones={currentMilestones}
-                         onMilestonesChange={handleMilestonesChange}
-                     />
+                     <div className="bg-muted/30 rounded-lg p-3 -mt-1">
+                         <MilestoneTracker
+                             taskId={task.id}
+                             taskDescription={description}
+                             taskDetails={details}
+                             initialMilestones={currentMilestones}
+                             onMilestonesChange={handleMilestonesChange}
+                         />
+                     </div>
                  </div>
 
                 <SheetFooter className="pt-6 mt-4 border-t">

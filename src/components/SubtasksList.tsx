@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, ChevronDown, ChevronUp, Building, Users, Calendar, AlertTriangle, CheckCircle2, PauseCircle } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronUp, Building, Users, Calendar, AlertTriangle, CheckCircle2, PauseCircle, X } from 'lucide-react';
 import { db } from '@/config/firebase';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { getSubtasks } from '@/services/subtasks';
@@ -81,7 +81,7 @@ export function SubtasksList({ parentTaskId }: SubtasksListProps) {
             id: `subtask-${index}`, // استخدام index كمعرف مؤقت
             description: data.description || '',
             details: data.details || undefined,
-            status: data.status || 'pending',
+            status: data.status || 'hold',
             startDate: data.startDate instanceof Timestamp ? data.startDate.toDate() : undefined,
             dueDate: data.dueDate instanceof Timestamp ? data.dueDate.toDate() : undefined,
             durationValue: data.durationValue || undefined,
@@ -147,27 +147,32 @@ export function SubtasksList({ parentTaskId }: SubtasksListProps) {
   const getStatusColor = (status: TaskStatus) => {
     switch (status) {
       case 'completed': return 'bg-status-completed';
+      case 'cancelled': return 'bg-destructive';
       case 'hold': return 'bg-muted-foreground/50';
       case 'pending': return 'bg-primary';
+      case 'in-progress': return 'bg-blue-500';
       default: return 'bg-primary';
     }
   };
 
   // الحصول على أيقونة حالة المهمة
   const getStatusIcon = (status: TaskStatus, isOverdue: boolean) => {
-    if (isOverdue && status === 'pending') return <AlertTriangle className="h-4 w-4 text-status-urgent" />;
+    if (isOverdue && (status === 'hold' || status === 'pending' || status === 'in-progress')) {
+      return <AlertTriangle className="h-4 w-4 text-status-urgent" />;
+    }
     switch (status) {
       case 'completed': return <CheckCircle2 className="h-4 w-4 text-status-completed" />;
-      case 'hold': return <PauseCircle className="h-4 w-4 text-muted-foreground" />;
+      case 'cancelled': return <X className="h-4 w-4 text-destructive" />;
+      case 'hold': return <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><rect width="6" height="14" x="4" y="5" rx="2"/><rect width="6" height="14" x="14" y="5" rx="2"/></svg>;
       default: return null;
     }
   };
 
   // التحقق مما إذا كانت المهمة متأخرة
   const isTaskOverdue = (task: SubtaskWithDepartment) => {
-    return task.status !== 'completed' && 
-           task.status !== 'hold' && 
-           task.dueDate && 
+    return task.status !== 'completed' &&
+           task.status !== 'cancelled' &&
+           task.dueDate &&
            task.dueDate < new Date(new Date().setHours(0,0,0,0));
   };
 
@@ -225,9 +230,9 @@ export function SubtasksList({ parentTaskId }: SubtasksListProps) {
             return (
               <Card key={subtask.id} className={cn(
                 "border-r-4",
-                isOverdue ? "border-r-status-urgent" : 
-                subtask.status === 'completed' ? "border-r-status-completed" : 
-                subtask.status === 'hold' ? "border-r-muted-foreground/50" : 
+                isOverdue ? "border-r-status-urgent" :
+                subtask.status === 'completed' ? "border-r-status-completed" :
+                subtask.status === 'cancelled' ? "border-r-destructive" :
                 "border-r-primary"
               )}>
                 <CardHeader className="py-3 px-4">
@@ -259,12 +264,15 @@ export function SubtasksList({ parentTaskId }: SubtasksListProps) {
                           "flex items-center gap-1",
                           isOverdue && "border-status-urgent text-status-urgent",
                           subtask.status === 'completed' && "border-status-completed text-status-completed",
-                          subtask.status === 'hold' && "border-muted-foreground/50 text-muted-foreground"
+                          subtask.status === 'hold' && "border-muted-foreground/50 text-muted-foreground",
+                          subtask.status === 'cancelled' && "border-destructive text-destructive"
                         )}>
                           {getStatusIcon(subtask.status, isOverdue || false)}
-                          {subtask.status === 'pending' && isOverdue ? 'متأخرة' : 
-                           subtask.status === 'completed' ? 'مكتملة' : 
-                           subtask.status === 'hold' ? 'معلقة' : 'قيد التنفيذ'}
+                          {(subtask.status === 'hold' || subtask.status === 'pending' || subtask.status === 'in-progress') && isOverdue ? 'متأخرة' :
+                           subtask.status === 'completed' ? 'مكتملة' :
+                           subtask.status === 'cancelled' ? 'ملغية' :
+                           subtask.status === 'hold' ? 'متوقفة' :
+                           subtask.status === 'pending' ? 'معلقة' : 'قيد التنفيذ'}
                         </Badge>
                       </div>
                     </div>

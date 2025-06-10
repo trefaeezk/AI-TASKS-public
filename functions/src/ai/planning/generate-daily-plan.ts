@@ -62,12 +62,12 @@ export const generateDailyPlan = createCallableFunction<{ tasks: GenerateDailyPl
     // الحصول على التاريخ الحالي
     const currentDate = format(new Date(), 'yyyy-MM-dd');
 
-    // تصفية المهام النشطة (pending و hold) فقط
-    const activeTasksForPrompt = tasks.filter(task => task.status === 'pending' || task.status === 'hold');
+    // تصفية المهام النشطة (hold) فقط
+    const activeTasksForPrompt = tasks.filter(task => task.status === 'hold');
 
     // إنشاء نص الطلب
     const prompt = `
-أنت خبير في تخطيط المهام بالذكاء الاصطناعي وتفهم اللغة العربية. مهمتك هي تحليل قائمة المهام المعطاة (فقط المهام ذات الحالة 'pending' أو 'hold') واقتراح خطة عمل لليوم الحالي (${currentDate}).
+أنت خبير في تخطيط المهام بالذكاء الاصطناعي وتفهم اللغة العربية. مهمتك هي تحليل قائمة المهام المعطاة (فقط المهام ذات الحالة 'hold') واقتراح خطة عمل لليوم الحالي (${currentDate}).
 
 **قائمة المهام:**
 ${JSON.stringify(activeTasksForPrompt, null, 2)}

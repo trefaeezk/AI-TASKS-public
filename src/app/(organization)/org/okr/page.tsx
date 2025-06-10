@@ -402,7 +402,7 @@ export default function OkrPage() {
             </h1>
             <div className="flex flex-col sm:flex-row gap-2">
               <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
-                <Link href="/org/okr/reports">
+                <Link href="/org/kpi?view=okr-reports">
                   <BarChart3 className="ml-2 h-4 w-4" />
                   التقارير
                 </Link>

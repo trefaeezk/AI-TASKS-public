@@ -468,13 +468,23 @@ export const acceptOrganizationInvitation = createCallableFunction<AcceptOrganiz
         }
 
         console.log(`[${functionName}] Adding user ${uid} to organization ${invitationData.organizationId} as member with role ${invitationData.role}`);
+
+        // إنشاء اسم المستخدم من displayName أو email (نفس المنطق لكلا المجموعتين)
+        const finalUserName = displayName || userRecord.displayName ||
+                              (userRecord.email ? userRecord.email.split('@')[0] : '') ||
+                              'مستخدم جديد';
+
+        console.log(`[${functionName}] Using final user name: ${finalUserName}`);
+
         await db.collection('organizations').doc(invitationData.organizationId).collection('members').doc(uid).set({
             role: invitationData.role,
             email: userRecord.email,
-            name: userRecord.displayName || '',
+            name: finalUserName,
+            displayName: finalUserName,
             joinedAt: admin.firestore.FieldValue.serverTimestamp(),
             invitationId: invitationId,
-            departmentId: invitationData.departmentId || null
+            departmentId: invitationData.departmentId || null,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
         console.log(`[${functionName}] Updating invitation ${invitationId} status to 'accepted'`);
@@ -515,21 +525,23 @@ export const acceptOrganizationInvitation = createCallableFunction<AcceptOrganiz
         console.log(`[${functionName}] Updating user document for ${uid} in 'users' collection`);
         const userDocRef = db.collection('users').doc(uid);
 
-        // إنشاء اسم المستخدم من displayName أو email
-        const userName = displayName || userRecord.displayName ||
-                        (userRecord.email ? userRecord.email.split('@')[0] : '') ||
-                        'مستخدم جديد';
+        // استخدام نفس الاسم المستخدم في مجموعة members لضمان التطابق
+        console.log(`[${functionName}] Using same final user name for users collection: ${finalUserName}`);
 
         await userDocRef.set({
             uid: uid,
-            name: userName,
+            name: finalUserName,
             email: userRecord.email || '',
-            displayName: userName,
+            displayName: finalUserName,
             role: invitationData.role,
             accountType: 'organization',
             organizationId: invitationData.organizationId,
-            departmentId: invitationData.departmentId || null,
+            departmentId: invitationData.departmentId, // إزالة || null للحفاظ على القيمة الصحيحة
             organizationName: organizationName, // إضافة اسم المؤسسة
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdBy: invitationData.invitedBy || null,
+            disabled: false,
+            customPermissions: [],
              // ضمان تعيين الأدوار المنطقية بشكل صحيح
             isOrgOwner: invitationData.role === 'isOrgOwner',
             isOrgAdmin: invitationData.role === 'isOrgAdmin',
@@ -538,6 +550,8 @@ export const acceptOrganizationInvitation = createCallableFunction<AcceptOrganiz
             isOrgTechnician: invitationData.role === 'isOrgTechnician',
             isOrgAssistant: invitationData.role === 'isOrgAssistant',
             isIndependent: false,
+            isSystemAdmin: false,
+            isSystemOwner: false,
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
 

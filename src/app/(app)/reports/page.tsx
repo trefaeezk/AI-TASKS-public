@@ -102,11 +102,11 @@ type EnrichedTask = TaskType & { planReasoning?: string; warningReason?: string 
 
       try {
           const tasksColRef = collection(db, 'tasks');
-          // Fetch pending, hold tasks for planning
+          // Fetch hold tasks for planning
           const q = query(
               tasksColRef,
               where('userId', '==', user.uid),
-              where('status', 'in', ['pending', 'hold']), // Fetch only active tasks
+              where('status', '==', 'hold'), // Fetch only active tasks
               orderBy('priority', 'asc'),
               orderBy('dueDate', 'asc')
           );

@@ -33,6 +33,10 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { useTaskCategories } from '@/hooks/useTaskCategories';
 import { useTaskTypeFilter } from '../../OrganizationLayoutContent';
+import { updateSubtasksFromParent, updateParentTaskComprehensive, resetMilestonesOnReopen } from '@/services/parentTaskUpdater';
+import { ReopenTaskDialog } from '@/components/ReopenTaskDialog';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useThrottledCounter } from '@/hooks/useThrottledCounter';
 
 export default function OrganizationTasksPage() {
   const { user, userClaims } = useAuth();
@@ -43,6 +47,8 @@ export default function OrganizationTasksPage() {
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [taskToReopen, setTaskToReopen] = useState<TaskType | null>(null);
+  const [isReopenDialogOpen, setIsReopenDialogOpen] = useState(false);
 
   const organizationId = userClaims?.organizationId;
 
@@ -80,6 +86,10 @@ export default function OrganizationTasksPage() {
     hasSetTasksDirectly: !!setTasksDirectly
   });
 
+  // استخدام debounce لتقليل التحديثات المستمرة
+  const debouncedTasks = useDebounce(tasks || [], 300);
+  const debouncedFilteredTasks = useDebounce(filteredTasks || [], 300);
+
   // إعداد sensors للسحب والإفلات
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -109,10 +119,18 @@ export default function OrganizationTasksPage() {
 
     console.log('Querying tasks with organizationId:', organizationId, 'taskTypeFilter:', taskTypeFilter);
 
-    // إنشاء مستمع للتغييرات في المهام
+    // إنشاء مستمع للتغييرات في المهام مع throttling
+    let lastUpdate = 0;
     const unsubscribe = onSnapshot(
       simpleQuery,
       (snapshot) => {
+        const now = Date.now();
+        // تجنب التحديثات المتكررة جداً (أقل من 200ms)
+        if (now - lastUpdate < 200) {
+          return;
+        }
+        lastUpdate = now;
+
         console.log('Snapshot received, docs count:', snapshot.size);
         const fetchedTasks: TaskType[] = [];
 
@@ -133,10 +151,19 @@ export default function OrganizationTasksPage() {
 
                 // مالك المؤسسة وأدمن المؤسسة يرون جميع مهام جميع الأقسام
                 if (userClaims?.isOrgOwner || userClaims?.isOrgAdmin) {
-                  console.log(`[DEPT FILTER] Owner/Admin access for task ${doc.id}`);
-                  // يرون مهام القسم العامة + جميع المهام الشخصية في الأقسام
-                  return data.taskContext === 'department' ||
-                         (data.departmentId && data.taskContext === 'individual');
+                  console.log(`[DEPT FILTER] Owner/Admin access for task ${doc.id}`, {
+                    taskContext: data.taskContext,
+                    parentTaskId: data.parentTaskId,
+                    departmentId: data.departmentId,
+                    assignedToUserId: data.assignedToUserId,
+                    assignedToUserIds: data.assignedToUserIds
+                  });
+                  // يرون جميع مهام الأقسام:
+                  // 1. المهام الأصلية للقسم (taskContext === 'department' بدون parentTaskId)
+                  // 2. المهام المُوزعة من المؤسسة للقسم (taskContext === 'department' مع parentTaskId)
+                  const shouldShow = data.taskContext === 'department';
+                  console.log(`[DEPT FILTER] Owner/Admin decision for task ${doc.id}: ${shouldShow}`);
+                  return shouldShow;
                 }
 
                 // أعضاء الأقسام يرون مهام قسمهم فقط
@@ -146,30 +173,28 @@ export default function OrganizationTasksPage() {
                 // المهندسون والمشرفون يرون جميع مهام القسم (المهندس أعلى من المشرف)
                 if (userClaims?.isOrgEngineer || userClaims?.isOrgSupervisor) {
                   console.log(`[DEPT FILTER] Engineer/Supervisor access for task ${doc.id}`);
-                  // يرون مهام القسم العامة + جميع المهام الشخصية في قسمهم
-                  return data.taskContext === 'department' ||
-                         (data.departmentId === userClaims?.departmentId && data.taskContext === 'individual');
+                  // يرون جميع مهام قسمهم:
+                  // 1. المهام الأصلية للقسم (taskContext === 'department' بدون parentTaskId)
+                  // 2. المهام المُوزعة من المؤسسة للقسم (taskContext === 'department' مع parentTaskId)
+                  return data.taskContext === 'department' &&
+                         data.departmentId === userClaims?.departmentId;
                 }
 
                 // أعضاء القسم العاديون (فنيون، مساعدون فنيون) يرون:
-                // 1. مهام القسم العامة (taskContext === 'department')
-                // 2. مهامهم الشخصية المكلفين بها فقط (لا يرون مهام زملائهم)
+                // 1. جميع مهام قسمهم (taskContext === 'department')
+                // 2. سواء كانت أصلية أو مُوزعة من المؤسسة
                 if (userClaims?.isOrgTechnician || userClaims?.isOrgAssistant) {
-                  const isGeneralDeptTask = data.taskContext === 'department' && data.departmentId === userClaims?.departmentId;
-                  const isMyPersonalTask = data.taskContext === 'individual' &&
-                                          data.departmentId === userClaims?.departmentId &&
-                                          (data.assignedToUserId === user?.uid || data.createdBy === user?.uid);
+                  const isDeptTask = data.taskContext === 'department' &&
+                                   data.departmentId === userClaims?.departmentId;
                   console.log(`[DEPT FILTER] Technician/Assistant access for task ${doc.id}:`, {
-                    isGeneralDeptTask,
-                    isMyPersonalTask,
+                    isDeptTask,
                     taskContext: data.taskContext,
                     taskDeptId: data.departmentId,
                     userDeptId: userClaims?.departmentId,
-                    assignedTo: data.assignedToUserId,
-                    createdBy: data.createdBy,
+                    parentTaskId: data.parentTaskId,
                     currentUser: user?.uid
                   });
-                  return isGeneralDeptTask || isMyPersonalTask;
+                  return isDeptTask;
                 }
 
                 // للأدوار الأخرى - لا يُسمح بالوصول
@@ -177,10 +202,35 @@ export default function OrganizationTasksPage() {
                 return false;
 
               case 'individual':
-                // المهام الفردية - فقط المهام المسندة للمستخدم أو التي أنشأها
-                return data.assignedToUserId === user?.uid ||
-                       data.userId === user?.uid ||
-                       data.createdBy === user?.uid;
+                // المهام الفردية - تشمل فقط:
+                // 1. المهام المُسندة للمستخدم شخصياً (assignedToUserId أو assignedToUserIds)
+                // 2. المهام الفردية التي أنشأها المستخدم (taskContext === 'individual')
+                // 3. المهام الفرعية المُسندة للمستخدم من مهام الأقسام أو المؤسسة
+                const isAssignedToUser = data.assignedToUserId === user?.uid ||
+                                       (data.assignedToUserIds && data.assignedToUserIds.includes(user?.uid));
+                const isOwnIndividualTask = data.taskContext === 'individual' &&
+                                          (data.userId === user?.uid || data.createdBy === user?.uid);
+
+                // المهام الفرعية المُسندة للمستخدم (من مهام المؤسسة أو الأقسام)
+                const isAssignedSubtask = data.parentTaskId &&
+                                        (data.assignedToUserId === user?.uid ||
+                                         (data.assignedToUserIds && data.assignedToUserIds.includes(user?.uid)));
+
+                console.log(`[INDIVIDUAL FILTER] Task ${doc.id} (${data.description}):`, {
+                  isAssignedToUser,
+                  isOwnIndividualTask,
+                  isAssignedSubtask,
+                  taskContext: data.taskContext,
+                  assignedToUserId: data.assignedToUserId,
+                  assignedToUserIds: data.assignedToUserIds,
+                  userId: data.userId,
+                  createdBy: data.createdBy,
+                  currentUserId: user?.uid,
+                  parentTaskId: data.parentTaskId,
+                  status: data.status
+                });
+
+                return isAssignedToUser || isOwnIndividualTask || isAssignedSubtask;
 
               default:
                 return false;
@@ -234,9 +284,11 @@ export default function OrganizationTasksPage() {
             order: data.order || 0,
             // إضافة الحقول المفقودة مع تحويل null إلى undefined
             assignedToUserId: data.assignedToUserId || undefined,
+            assignedToUserIds: data.assignedToUserIds || undefined, // إضافة حقل assignedToUserIds
             taskContext: data.taskContext || undefined,
             departmentId: data.departmentId || undefined,
             createdBy: data.createdBy || undefined,
+            parentTaskId: data.parentTaskId || undefined, // إضافة حقل parentTaskId
           };
 
           fetchedTasks.push(task);
@@ -291,12 +343,13 @@ export default function OrganizationTasksPage() {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = tasks.findIndex(task => task.id === active.id);
-      const newIndex = tasks.findIndex(task => task.id === over.id);
+      const currentTasks = tasks || [];
+      const oldIndex = currentTasks.findIndex(task => task.id === active.id);
+      const newIndex = currentTasks.findIndex(task => task.id === over.id);
 
       if (oldIndex !== -1 && newIndex !== -1) {
         // تحديث ترتيب المهام محليًا
-        const newTasks = arrayMove(tasks, oldIndex, newIndex);
+        const newTasks = arrayMove(currentTasks, oldIndex, newIndex);
 
         // تحديث ترتيب المهام في Firestore
         const updatedTasks = newTasks.map((task, index) => ({
@@ -351,6 +404,50 @@ export default function OrganizationTasksPage() {
     }
   }, [taskToDelete, removeTaskOptimistic, toast]);
 
+  // دالة تنفيذ تغيير الحالة
+  const executeStatusChange = useCallback(async (task: TaskType, newStatus: TaskStatus, resetMilestones: boolean = false) => {
+    const updatedTask = { ...task, status: newStatus };
+    updateTaskOptimistic(task.id, updatedTask);
+
+    try {
+      // إذا كانت إعادة فتح وطُلب إعادة تعيين نقاط التتبع
+      if (newStatus === 'pending' && (task.status === 'completed' || task.status === 'cancelled') && resetMilestones) {
+        await resetMilestonesOnReopen(task.id);
+        console.log(`Reset milestones for reopened task ${task.id}`);
+      }
+
+      const taskRef = doc(db, 'tasks', task.id);
+      await updateDoc(taskRef, {
+        status: newStatus,
+        updatedAt: Timestamp.now()
+      });
+
+      // تحديث المهام الفرعية إذا كانت هذه مهمة رئيسية
+      await updateSubtasksFromParent(task.id, newStatus);
+
+      // تحديث المهمة الرئيسية إذا كانت هذه مهمة فرعية
+      if (task.parentTaskId) {
+        await updateParentTaskComprehensive(task.parentTaskId);
+      }
+    } catch (error) {
+      console.error(`Error updating task status for ${task.id}:`, error);
+      revertTaskOptimistic(task.id, task);
+      toast({
+        title: 'خطأ في تحديث حالة المهمة',
+        description: 'حدث خطأ أثناء محاولة تحديث حالة المهمة.',
+        variant: 'destructive',
+      });
+    }
+  }, [updateTaskOptimistic, revertTaskOptimistic, toast]);
+
+  // معالجة تأكيد إعادة الفتح
+  const handleReopenConfirm = useCallback((resetMilestones: boolean) => {
+    if (taskToReopen) {
+      executeStatusChange(taskToReopen, 'pending', resetMilestones);
+      setTaskToReopen(null);
+    }
+  }, [taskToReopen, executeStatusChange]);
+
   // التحقق من وجود سياق صفحة المهام
   if (!taskPageContext) {
     return (
@@ -375,14 +472,14 @@ export default function OrganizationTasksPage() {
         <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4">
           {(() => {
             console.log('Render conditions:', {
-              filteredTasksLength: filteredTasks?.length || 0,
-              tasksLength: tasks?.length || 0,
+              filteredTasksLength: debouncedFilteredTasks?.length || 0,
+              tasksLength: debouncedTasks?.length || 0,
               hasFilters: !!(categoryFilter || dateFilter?.startDate || dateFilter?.endDate),
               categoryFilter,
               dateFilter
             });
 
-            if (!tasks || !filteredTasks) {
+            if (!debouncedTasks || !debouncedFilteredTasks) {
               return (
                 <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-10">
                   <FileText className="w-16 h-16 mb-4" />
@@ -391,7 +488,7 @@ export default function OrganizationTasksPage() {
               );
             }
 
-            if (filteredTasks.length === 0 && (categoryFilter || dateFilter?.startDate || dateFilter?.endDate)) {
+            if (debouncedFilteredTasks.length === 0 && (categoryFilter || dateFilter?.startDate || dateFilter?.endDate)) {
               return (
                 <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-10">
                   <FileText className="w-16 h-16 mb-4" />
@@ -404,7 +501,7 @@ export default function OrganizationTasksPage() {
               );
             }
 
-            if (tasks.length === 0) {
+            if (debouncedTasks.length === 0) {
               return (
                 <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-10">
                   <FileText className="w-16 h-16 mb-4" />
@@ -445,23 +542,17 @@ export default function OrganizationTasksPage() {
                           <TaskCardTemp
                             key={task.id}
                             task={task}
-                            onStatusChange={(_, newStatus) => {
-                              const updatedTask = { ...task, status: newStatus };
-                              updateTaskOptimistic(task.id, updatedTask);
+                            currentCategory={categoryKey}
+                            onStatusChange={async (_, newStatus) => {
+                              // إذا كانت إعادة فتح (من مكتملة أو ملغية إلى معلقة)، اعرض الحوار
+                              if (newStatus === 'pending' && (task.status === 'completed' || task.status === 'cancelled')) {
+                                setTaskToReopen(task);
+                                setIsReopenDialogOpen(true);
+                                return;
+                              }
 
-                              const taskRef = doc(db, 'tasks', task.id);
-                              updateDoc(taskRef, {
-                                status: newStatus,
-                                updatedAt: Timestamp.now()
-                              }).catch(error => {
-                                console.error(`Error updating task status for ${task.id}:`, error);
-                                revertTaskOptimistic(task.id, task);
-                                toast({
-                                  title: 'خطأ في تحديث حالة المهمة',
-                                  description: 'حدث خطأ أثناء محاولة تحديث حالة المهمة.',
-                                  variant: 'destructive',
-                                });
-                              });
+                              // للحالات الأخرى، نفذ التغيير مباشرة
+                              await executeStatusChange(task, newStatus);
                             }}
                             onEdit={() => {
                               setTaskToEdit(task);
@@ -528,6 +619,17 @@ export default function OrganizationTasksPage() {
             // إعادة تحميل المهام بعد التحديث
             console.log("Task updated, refreshing tasks");
           }}
+        />
+      )}
+
+      {/* حوار إعادة الفتح */}
+      {taskToReopen && (
+        <ReopenTaskDialog
+          isOpen={isReopenDialogOpen}
+          onOpenChange={setIsReopenDialogOpen}
+          onConfirm={handleReopenConfirm}
+          taskDescription={taskToReopen.description}
+          hasMilestones={taskToReopen.milestones ? taskToReopen.milestones.length > 0 : false}
         />
       )}
     </div>

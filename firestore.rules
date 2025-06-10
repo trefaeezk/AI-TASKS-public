@@ -78,7 +78,7 @@ service cloud.firestore {
 
     // التحقق من صلاحية إدارة المشاريع
     function canManageProjects() {
-      return hasSystemAccess() || isOrgOwner() || isOrgAdmin();
+      return hasSystemAccess() || isOrgOwner() || isOrgAdmin() || isOrgEngineer();
     }
 
     // التحقق من صلاحية عرض التقارير
@@ -136,6 +136,16 @@ service cloud.firestore {
         getUserToken().customPermissions != null &&
         getUserToken().customPermissions is list &&
         permission in getUserToken().customPermissions;
+    }
+
+    // التحقق من أن التحديث يشمل نقاط التتبع والحالة فقط (للأدوار الأقل)
+    function onlyMilestonesAndStatusChanged() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly(['milestones', 'status', 'updatedAt']);
+    }
+
+    // التحقق من الأدوار العليا (يمكنها تعديل كامل)
+    function hasHighLevelAccess() {
+      return hasSystemAccess() || isOrgOwner() || isOrgAdmin() || isOrgEngineer();
     }
 
     // ===== قواعد فئات المهام =====
@@ -221,8 +231,29 @@ service cloud.firestore {
         resource.data.createdBy == request.auth.uid ||
         // للمهام الفردية
         (resource.data.organizationId == null && resource.data.userId == request.auth.uid) ||
-        // للمهام المؤسسية - أعضاء المؤسسة فقط
-        (resource.data.organizationId != null && getUserToken().organizationId == resource.data.organizationId && hasAdminAccess())
+        // للمهام المؤسسية - الأدوار العليا لها صلاحية كاملة
+        (resource.data.organizationId != null && getUserToken().organizationId == resource.data.organizationId && hasHighLevelAccess()) ||
+        // للمهام المؤسسية - المهندس يمكنه تحديث المهام المُسندة إليه أو مهام قسمه بحرية كاملة
+        (resource.data.organizationId != null && getUserToken().organizationId == resource.data.organizationId &&
+         isOrgEngineer() && (
+           (resource.data.assignedToUserId == request.auth.uid ||
+            (resource.data.assignedToUserIds != null && request.auth.uid in resource.data.assignedToUserIds)) ||
+           (resource.data.departmentId != null && getUserToken().departmentId == resource.data.departmentId)
+         )) ||
+        // للمهام المؤسسية - المشرف يمكنه تحديث مهام قسمه بحرية كاملة
+        (resource.data.organizationId != null && getUserToken().organizationId == resource.data.organizationId &&
+         isOrgSupervisor() && (
+           (resource.data.assignedToUserId == request.auth.uid ||
+            (resource.data.assignedToUserIds != null && request.auth.uid in resource.data.assignedToUserIds)) ||
+           (resource.data.departmentId != null && getUserToken().departmentId == resource.data.departmentId)
+         )) ||
+        // للمهام المؤسسية - الأدوار الأقل يمكنها تحديث نقاط التتبع والحالة فقط للمهام المُسندة إليهم
+        (resource.data.organizationId != null && getUserToken().organizationId == resource.data.organizationId &&
+         (resource.data.assignedToUserId == request.auth.uid ||
+          (resource.data.assignedToUserIds != null && request.auth.uid in resource.data.assignedToUserIds)) &&
+         // السماح بتحديث نقاط التتبع والحالة فقط للأدوار الأقل (فني، مساعد)
+         (isOrgTechnician() || isOrgAssistant()) &&
+         onlyMilestonesAndStatusChanged())
       );
 
       // حذف المهام

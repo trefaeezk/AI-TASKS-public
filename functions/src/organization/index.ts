@@ -311,8 +311,94 @@ export const removeOrganizationMember = createCallableFunction<RemoveOrganizatio
             }
         }
 
+        // الحصول على بيانات المستخدم الحالية
+        const userDoc = await db.collection('users').doc(userId).get();
+        const userData = userDoc.exists ? userDoc.data() : null;
+
+        // التحقق من وجود عضويات أخرى في مؤسسات أخرى
+        const allOrgsSnapshot = await db.collection('organizations').get();
+        let hasOtherMemberships = false;
+
+        for (const orgDoc of allOrgsSnapshot.docs) {
+            if (orgDoc.id !== orgId) {
+                const memberInOtherOrg = await orgDoc.ref.collection('members').doc(userId).get();
+                if (memberInOtherOrg.exists) {
+                    hasOtherMemberships = true;
+                    break;
+                }
+            }
+        }
+
         // إزالة المستخدم من المؤسسة
         await db.collection('organizations').doc(orgId).collection('members').doc(userId).delete();
+
+        // تحديث بيانات المستخدم في مجموعة users
+        if (userData) {
+            const updateData: any = {
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            };
+
+            // إذا لم يكن لديه عضويات أخرى، تحويله إلى مستقل
+            if (!hasOtherMemberships) {
+                updateData.accountType = 'individual';
+                updateData.role = 'isIndependent';
+                updateData.organizationId = null;
+                updateData.departmentId = null;
+                updateData.isIndependent = true;
+                updateData.isOrgOwner = false;
+                updateData.isOrgAdmin = false;
+                updateData.isOrgSupervisor = false;
+                updateData.isOrgEngineer = false;
+                updateData.isOrgTechnician = false;
+                updateData.isOrgAssistant = false;
+            } else {
+                // إذا كان لديه عضويات أخرى، إزالة معرف هذه المؤسسة فقط
+                if (userData.organizationId === orgId) {
+                    updateData.organizationId = null;
+                    updateData.departmentId = null;
+                }
+            }
+
+            await db.collection('users').doc(userId).update(updateData);
+        }
+
+        // تحديث Firebase Auth Custom Claims
+        try {
+            const userRecord = await admin.auth().getUser(userId);
+            const currentClaims = userRecord.customClaims || {};
+
+            let newClaims: any = { ...currentClaims };
+
+            if (!hasOtherMemberships) {
+                // تحويل إلى مستقل
+                newClaims = {
+                    ...currentClaims,
+                    role: 'isIndependent',
+                    accountType: 'individual',
+                    organizationId: null,
+                    departmentId: null,
+                    isIndependent: true,
+                    isOrgOwner: false,
+                    isOrgAdmin: false,
+                    isOrgSupervisor: false,
+                    isOrgEngineer: false,
+                    isOrgTechnician: false,
+                    isOrgAssistant: false
+                };
+            } else {
+                // إزالة معرف هذه المؤسسة فقط
+                if (currentClaims.organizationId === orgId) {
+                    newClaims.organizationId = null;
+                    newClaims.departmentId = null;
+                }
+            }
+
+            await admin.auth().setCustomUserClaims(userId, newClaims);
+            console.log(`[Organization] Updated custom claims for user ${userId}`);
+        } catch (claimsError) {
+            console.error(`[Organization] Error updating custom claims for user ${userId}:`, claimsError);
+            // لا نوقف العملية إذا فشل تحديث Claims
+        }
 
         console.log(`[Organization] Successfully removed user ${userId} from organization ${orgId}.`);
         return { success: true };
@@ -387,7 +473,7 @@ export const updateOrganizationMember = createCallableFunction<UpdateOrganizatio
         };
 
         if (role !== undefined) {
-            const validRoles = ['isOrgAdmin', 'isOrgEngineer', 'isOrgSupervisor', 'isOrgTechnician', 'isOrgAssistant'];
+            const validRoles = ['isOrgOwner', 'isOrgAdmin', 'isOrgEngineer', 'isOrgSupervisor', 'isOrgTechnician', 'isOrgAssistant'];
             if (!validRoles.includes(role)) {
                 throw new functions.https.HttpsError(
                     "invalid-argument",
@@ -401,8 +487,81 @@ export const updateOrganizationMember = createCallableFunction<UpdateOrganizatio
             updateData.departmentId = departmentId;
         }
 
-        // تحديث بيانات العضو
+        // تحديث بيانات العضو في members
         await db.collection('organizations').doc(orgId).collection('members').doc(userId).update(updateData);
+
+        // تحديث بيانات المستخدم في مجموعة users
+        const userDoc = await db.collection('users').doc(userId).get();
+        if (userDoc.exists) {
+            const userData = userDoc.data();
+            const userUpdateData: any = {
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            };
+
+            // تحديث الدور إذا تم تغييره
+            if (role !== undefined) {
+                userUpdateData.role = role;
+                // تحديث الأدوار المنطقية
+                userUpdateData.isOrgOwner = role === 'isOrgOwner';
+                userUpdateData.isOrgAdmin = role === 'isOrgAdmin';
+                userUpdateData.isOrgSupervisor = role === 'isOrgSupervisor';
+                userUpdateData.isOrgEngineer = role === 'isOrgEngineer';
+                userUpdateData.isOrgTechnician = role === 'isOrgTechnician';
+                userUpdateData.isOrgAssistant = role === 'isOrgAssistant';
+                userUpdateData.isIndependent = false;
+            }
+
+            // تحديث معرف القسم إذا تم تغييره
+            if (departmentId !== undefined) {
+                userUpdateData.departmentId = departmentId;
+            }
+
+            // تحديث معرف المؤسسة إذا لم يكن موجوداً
+            if (!userData?.organizationId) {
+                userUpdateData.organizationId = orgId;
+                userUpdateData.accountType = 'organization';
+            }
+
+            await db.collection('users').doc(userId).update(userUpdateData);
+        }
+
+        // تحديث Firebase Auth Custom Claims
+        try {
+            const userRecord = await admin.auth().getUser(userId);
+            const currentClaims = userRecord.customClaims || {};
+
+            let newClaims: any = { ...currentClaims };
+
+            // تحديث الدور في Claims
+            if (role !== undefined) {
+                newClaims.role = role;
+                newClaims.isOrgOwner = role === 'isOrgOwner';
+                newClaims.isOrgAdmin = role === 'isOrgAdmin';
+                newClaims.isOrgSupervisor = role === 'isOrgSupervisor';
+                newClaims.isOrgEngineer = role === 'isOrgEngineer';
+                newClaims.isOrgTechnician = role === 'isOrgTechnician';
+                newClaims.isOrgAssistant = role === 'isOrgAssistant';
+                newClaims.isIndependent = false;
+                newClaims.accountType = 'organization';
+            }
+
+            // تحديث معرف القسم في Claims
+            if (departmentId !== undefined) {
+                newClaims.departmentId = departmentId;
+            }
+
+            // تحديث معرف المؤسسة في Claims إذا لم يكن موجوداً
+            if (!currentClaims.organizationId) {
+                newClaims.organizationId = orgId;
+                newClaims.accountType = 'organization';
+            }
+
+            await admin.auth().setCustomUserClaims(userId, newClaims);
+            console.log(`[Organization] Updated custom claims for user ${userId}`);
+        } catch (claimsError) {
+            console.error(`[Organization] Error updating custom claims for user ${userId}:`, claimsError);
+            // لا نوقف العملية إذا فشل تحديث Claims
+        }
 
         console.log(`[Organization] Successfully updated user ${userId} in organization ${orgId}.`);
         return { success: true };
@@ -496,6 +655,106 @@ export const getOrganizationMembers = createCallableFunction<GetOrganizationMemb
         throw new functions.https.HttpsError(
             "internal",
             `Failed to get organization members: ${error.message || 'Unknown internal server error.'}`
+        );
+    }
+});
+
+/**
+ * نوع بيانات طلب إزالة المستخدم من القسم
+ */
+interface RemoveUserFromDepartmentRequest {
+    orgId: string;
+    userId: string;
+}
+
+/**
+ * إزالة المستخدم من القسم (تحويله إلى فرد بدون قسم)
+ */
+export const removeUserFromDepartment = createCallableFunction<RemoveUserFromDepartmentRequest>(async (request) => {
+    const data = request.data;
+    const context = {
+        auth: request.auth ? {
+            uid: request.auth.uid,
+            token: request.auth.token
+        } : undefined,
+        rawRequest: request.rawRequest
+    };
+    const functionName = 'removeUserFromDepartment';
+    console.log(`[Organization] --- ${functionName} Cloud Function triggered ---`);
+
+    try {
+        const { orgId, userId } = data;
+
+        // التحقق من صحة المدخلات
+        if (!orgId || typeof orgId !== "string") {
+            throw new functions.https.HttpsError(
+                "invalid-argument",
+                "يجب توفير معرف المؤسسة."
+            );
+        }
+
+        if (!userId || typeof userId !== "string") {
+            throw new functions.https.HttpsError(
+                "invalid-argument",
+                "يجب توفير معرف المستخدم."
+            );
+        }
+
+        // التحقق من أن المستخدم يملك صلاحيات إدارة أعضاء في المؤسسة
+        await ensureCanInviteToOrganization(context, orgId);
+
+        // التحقق من وجود العضو في المؤسسة
+        const memberDoc = await db.collection('organizations').doc(orgId).collection('members').doc(userId).get();
+        if (!memberDoc.exists) {
+            throw new functions.https.HttpsError(
+                "not-found",
+                "العضو غير موجود في المؤسسة."
+            );
+        }
+
+        // تحديث بيانات العضو في members (إزالة القسم)
+        await db.collection('organizations').doc(orgId).collection('members').doc(userId).update({
+            departmentId: null,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        // تحديث بيانات المستخدم في مجموعة users
+        const userDoc = await db.collection('users').doc(userId).get();
+        if (userDoc.exists) {
+            await db.collection('users').doc(userId).update({
+                departmentId: null,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+        }
+
+        // تحديث Firebase Auth Custom Claims
+        try {
+            const userRecord = await admin.auth().getUser(userId);
+            const currentClaims = userRecord.customClaims || {};
+
+            const newClaims: any = {
+                ...currentClaims,
+                departmentId: null
+            };
+
+            await admin.auth().setCustomUserClaims(userId, newClaims);
+            console.log(`[Organization] Updated custom claims for user ${userId} - removed from department`);
+        } catch (claimsError) {
+            console.error(`[Organization] Error updating custom claims for user ${userId}:`, claimsError);
+            // لا نوقف العملية إذا فشل تحديث Claims
+        }
+
+        console.log(`[Organization] Successfully removed user ${userId} from department in organization ${orgId}.`);
+        return { success: true };
+
+    } catch (error: any) {
+        console.error(`[Organization] Error in ${functionName}:`, error);
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
+        throw new functions.https.HttpsError(
+            "internal",
+            `Failed to remove user from department: ${error.message || 'Unknown internal server error.'}`
         );
     }
 });

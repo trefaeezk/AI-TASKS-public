@@ -24,7 +24,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Loader2, UserPlus } from 'lucide-react';
 import { db } from '@/config/firebase';
-import { collection, query, where, getDocs, doc, getDoc, updateDoc, Timestamp, writeBatch } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, updateDoc, setDoc, Timestamp, writeBatch } from 'firebase/firestore';
 import { TaskType, Milestone } from '@/types/task';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -164,54 +164,50 @@ export function AssignTaskToMembersDialog({ task, onTaskAssigned }: AssignTaskTo
     setLoading(true);
     try {
       if (assignMode === 'whole-task') {
-        // إنشاء مهام فرعية للأعضاء المحددين
-        const batch = writeBatch(db);
-        
-        for (const memberId of selectedMembers) {
-          // إنشاء نسخة من نقاط التتبع للمهمة الفرعية
-          const subtaskMilestones = task.milestones 
-            ? task.milestones.map(milestone => ({
-                id: uuidv4(),
-                description: milestone.description,
-                completed: false,
-                weight: milestone.weight,
-                dueDate: milestone.dueDate instanceof Date 
-                  ? Timestamp.fromDate(milestone.dueDate) 
-                  : null
-              }))
-            : null;
+        // إنشاء مهمة واحدة مُسندة لجميع الأعضاء المحددين
 
-          // إنشاء بيانات المهمة الفرعية
-          const subtaskData = {
-            description: task.description,
-            userId: user.uid,
-            status: 'pending',
-            details: task.details || null,
-            startDate: task.startDate ? Timestamp.fromDate(task.startDate) : null,
-            dueDate: task.dueDate ? Timestamp.fromDate(task.dueDate) : null,
-            durationValue: task.durationValue || null,
-            durationUnit: task.durationUnit || null,
-            priority: task.priority || null,
-            priorityReason: task.priorityReason || null,
-            taskCategoryName: task.taskCategoryName || null,
-            milestones: subtaskMilestones,
-            
-            // حقول سياق المهمة
-            taskContext: 'individual',
-            organizationId: task.organizationId || null,
-            departmentId: task.departmentId || null,
-            assignedToUserId: memberId,
-            parentTaskId: task.id,
-            createdAt: Timestamp.now(),
-            updatedAt: Timestamp.now()
-          };
+        // إنشاء نسخة من نقاط التتبع للمهمة الفرعية
+        const subtaskMilestones = task.milestones
+          ? task.milestones.map(milestone => ({
+              id: uuidv4(),
+              description: milestone.description,
+              completed: false,
+              weight: milestone.weight,
+              dueDate: milestone.dueDate instanceof Date
+                ? Timestamp.fromDate(milestone.dueDate)
+                : null
+            }))
+          : null;
 
-          // إضافة المهمة الفرعية إلى قاعدة البيانات
-          const subtaskRef = doc(collection(db, 'tasks'));
-          batch.set(subtaskRef, subtaskData);
-        }
-        
-        await batch.commit();
+        // إنشاء بيانات المهمة الفرعية الواحدة مع تعيين متعدد الأشخاص
+        const subtaskData = {
+          description: task.description,
+          userId: user.uid,
+          status: 'pending',
+          details: task.details || null,
+          startDate: task.startDate ? Timestamp.fromDate(task.startDate) : null,
+          dueDate: task.dueDate ? Timestamp.fromDate(task.dueDate) : null,
+          durationValue: task.durationValue || null,
+          durationUnit: task.durationUnit || null,
+          priority: task.priority || null,
+          priorityReason: task.priorityReason || null,
+          taskCategoryName: task.taskCategoryName || null,
+          milestones: subtaskMilestones,
+
+          // حقول سياق المهمة
+          taskContext: 'individual',
+          organizationId: task.organizationId || null,
+          departmentId: task.departmentId || null,
+          assignedToUserId: null, // لا نستخدم هذا الحقل للتعيين المتعدد
+          assignedToUserIds: selectedMembers, // تعيين جميع الأعضاء المحددين
+          parentTaskId: task.id,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        };
+
+        // إضافة المهمة الفرعية الواحدة إلى قاعدة البيانات
+        const subtaskRef = doc(collection(db, 'tasks'));
+        await setDoc(subtaskRef, subtaskData);
       } else {
         // تعيين نقاط التتبع للأعضاء المحددين
         const taskRef = doc(db, 'tasks', task.id);

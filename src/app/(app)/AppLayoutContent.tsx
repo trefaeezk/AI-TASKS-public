@@ -41,6 +41,7 @@ import { useTaskPageContext, type TaskCategory, categoryInfo, categoryOrder } fr
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAccountType } from '@/hooks/useAccountType';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useThrottledCounter } from '@/hooks/useThrottledCounter';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DateRangePicker } from '@/components/DateRangePicker';
@@ -74,7 +75,9 @@ function TaskTabsHeader() {
                 <TabsList className="inline-flex h-auto flex-wrap justify-start gap-x-1 gap-y-1 p-1 bg-transparent border-none shadow-none">
                     {categoryOrder.map(categoryKey => {
                         const info = categoryInfo[categoryKey];
-                        const count = categorizedTasks[categoryKey]?.length ?? 0;
+                        const rawCount = categorizedTasks[categoryKey]?.length ?? 0;
+                        // استخدام throttled counter لتقليل الاهتزاز
+                        const count = useThrottledCounter(rawCount, 500);
                         if (!info) return null;
                         const IconComponent = info.icon;
                         return (

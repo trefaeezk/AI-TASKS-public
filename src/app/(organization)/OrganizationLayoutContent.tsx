@@ -9,6 +9,8 @@ import {
   Calendar, Wand2, Target, CalendarDays
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale'; // Ensure 'ar' is imported
 
@@ -19,11 +21,17 @@ import {
   SidebarFooter,
   SidebarTrigger,
   SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
   SidebarSeparator,
   SidebarInset,
   useSidebar,
 } from '@/components/ui/sidebar';
 import { SidebarMenuLink } from '@/components/ui/sidebar-menu-link';
+import { CollapsibleSidebarMenu, CollapsibleSidebarSubItem } from '@/components/ui/collapsible-sidebar-menu';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import { Button } from '@/components/ui/button';
 import { AddTaskSheet } from '@/components/AddTaskSheet';
@@ -36,6 +44,7 @@ import { NotificationsPopover } from '@/components/notifications/NotificationsPo
 import { useTaskPageContext, type TaskCategory, categoryInfo, categoryOrder } from '@/context/TaskPageContext';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { useThrottledCounter } from '@/hooks/useThrottledCounter';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DateRangePicker } from '@/components/DateRangePicker';
 import { CategoryFilter } from '@/components/CategoryFilter';
@@ -43,7 +52,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { OkrTaskFilter } from '@/components/okr/OkrTaskFilter';
 import { cn } from '@/lib/utils';
-import { Filter, ChevronDown } from 'lucide-react';
+import {
+  Filter,
+  ChevronDown,
+  ChevronRight,
+  TrendingUp
+} from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 // import Link from 'next/link'; // غير مستخدم حالياً
 
@@ -92,7 +106,9 @@ function TaskTabsHeader() {
                 <TabsList className="inline-flex h-auto flex-wrap justify-start gap-x-1 gap-y-1 p-1 bg-transparent border-none shadow-none">
                     {categoryOrder.map(categoryKey => {
                         const info = categoryInfo[categoryKey];
-                        const count = categorizedTasks[categoryKey]?.length ?? 0;
+                        const rawCount = categorizedTasks[categoryKey]?.length ?? 0;
+                        // استخدام throttled counter لتقليل الاهتزاز
+                        const count = useThrottledCounter(rawCount, 500);
                         if (!info) return null;
                         const IconComponent = info.icon;
                         return (
@@ -204,6 +220,7 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
   const { user, userClaims } = useAuth();
   const { t, direction, language } = useLanguage();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // تحديد ما إذا كانت اللغة عربية
   const isRTL = language === 'ar' || direction === 'rtl';
@@ -348,11 +365,11 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
               <span><Translate text="sidebar.tasks" /></span>
             </SidebarMenuLink>
 
-            {/* التقارير - للأدوار العليا والمشرفين */}
+            {/* الخطة اليومية - للأدوار العليا والمشرفين */}
             {canAccessManagement && (
-              <SidebarMenuLink href="/org/reports" active={pathname?.startsWith('/org/reports') || false}>
+              <SidebarMenuLink href="/org/reports" active={pathname === '/org/reports'}>
                 <FileText className="ml-2 h-5 w-5" />
-                <span><Translate text="sidebar.reports" /></span>
+                <span>الخطة اليومية</span>
               </SidebarMenuLink>
             )}
 
@@ -362,21 +379,51 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
               <span><Translate text="sidebar.meetings" /></span>
             </SidebarMenuLink>
 
-            {/* مؤشرات الأداء - للأدوار العليا فقط */}
+            {/* مؤشرات الأداء والتقارير - للأدوار العليا فقط */}
             {canAccessDashboard && (
-              <SidebarMenuLink href="/org/kpi" active={pathname === '/org/kpi'}>
-                <BarChart3 className="ml-2 h-5 w-5" />
-                <span><Translate text="sidebar.kpi" /></span>
-              </SidebarMenuLink>
+              <CollapsibleSidebarMenu
+                href="/org/kpi"
+                icon={<BarChart3 className="ml-2 h-5 w-5" />}
+                label={<span>مؤشرات الأداء والتقارير</span>}
+                active={pathname?.startsWith('/org/kpi') || false}
+                defaultOpen={pathname?.startsWith('/org/kpi')}
+              >
+                <CollapsibleSidebarSubItem
+                  href="/org/kpi"
+                  icon={<BarChart3 className="ml-2 h-4 w-4" />}
+                  label="مؤشرات الأداء"
+                  active={pathname === '/org/kpi' && !searchParams.get('view')}
+                />
+                <CollapsibleSidebarSubItem
+                  href="/org/kpi?view=weekly-report"
+                  icon={<TrendingUp className="ml-2 h-4 w-4" />}
+                  label="التقرير الأسبوعي"
+                  active={pathname?.startsWith('/org/kpi') && searchParams.get('view') === 'weekly-report'}
+                />
+                <CollapsibleSidebarSubItem
+                  href="/org/kpi?view=monthly-report"
+                  icon={<CalendarDays className="ml-2 h-4 w-4" />}
+                  label="التقرير الشهري"
+                  active={pathname?.startsWith('/org/kpi') && searchParams.get('view') === 'monthly-report'}
+                />
+                <CollapsibleSidebarSubItem
+                  href="/org/kpi?view=yearly-report"
+                  icon={<Calendar className="ml-2 h-4 w-4" />}
+                  label="التقرير السنوي"
+                  active={pathname?.startsWith('/org/kpi') && searchParams.get('view') === 'yearly-report'}
+                />
+              </CollapsibleSidebarMenu>
             )}
 
-            {/* الأهداف والنتائج الرئيسية - للأدوار العليا فقط */}
+            {/* OKR - للأدوار العليا فقط */}
             {canAccessDashboard && (
               <SidebarMenuLink href="/org/okr" active={pathname?.startsWith('/org/okr') || false}>
                 <Target className="ml-2 h-5 w-5" />
-                <span><Translate text="sidebar.okr" /></span>
+                <span>OKR</span>
               </SidebarMenuLink>
             )}
+
+
 
             {canAccessManagement && <SidebarSeparator />}
 

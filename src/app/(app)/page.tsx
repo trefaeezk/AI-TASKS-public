@@ -71,7 +71,7 @@ import { Button } from '@/components/ui/button';
   } = taskPageContext ?? {
       tasks: [],
       filteredTasks: [],
-      categorizedTasks: { overdue: [], today: [], upcoming: [], scheduled: [], pending: [], hold: [], completed: [] },
+      categorizedTasks: { overdue: [], today: [], upcoming: [], scheduled: [], hold: [], cancelled: [], completed: [] },
       selectedCategory: 'today', // Default to 'today'
       setSelectedCategory: () => {},
       updateTaskOptimistic: () => {},
@@ -246,8 +246,9 @@ import { Button } from '@/components/ui/button';
              if (targetCategoryKey) {
                 const newStatus: TaskStatus | null =
                     targetCategoryKey === 'completed' ? 'completed' :
+                    targetCategoryKey === 'cancelled' ? 'cancelled' :
                     targetCategoryKey === 'hold' ? 'hold' :
-                    (targetCategoryKey === 'overdue' || targetCategoryKey === 'today' || targetCategoryKey === 'upcoming' || targetCategoryKey === 'scheduled' || targetCategoryKey === 'pending') ? 'pending' :
+                    (targetCategoryKey === 'overdue' || targetCategoryKey === 'today' || targetCategoryKey === 'upcoming' || targetCategoryKey === 'scheduled') ? 'pending' :
                     null;
 
                 if (newStatus !== null && originalTask.status !== newStatus) {
@@ -370,6 +371,7 @@ import { Button } from '@/components/ui/button';
                                                      onDelete={handleDeleteTask}
                                                      id={task.id}
                                                      getCategoryColor={getCategoryColor}
+                                                     currentCategory={categoryKey}
                                                  />
                                              ))}
                                          </ul>

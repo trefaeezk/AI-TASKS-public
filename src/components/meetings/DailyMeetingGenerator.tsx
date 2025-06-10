@@ -137,7 +137,7 @@ export function DailyMeetingGenerator({ departmentId, onSuccess }: DailyMeetingG
       const today = startOfDay(selectedDate);
       const overdueTasks = tasks.filter(
         task =>
-          task.status === 'pending' &&
+          task.status === 'hold' &&
           task.dueDate &&
           task.dueDate < today
       );
@@ -146,7 +146,7 @@ export function DailyMeetingGenerator({ departmentId, onSuccess }: DailyMeetingG
       const todayEnd = endOfDay(selectedDate);
       const todayTasks = tasks.filter(
         task =>
-          task.status === 'pending' &&
+          task.status === 'hold' &&
           task.dueDate &&
           task.dueDate >= today &&
           task.dueDate <= todayEnd
@@ -159,7 +159,7 @@ export function DailyMeetingGenerator({ departmentId, onSuccess }: DailyMeetingG
 
       const upcomingTasks = tasks.filter(
         task =>
-          task.status === 'pending' &&
+          task.status === 'hold' &&
           task.dueDate &&
           task.dueDate >= tomorrowStart &&
           task.dueDate <= tomorrowEnd

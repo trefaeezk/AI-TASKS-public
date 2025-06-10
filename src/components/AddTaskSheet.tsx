@@ -638,15 +638,17 @@ export function AddTaskSheet({ user, isOpen, onOpenChange, showTrigger = true }:
             </div>
 
              <Separator />
-             <div className="space-y-3 pt-2">
+             <div className="space-y-2 pt-2">
                 <h3 className="text-sm font-medium text-muted-foreground">نقاط التتبع (اختياري)</h3>
-                 <MilestoneTracker
-                     taskId="new-task"
-                     taskDescription={newTaskDescription}
-                     taskDetails={newTaskDetails}
-                     initialMilestones={currentMilestones}
-                     onMilestonesChange={handleMilestonesChange}
-                 />
+                <div className="bg-muted/30 rounded-lg p-3 -mt-1">
+                    <MilestoneTracker
+                        taskId="new-task"
+                        taskDescription={newTaskDescription}
+                        taskDetails={newTaskDetails}
+                        initialMilestones={currentMilestones}
+                        onMilestonesChange={handleMilestonesChange}
+                    />
+                </div>
              </div>
 
            <SheetFooter className="pt-6 mt-4 border-t">

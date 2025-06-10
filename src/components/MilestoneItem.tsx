@@ -171,7 +171,7 @@ export function MilestoneItem({
           )}
         </div>
 
-        <div className="flex items-center gap-x-1 sm:gap-x-1.5 flex-shrink-0 order-last ml-auto sm:ml-0 mt-1 sm:mt-0">
+        <div className="flex items-center gap-x-1 flex-shrink-0 order-last ml-auto sm:ml-0 mt-1 sm:mt-0 flex-wrap sm:flex-nowrap">
             {isEditing ? (
                 <>
                     <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen} modal={true}>
@@ -181,7 +181,7 @@ export function MilestoneItem({
                                 variant={'outline'}
                                 size="sm"
                                 className={cn(
-                                    'h-8 w-auto px-1.5 text-xs font-normal flex items-center gap-1 flex-shrink-0',
+                                    'h-7 w-auto px-1.5 text-xs font-normal flex items-center gap-1 flex-shrink-0',
                                     'border-input hover:bg-accent',
                                     (milestone.dueDate && typeof milestone.dueDate.getMonth === 'function' && !isNaN(milestone.dueDate.getTime()))
                                         ? 'bg-accent/50 text-accent-foreground border-accent'
@@ -190,7 +190,7 @@ export function MilestoneItem({
                                 onClick={handleTriggerClick}
                             >
                                 <CalendarIcon className="h-3 w-3 flex-shrink-0" />
-                                <span className="min-w-[45px] text-center">
+                                <span className="min-w-[35px] sm:min-w-[45px] text-center text-xs">
                                     {milestone.dueDate && typeof milestone.dueDate.getMonth === 'function' && !isNaN(milestone.dueDate.getTime())
                                         ? format(milestone.dueDate, 'd MMM', { locale: ar })
                                         : 'تاريخ؟'}
@@ -218,7 +218,7 @@ export function MilestoneItem({
                             type="number"
                             value={milestone.weight ?? 0}
                             onChange={handleWeightChange}
-                            className="h-8 text-sm w-12 sm:w-14 text-center bg-input px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            className="h-7 text-xs w-10 sm:w-12 text-center bg-input px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             min="0"
                             max="100"
                             aria-label={`وزن النقطة ${milestone.description || 'بدون عنوان'}`}
@@ -237,7 +237,7 @@ export function MilestoneItem({
                         }}
                         aria-label={`حذف النقطة ${milestone.description || 'بدون عنوان'}`}
                     >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-3 w-3" />
                     </Button>
                 </>
             ) : (

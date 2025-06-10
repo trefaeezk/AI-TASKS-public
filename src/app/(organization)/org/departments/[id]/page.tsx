@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { AssignMemberToDepartmentDialog } from '@/components/organization/AssignMemberToDepartmentDialog'; // Import the new dialog
+import { DepartmentMembersManager } from '@/components/organization/DepartmentMembersManager';
 
 interface Department {
   id: string;
@@ -350,43 +351,14 @@ export default function DepartmentDetailsPage() {
         </TabsContent>
 
         <TabsContent value="members">
-          <Card>
-            <CardHeader>
-              <CardTitle>أعضاء القسم</CardTitle>
-              <CardDescription>
-                قائمة بأعضاء القسم وأدوارهم
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {members.length === 0 ? (
-                <p className="text-center text-muted-foreground py-4">لا يوجد أعضاء في هذا القسم</p>
-              ) : (
-                <div className="space-y-4">
-                  {members.map((member) => (
-                    <div key={member.uid} className="flex justify-between items-center border-b pb-2">
-                      <div>
-                        <h3 className="font-medium">{member.displayName || member.name || member.email}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {member.role}
-                        </p>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {member.email}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="mt-6 text-center">
-                {canManageMembers && (
-                  <Button onClick={() => setIsAssignMemberDialogOpen(true)} variant="outline">
-                    <PlusCircle className="ml-2 h-4 w-4" />
-                    تعيين عضو إلى هذا القسم
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <DepartmentMembersManager
+            members={members}
+            departmentId={departmentId}
+            organizationId={organizationId!}
+            canManageMembers={canManageMembers}
+            onMemberUpdated={refreshDepartmentData}
+            onAssignMember={() => setIsAssignMemberDialogOpen(true)}
+          />
         </TabsContent>
 
         <TabsContent value="meetings">

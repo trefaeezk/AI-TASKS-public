@@ -425,6 +425,75 @@ body {
             min-height: 50px;
         }
     }
+
+    /* انتقالات القائمة القابلة للطي */
+    @keyframes collapsible-down {
+        from {
+            height: 0;
+            opacity: 0;
+        }
+        to {
+            height: var(--radix-collapsible-content-height);
+            opacity: 1;
+        }
+    }
+
+    @keyframes collapsible-up {
+        from {
+            height: var(--radix-collapsible-content-height);
+            opacity: 1;
+        }
+        to {
+            height: 0;
+            opacity: 0;
+        }
+    }
+
+    .animate-collapsible-down {
+        animation: collapsible-down 0.2s ease-out;
+    }
+
+    .animate-collapsible-up {
+        animation: collapsible-up 0.2s ease-out;
+    }
+
+    /* تحسينات للشاشات الصغيرة - نقاط التتبع */
+    @media (max-width: 640px) {
+        .milestone-container {
+            @apply space-y-1;
+        }
+
+        .milestone-header {
+            @apply flex-col items-start gap-2;
+        }
+
+        .milestone-buttons {
+            @apply flex-wrap gap-1 w-full justify-start;
+        }
+
+        .milestone-button-compact {
+            @apply h-6 px-1.5 text-xs;
+        }
+
+        .milestone-item-mobile {
+            @apply flex-col items-start gap-2;
+        }
+
+        .milestone-controls-mobile {
+            @apply flex-wrap gap-1 w-full justify-start;
+        }
+    }
+
+    /* تحسينات إضافية للشاشات الصغيرة جداً */
+    @media (max-width: 480px) {
+        .milestone-button-compact {
+            @apply h-5 px-1 text-xs;
+        }
+
+        .milestone-text-mobile {
+            @apply text-xs;
+        }
+    }
 }
 
     

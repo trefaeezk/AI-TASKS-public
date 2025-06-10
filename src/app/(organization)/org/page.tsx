@@ -25,7 +25,9 @@ import {
   AlertCircle,
   Plus,
   ArrowUpRight,
-  Activity
+  Activity,
+  FileText,
+  Target
 } from 'lucide-react';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
@@ -53,7 +55,7 @@ interface DashboardStats {
     completed: number;
     inProgress: number;
     overdue: number;
-    pending: number;
+    hold: number;
     completionRate: number;
   };
   meetings: {
@@ -65,12 +67,14 @@ interface DashboardStats {
 
 interface RecentActivity {
   id: string;
-  type: 'task' | 'meeting' | 'member' | 'department';
+  type: 'task_completed' | 'task_overdue' | 'member_joined' | 'department_created' | 'meeting_scheduled';
   title: string;
   description: string;
   timestamp: Date;
   status?: string;
   priority?: 'low' | 'medium' | 'high';
+  count?: number;
+  department?: string;
 }
 
 export default function OrganizationDashboard() {
@@ -97,7 +101,7 @@ export default function OrganizationDashboard() {
       completed: 0,
       inProgress: 0,
       overdue: 0,
-      pending: 0,
+      hold: 0,
       completionRate: 0,
     },
     meetings: {
@@ -192,7 +196,7 @@ export default function OrganizationDashboard() {
           completed: 0,
           inProgress: 0,
           overdue: 0,
-          pending: 0,
+          hold: 0,
         };
 
         const now = new Date();
@@ -205,8 +209,8 @@ export default function OrganizationDashboard() {
             case 'in_progress':
               taskStats.inProgress++;
               break;
-            case 'pending':
-              taskStats.pending++;
+            case 'hold':
+              taskStats.hold++;
               break;
           }
 
@@ -218,27 +222,92 @@ export default function OrganizationDashboard() {
 
         const completionRate = taskStats.total > 0 ? (taskStats.completed / taskStats.total) * 100 : 0;
 
-        // جلب النشاط الأخير
-        const recentTasksQuery = query(
-          collection(db, 'tasks'),
-          where('organizationId', '==', organizationId),
-          orderBy('createdAt', 'desc'),
-          limit(10)
-        );
-        const recentTasksSnapshot = await getDocs(recentTasksQuery);
+        // جلب النشاط الأخير - تحسين للسياق المؤسسي
+        const activityData: RecentActivity[] = [];
 
-        const activityData: RecentActivity[] = recentTasksSnapshot.docs.map(doc => {
-          const task = doc.data();
-          return {
-            id: doc.id,
-            type: 'task' as const,
-            title: task.title,
-            description: task.description || 'لا يوجد وصف',
-            timestamp: task.createdAt?.toDate() || new Date(),
-            status: task.status,
-            priority: task.priority || 'medium'
-          };
-        });
+        // 1. المهام المكتملة حديثاً
+        try {
+          const completedTasksQuery = query(
+            collection(db, 'tasks'),
+            where('organizationId', '==', organizationId),
+            where('status', '==', 'completed'),
+            orderBy('updatedAt', 'desc'),
+            limit(3)
+          );
+          const completedTasksSnapshot = await getDocs(completedTasksQuery);
+
+          completedTasksSnapshot.docs.forEach(doc => {
+            const task = doc.data();
+            activityData.push({
+              id: `completed_${doc.id}`,
+              type: 'task_completed',
+              title: `تم إكمال: ${task.title}`,
+              description: `بواسطة ${task.assigneeName || 'غير محدد'} في ${task.departmentName || 'قسم غير محدد'}`,
+              timestamp: task.updatedAt?.toDate() || new Date(),
+              department: task.departmentName
+            });
+          });
+        } catch (error) {
+          console.log('Error fetching completed tasks:', error);
+        }
+
+        // 2. المهام المتأخرة
+        try {
+          const now = new Date();
+          const overdueTasksQuery = query(
+            collection(db, 'tasks'),
+            where('organizationId', '==', organizationId),
+            where('status', 'in', ['hold', 'in_progress']),
+            where('dueDate', '<', now),
+            limit(5)
+          );
+          const overdueTasksSnapshot = await getDocs(overdueTasksQuery);
+
+          if (overdueTasksSnapshot.docs.length > 0) {
+            activityData.push({
+              id: 'overdue_tasks',
+              type: 'task_overdue',
+              title: `${overdueTasksSnapshot.docs.length} مهام متأخرة`,
+              description: 'تحتاج إلى متابعة عاجلة',
+              timestamp: now,
+              count: overdueTasksSnapshot.docs.length
+            });
+          }
+        } catch (error) {
+          console.log('Error fetching overdue tasks:', error);
+        }
+
+        // 3. الأعضاء الجدد (آخر 7 أيام)
+        try {
+          const weekAgo = new Date();
+          weekAgo.setDate(weekAgo.getDate() - 7);
+
+          const newMembersQuery = query(
+            collection(db, 'organizationMembers'),
+            where('organizationId', '==', organizationId),
+            where('joinedAt', '>=', weekAgo),
+            orderBy('joinedAt', 'desc'),
+            limit(3)
+          );
+          const newMembersSnapshot = await getDocs(newMembersQuery);
+
+          newMembersSnapshot.docs.forEach(doc => {
+            const member = doc.data();
+            activityData.push({
+              id: `member_${doc.id}`,
+              type: 'member_joined',
+              title: `عضو جديد: ${member.displayName || member.email}`,
+              description: `انضم إلى ${member.departmentName || 'المؤسسة'}`,
+              timestamp: member.joinedAt?.toDate() || new Date(),
+              department: member.departmentName
+            });
+          });
+        } catch (error) {
+          console.log('Error fetching new members:', error);
+        }
+
+        // ترتيب النشاطات حسب التاريخ
+        activityData.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
         setStats({
           members: {
@@ -490,30 +559,33 @@ export default function OrganizationDashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Activity className="ml-2 h-5 w-5" />
-                  النشاط الأخير
+                  النشاط المؤسسي
                 </CardTitle>
-                <CardDescription>آخر الأنشطة في المؤسسة</CardDescription>
+                <CardDescription>المهام المكتملة، التحديثات المهمة، والأعضاء الجدد</CardDescription>
               </CardHeader>
               <CardContent>
                 {recentActivity.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>لا يوجد نشاط حديث</p>
+                    <p>لا يوجد نشاط مؤسسي حديث</p>
+                    <p className="text-sm mt-2">ابدأ بإضافة مهام أو دعوة أعضاء جدد</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {recentActivity.slice(0, 6).map((activity) => (
                       <div key={activity.id} className="flex items-start space-x-3 space-x-reverse">
                         <div className={`p-2 rounded-full ${
-                          activity.type === 'task' ? 'bg-blue-100 text-blue-600' :
-                          activity.type === 'meeting' ? 'bg-green-100 text-green-600' :
-                          activity.type === 'member' ? 'bg-purple-100 text-purple-600' :
-                          'bg-orange-100 text-orange-600'
+                          activity.type === 'task_completed' ? 'bg-green-100 text-green-600' :
+                          activity.type === 'task_overdue' ? 'bg-red-100 text-red-600' :
+                          activity.type === 'member_joined' ? 'bg-purple-100 text-purple-600' :
+                          activity.type === 'department_created' ? 'bg-orange-100 text-orange-600' :
+                          'bg-blue-100 text-blue-600'
                         }`}>
-                          {activity.type === 'task' && <ListTodo className="h-4 w-4" />}
-                          {activity.type === 'meeting' && <Calendar className="h-4 w-4" />}
-                          {activity.type === 'member' && <Users className="h-4 w-4" />}
-                          {activity.type === 'department' && <FolderTree className="h-4 w-4" />}
+                          {activity.type === 'task_completed' && <CheckCircle className="h-4 w-4" />}
+                          {activity.type === 'task_overdue' && <AlertCircle className="h-4 w-4" />}
+                          {activity.type === 'member_joined' && <Users className="h-4 w-4" />}
+                          {activity.type === 'department_created' && <FolderTree className="h-4 w-4" />}
+                          {activity.type === 'meeting_scheduled' && <Calendar className="h-4 w-4" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
@@ -527,7 +599,7 @@ export default function OrganizationDashboard() {
                                 } className="text-xs">
                                   {activity.status === 'completed' ? 'مكتملة' :
                                    activity.status === 'in_progress' ? 'قيد التنفيذ' :
-                                   activity.status === 'pending' ? 'معلقة' :
+                                   activity.status === 'hold' ? 'معلقة' :
                                    activity.status === 'overdue' ? 'متأخرة' : activity.status}
                                 </Badge>
                               )}
@@ -591,8 +663,24 @@ export default function OrganizationDashboard() {
 
                 <Button asChild variant="ghost" className="w-full justify-start">
                   <Link href="/org/reports">
+                    <FileText className="ml-2 h-4 w-4" />
+                    الخطة اليومية
+                    <ArrowUpRight className="mr-2 h-4 w-4" />
+                  </Link>
+                </Button>
+
+                <Button asChild variant="ghost" className="w-full justify-start">
+                  <Link href="/org/kpi">
                     <BarChart3 className="ml-2 h-4 w-4" />
-                    عرض التقارير
+                    مؤشرات الأداء والتقارير
+                    <ArrowUpRight className="mr-2 h-4 w-4" />
+                  </Link>
+                </Button>
+
+                <Button asChild variant="ghost" className="w-full justify-start">
+                  <Link href="/org/okr">
+                    <Target className="ml-2 h-4 w-4" />
+                    OKR
                     <ArrowUpRight className="mr-2 h-4 w-4" />
                   </Link>
                 </Button>
@@ -636,7 +724,7 @@ export default function OrganizationDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">معلقة</p>
-                    <p className="text-2xl font-bold text-orange-600">{stats.tasks.pending}</p>
+                    <p className="text-2xl font-bold text-orange-600">{stats.tasks.hold}</p>
                   </div>
                   <ListTodo className="h-8 w-8 text-orange-500" />
                 </div>
@@ -662,7 +750,7 @@ export default function OrganizationDashboard() {
               <CardDescription>آخر المهام المضافة والمحدثة</CardDescription>
             </CardHeader>
             <CardContent>
-              {recentActivity.filter(a => a.type === 'task').length === 0 ? (
+              {recentActivity.filter(a => a.type === 'task_completed' || a.type === 'task_overdue').length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <ListTodo className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>لا توجد مهام حديثة</p>
@@ -675,7 +763,7 @@ export default function OrganizationDashboard() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {recentActivity.filter(a => a.type === 'task').slice(0, 8).map((task) => (
+                  {recentActivity.filter(a => a.type === 'task_completed' || a.type === 'task_overdue').slice(0, 8).map((task) => (
                     <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
                       <div className="flex items-center space-x-3 space-x-reverse">
                         <div className={`p-2 rounded-full ${
@@ -698,7 +786,7 @@ export default function OrganizationDashboard() {
                         }>
                           {task.status === 'completed' ? 'مكتملة' :
                            task.status === 'in_progress' ? 'قيد التنفيذ' :
-                           task.status === 'pending' ? 'معلقة' :
+                           task.status === 'hold' ? 'معلقة' :
                            task.status === 'overdue' ? 'متأخرة' : task.status}
                         </Badge>
                         <span className="text-xs text-muted-foreground">

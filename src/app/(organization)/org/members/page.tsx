@@ -40,6 +40,7 @@ import {
 import { Translate } from '@/components/Translate';
 import { DeleteUserDialog } from '@/components/admin/DeleteUserDialog';
 import { MembersStats, MembersFilters, MembersList } from '@/components/organization';
+import { IndividualMembersManager } from '@/components/organization/IndividualMembersManager';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
@@ -246,7 +247,7 @@ export default function MembersPage() {
                 email: userData?.email || memberData.email || 'غير متاح',
 
                 // 👤 الاسم: من Firestore (أكثر تفصيلاً)
-                name: userData?.name || userData?.displayName || memberData.displayName || 'مستخدم غير معروف',
+                name: userData?.name || userData?.displayName || memberData.name || memberData.displayName || 'مستخدم غير معروف',
 
                 // 🎭 الدور: من عضوية المؤسسة (أولوية)
                 role: memberData.role || userData?.role || 'isOrgAssistant',
@@ -270,7 +271,7 @@ export default function MembersPage() {
               return {
                 uid: memberId,
                 email: memberData.email || 'غير متاح',
-                name: memberData.displayName || 'مستخدم غير معروف',
+                name: memberData.name || memberData.displayName || 'مستخدم غير معروف',
                 role: memberData.role || 'assistant',
                 departmentId: memberData.departmentId || null,
                 joinedAt: memberData.joinedAt?.toDate() || new Date(),
@@ -547,6 +548,21 @@ export default function MembersPage() {
                   </p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* إدارة الأفراد بدون قسم */}
+          {activeTab === 'individuals' && (isOwner || isAdmin) && (
+            <div className="mb-6">
+              <IndividualMembersManager
+                members={members}
+                departments={departments}
+                organizationId={organizationId!}
+                canManageMembers={isOwner || isAdmin}
+                onMemberUpdated={() => {
+                  // سيتم تحديث البيانات تلقائياً عبر onSnapshot
+                }}
+              />
             </div>
           )}
 

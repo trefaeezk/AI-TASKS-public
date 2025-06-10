@@ -5,7 +5,7 @@ import type { TaskType, DurationUnit, TaskStatus, PriorityLevel, Milestone, Mile
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar as CalendarIcon, ChevronDown, ChevronUp, Clock, AlertTriangle, CheckCircle2, PauseCircle, MoreHorizontal, Edit, Trash2, GripVertical, Tag, CircleHelp, Info, ListChecks, Share2, Target, Percent, User } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronDown, ChevronUp, Clock, AlertTriangle, CheckCircle2, MoreHorizontal, Edit, Trash2, GripVertical, Tag, CircleHelp, Info, ListChecks, Share2, Target, User, X } from 'lucide-react';
 import { CreateSubtasksDialog } from './CreateSubtasksDialog';
 import { SubtasksList } from './SubtasksList';
 import { AssignTaskToMembersDialog } from './AssignTaskToMembersDialog';
@@ -29,9 +29,13 @@ import { doc, updateDoc, Timestamp, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
 import { v4 as uuidv4 } from 'uuid';
+import { updateParentTaskComprehensive, updateSubtasksFromParent, calculateTaskStatusFromMilestones, resetMilestonesOnReopen } from '@/services/parentTaskUpdater';
 import { OkrTaskBadge } from './okr/OkrTaskBadge';
 import { TaskKeyResultBadge } from './okr/TaskKeyResultBadge';
+import { CompactAssigneesList } from './CompactAssigneesList';
 import { useAuth } from '@/context/AuthContext';
+import { ReopenTaskDialog } from './ReopenTaskDialog';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface TaskCardTempProps {
   task: TaskType;
@@ -41,6 +45,7 @@ interface TaskCardTempProps {
   onDelete?: (taskId: string) => void;
   getCategoryColor?: (categoryName?: string) => string | undefined;
   aiReasoning?: string;
+  currentCategory?: string; // إضافة الفئة الحالية لتحديد الخيارات المناسبة
 }
 
 // Helper to safely format date
@@ -94,43 +99,127 @@ const calculateTaskProgress = (milestones?: Milestone[]): number => {
     return Math.round((completedWeight / totalWeight) * 100);
 };
 
-export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCategoryColor, aiReasoning }: TaskCardTempProps) {
+const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, getCategoryColor, aiReasoning, currentCategory }: TaskCardTempProps) => {
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   const [isMilestonesExpanded, setIsMilestonesExpanded] = useState(false);
   const [showSubtasks, setShowSubtasks] = useState(false);
-  const [assigneeName, setAssigneeName] = useState<string | null>(null);
+  const [isReopenDialogOpen, setIsReopenDialogOpen] = useState(false);
+
   const { toast } = useToast();
-  const { userClaims } = useAuth();
+  const { user, userClaims } = useAuth();
 
-
-
-  // جلب اسم المكلف بالمهمة للمؤسسات فقط
-  useEffect(() => {
-    const fetchAssigneeName = async () => {
-
-
-      if (!task.assignedToUserId || !task.organizationId) {
-        setAssigneeName(null);
-        return;
-      }
-
-      try {
-        const userDoc = await getDoc(doc(db, 'users', task.assignedToUserId));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const name = userData.displayName || userData.name || userData.email || 'مستخدم';
-          setAssigneeName(name);
-        } else {
-          setAssigneeName('مستخدم غير معروف');
-        }
-      } catch (error) {
-        console.error('Error fetching assignee name:', error);
-        setAssigneeName(null);
-      }
+  // دالة لتحديد الخيارات المتاحة حسب الفئة الحالية فقط
+  const getAvailableActions = () => {
+    const actions = {
+      canComplete: false,
+      canReopen: false,
+      canHold: false,
+      canActivate: false,
+      canRestart: false,
+      canCancel: false
     };
 
-    fetchAssigneeName();
-  }, [task.assignedToUserId, task.organizationId]);
+    // فحص الصلاحيات أولاً
+    const canModifyTask = () => {
+      // مالك المؤسسة وأدمن المؤسسة يمكنهم تعديل جميع المهام
+      if (userClaims?.isOrgOwner || userClaims?.isOrgAdmin) {
+        return true;
+      }
+
+      // المهندس والمشرف يمكنهم تعديل مهام قسمهم والمهام المُسندة إليهم
+      if (userClaims?.isOrgEngineer || userClaims?.isOrgSupervisor) {
+        // يمكنهم تعديل مهام قسمهم
+        if (task.departmentId === userClaims?.departmentId) {
+          return true;
+        }
+        // أو المهام المُسندة إليهم شخصياً
+        if (task.assignedToUserId === user?.uid ||
+            (task.assignedToUserIds && task.assignedToUserIds.includes(user?.uid))) {
+          return true;
+        }
+        // أو المهام التي أنشأوها
+        if (task.userId === user?.uid || task.createdBy === user?.uid) {
+          return true;
+        }
+        return false;
+      }
+
+      // الفني والمساعد الفني يمكنهم تعديل المهام المُسندة إليهم فقط
+      if (userClaims?.isOrgTechnician || userClaims?.isOrgAssistant) {
+        return task.assignedToUserId === user?.uid ||
+               (task.assignedToUserIds && task.assignedToUserIds.includes(user?.uid)) ||
+               (task.userId === user?.uid || task.createdBy === user?.uid);
+      }
+
+      return false;
+    };
+
+    // إذا لم يكن للمستخدم صلاحية تعديل المهمة، لا توجد إجراءات متاحة
+    if (!canModifyTask()) {
+      console.log(`[PERMISSIONS] User ${userClaims?.uid} cannot modify task ${task.id}`, {
+        userRole: {
+          isOrgOwner: userClaims?.isOrgOwner,
+          isOrgAdmin: userClaims?.isOrgAdmin,
+          isOrgEngineer: userClaims?.isOrgEngineer,
+          isOrgSupervisor: userClaims?.isOrgSupervisor,
+          isOrgTechnician: userClaims?.isOrgTechnician,
+          isOrgAssistant: userClaims?.isOrgAssistant
+        },
+        taskInfo: {
+          departmentId: task.departmentId,
+          assignedToUserId: task.assignedToUserId,
+          assignedToUserIds: task.assignedToUserIds,
+          userId: task.userId,
+          createdBy: task.createdBy
+        },
+        userInfo: {
+          uid: user?.uid,
+          departmentId: userClaims?.departmentId
+        }
+      });
+      return actions;
+    }
+
+    // منطق حسب الفئة الحالية
+    switch (currentCategory) {
+      case 'completed':
+        // في فئة المكتملة: إعادة فتح فقط
+        actions.canReopen = true;
+        break;
+
+      case 'cancelled':
+        // في فئة الملغية: إعادة تشغيل فقط
+        actions.canRestart = true;
+        break;
+
+      case 'hold':
+        // في فئة المعلقة: إكمال + إعادة تفعيل + إلغاء
+        actions.canComplete = true;
+        actions.canActivate = true;
+        actions.canCancel = true;
+        break;
+
+      case 'today':
+      case 'upcoming':
+      case 'scheduled':
+      case 'overdue':
+      default:
+        // في الفئات النشطة: إكمال + تعليق + إلغاء
+        actions.canComplete = true;
+        actions.canHold = true;
+        actions.canCancel = true;
+        break;
+    }
+
+    console.log(`[PERMISSIONS] Available actions for task ${task.id}:`, actions);
+    return actions;
+  };
+
+  const availableActions = getAvailableActions();
+
+
+
+  // تم استبدال منطق جلب اسم المكلف بمكون TaskAssignees
 
   const {
       attributes,
@@ -170,9 +259,9 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
     return isDetailsExpanded ? taskDetails : getFirstLine(taskDetails);
   }, [isDetailsExpanded, taskDetails]);
 
-  const isOverdue = task.status !== 'completed' && task.status !== 'hold' && task.dueDate && task.dueDate < new Date(new Date().setHours(0,0,0,0));
+  const isOverdue = task.status !== 'completed' && task.status !== 'cancelled' && task.dueDate && task.dueDate < new Date(new Date().setHours(0,0,0,0));
   const isCompleted = task.status === 'completed';
-  const isOnHold = task.status === 'hold';
+  const isCancelled = task.status === 'cancelled';
 
   const toggleDetailsExpand = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -200,7 +289,7 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
 
   const getBorderColor = (): string => {
     if (isCompleted) return 'border-status-completed';
-    if (isOnHold) return 'border-muted-foreground/50';
+    if (isCancelled) return 'border-destructive';
     if (isOverdue) return 'border-status-urgent';
 
     switch (priority) {
@@ -213,13 +302,47 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
     }
   };
 
-  const handleStatusChangeLocal = (e: React.MouseEvent, newStatus: TaskStatus) => {
+  const handleStatusChangeLocal = async (e: React.MouseEvent, newStatus: TaskStatus) => {
      e.stopPropagation();
+
+    // إذا كانت إعادة فتح (من مكتملة أو ملغية إلى معلقة)، اعرض الحوار
+    if (newStatus === 'pending' && (task.status === 'completed' || task.status === 'cancelled')) {
+      setIsReopenDialogOpen(true);
+      return;
+    }
+
+    // للحالات الأخرى، نفذ التغيير مباشرة
+    await executeStatusChange(newStatus);
+  };
+
+  const executeStatusChange = async (newStatus: TaskStatus, resetMilestones: boolean = false) => {
     if (task?.id && onStatusChange) {
       onStatusChange(task.id, newStatus);
+
+      // إذا كانت إعادة فتح وطُلب إعادة تعيين نقاط التتبع
+      if (newStatus === 'pending' && (task.status === 'completed' || task.status === 'cancelled') && resetMilestones) {
+        try {
+          await resetMilestonesOnReopen(task.id);
+          console.log(`Reset milestones for reopened task ${task.id}`);
+        } catch (error) {
+          console.error('Error resetting milestones on reopen:', error);
+        }
+      }
+
+      // تحديث المهام الفرعية إذا كانت هذه مهمة أم (لها مهام فرعية)
+      try {
+        await updateSubtasksFromParent(task.id, newStatus);
+        console.log(`Updated subtasks for parent task ${task.id} with new status: ${newStatus}`);
+      } catch (error) {
+        console.error('Error updating subtasks from parent status change:', error);
+      }
     } else {
         console.error("Task ID is missing or onStatusChange not provided.");
     }
+  };
+
+  const handleReopenConfirm = (resetMilestones: boolean) => {
+    executeStatusChange('pending', resetMilestones);
   };
 
   const handleEditLocal = (e: React.MouseEvent) => {
@@ -240,6 +363,16 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
 
    const handleMilestonesChange = useCallback(async (updatedMilestones: Milestone[]) => {
        if (!task?.id) return;
+
+       console.log(`[MILESTONE CHANGE] Task ${task.id} milestone update started`, {
+         taskId: task.id,
+         taskDescription: task.description,
+         parentTaskId: task.parentTaskId,
+         taskContext: task.taskContext,
+         departmentId: task.departmentId,
+         organizationId: task.organizationId,
+         milestonesCount: updatedMilestones.length
+       });
 
        const taskDocRef = doc(db, 'tasks', task.id);
        try {
@@ -264,7 +397,45 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
                      };
                  });
              const milestonesToSave = cleanMilestones.length > 0 ? cleanMilestones : null;
-             await updateDoc(taskDocRef, { milestones: milestonesToSave });
+
+             // حساب الحالة الجديدة للمهمة بناءً على نقاط التتبع
+             const newTaskStatus = calculateTaskStatusFromMilestones(cleanMilestones, task.status);
+
+             // تحديث المهمة بنقاط التتبع المعدلة والحالة الجديدة
+             const updateData: any = {
+               milestones: milestonesToSave,
+               updatedAt: Timestamp.now()
+             };
+
+             if (newTaskStatus !== task.status) {
+               updateData.status = newTaskStatus;
+             }
+
+             await updateDoc(taskDocRef, updateData);
+
+             // تحديث المهمة الرئيسية إذا كانت هذه مهمة فرعية
+             if (task.parentTaskId) {
+               try {
+                 console.log(`[MILESTONE UPDATE] Updating parent task ${task.parentTaskId} for subtask ${task.id}`);
+                 await updateParentTaskComprehensive(task.parentTaskId);
+                 console.log(`[MILESTONE UPDATE] Successfully updated parent task ${task.parentTaskId}`);
+               } catch (error) {
+                 console.error('Error updating parent task:', error);
+               }
+             } else {
+               console.log(`[MILESTONE UPDATE] Task ${task.id} has no parent task, skipping parent update`);
+             }
+
+             // تحديث المهام الفرعية إذا كانت هذه مهمة أم وتغيرت حالتها
+             if (newTaskStatus !== task.status) {
+               try {
+                 await updateSubtasksFromParent(task.id, newTaskStatus);
+                 console.log(`Updated subtasks for parent task ${task.id} due to milestone changes, new status: ${newTaskStatus}`);
+               } catch (error) {
+                 console.error('Error updating subtasks from milestone changes:', error);
+               }
+             }
+
              console.log(`[TaskCardTemp ${task.id}] Milestones updated successfully in Firestore.`);
              toast({
                  title: 'تم تحديث نقاط التتبع',
@@ -292,7 +463,7 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
       <Card className={cn(
           "mb-3 shadow-md border-l-[6px] rounded-lg overflow-hidden bg-card transition-opacity duration-300 relative group/task-card",
           getBorderColor(),
-          (isCompleted || isOnHold) && "opacity-60 hover:opacity-100"
+          (isCompleted || isCancelled) && "opacity-60 hover:opacity-100"
       )}>
          {/* Drag Handle */}
           <button
@@ -309,7 +480,7 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
 
         <CardHeader className="pb-2 pt-3 px-4 pr-8 flex flex-row items-start justify-between">
            <div className="flex-1 mr-2 space-y-1 min-w-0">
-              <CardTitle className={cn("text-base font-semibold break-words", isCompleted && "line-through text-muted-foreground")}>
+              <CardTitle className={cn("text-base font-semibold break-words", (isCompleted || isCancelled) && "line-through text-muted-foreground")}>
               {task.description}
               </CardTitle>
               <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-xs">
@@ -319,10 +490,11 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
                         متأخرة
                     </Badge>
                  )}
-                 {isOnHold && !isCompleted && (
-                    <Badge variant="secondary" className="py-0.5 px-1.5 h-auto text-xs">
-                        <PauseCircle className="ml-1 h-3 w-3" />
-                        معلقة
+
+                 {isCancelled && (
+                    <Badge variant="destructive" className="py-0.5 px-1.5 h-auto text-xs">
+                        <X className="ml-1 h-3 w-3" />
+                        ملغية
                     </Badge>
                  )}
                  {isCompleted && (
@@ -331,7 +503,7 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
                          مكتملة
                      </Badge>
                  )}
-                 {priority !== undefined && priority !== null && !isCompleted && !isOnHold && !isOverdue && (
+                 {priority !== undefined && priority !== null && !isCompleted && !isOverdue && (
                       <TooltipProvider delayDuration={100}>
                           <Tooltip>
                               <TooltipTrigger asChild>
@@ -363,30 +535,57 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
                       </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()} >
-                      {onStatusChange && task.status !== 'completed' && (
-                          <DropdownMenuItem onClick={(e) => handleStatusChangeLocal(e, 'completed')} className="text-status-completed focus:bg-status-completed/10 focus:text-status-completed cursor-pointer">
+                      {/* خيار الإكمال */}
+                      {onStatusChange && availableActions.canComplete && (
+                          <DropdownMenuItem onClick={(e) => handleStatusChangeLocal(e, 'completed')} className="text-green-700 hover:text-green-800 focus:bg-green-50 hover:bg-green-50 focus:text-green-800 cursor-pointer">
                               <CheckCircle2 className="ml-2 h-4 w-4" />
                               <span>وضع علامة كمكتملة</span>
                           </DropdownMenuItem>
                        )}
-                      {onStatusChange && task.status === 'completed' && (
-                          <DropdownMenuItem onClick={(e) => handleStatusChangeLocal(e, 'pending')} className="cursor-pointer">
+
+                      {/* خيار إعادة الفتح للمهام المكتملة */}
+                      {onStatusChange && availableActions.canReopen && (
+                          <DropdownMenuItem onClick={(e) => handleStatusChangeLocal(e, 'pending')} className="text-blue-700 hover:text-blue-800 focus:bg-blue-50 hover:bg-blue-50 focus:text-blue-800 cursor-pointer">
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
                               <span>إعادة فتح</span>
                           </DropdownMenuItem>
                       )}
-                      {onStatusChange && task.status !== 'hold' && task.status !== 'completed' && (
-                          <DropdownMenuItem onClick={(e) => handleStatusChangeLocal(e, 'hold')} className="text-muted-foreground focus:bg-gray-500/10 focus:text-muted-foreground cursor-pointer">
-                              <PauseCircle className="ml-2 h-4 w-4" />
+
+                      {/* خيار إعادة التشغيل للمهام الملغية */}
+                      {onStatusChange && availableActions.canRestart && (
+                          <DropdownMenuItem onClick={(e) => handleStatusChangeLocal(e, 'pending')} className="text-emerald-700 hover:text-emerald-800 focus:bg-emerald-50 hover:bg-emerald-50 focus:text-emerald-800 cursor-pointer">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg>
+                              <span>إعادة تشغيل المهمة</span>
+                          </DropdownMenuItem>
+                      )}
+
+                      {/* خيار التعليق للمهام النشطة */}
+                      {onStatusChange && availableActions.canHold && (
+                          <DropdownMenuItem onClick={(e) => handleStatusChangeLocal(e, 'hold')} className="text-amber-700 hover:text-amber-800 focus:bg-amber-50 hover:bg-amber-50 focus:text-amber-800 cursor-pointer">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><rect width="6" height="14" x="4" y="5" rx="2"/><rect width="6" height="14" x="14" y="5" rx="2"/></svg>
                               <span>تعليق المهمة</span>
                           </DropdownMenuItem>
                       )}
-                      {onStatusChange && task.status === 'hold' && (
-                          <DropdownMenuItem onClick={(e) => handleStatusChangeLocal(e, 'pending')} className="cursor-pointer">
-                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                               <span>استئناف المهمة</span>
+
+                      {/* خيار إعادة التفعيل للمهام المعلقة */}
+                      {onStatusChange && availableActions.canActivate && (
+                          <DropdownMenuItem onClick={(e) => handleStatusChangeLocal(e, 'in-progress')} className="text-indigo-700 hover:text-indigo-800 focus:bg-indigo-50 hover:bg-indigo-50 focus:text-indigo-800 cursor-pointer">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><polygon points="5,3 19,12 5,21"/></svg>
+                              <span>إعادة تفعيل المهمة</span>
                           </DropdownMenuItem>
-                       )}
+                      )}
+
+                      {/* خيار الإلغاء */}
+                      {onStatusChange && availableActions.canCancel && (
+                          <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={(e) => handleStatusChangeLocal(e, 'cancelled')} className="text-red-700 hover:text-red-800 focus:bg-red-50 hover:bg-red-50 focus:text-red-800 cursor-pointer">
+                                  <X className="ml-2 h-4 w-4" />
+                                  <span>إلغاء المهمة</span>
+                              </DropdownMenuItem>
+                          </>
+                      )}
+
                        {onStatusChange && (onEdit || onDelete) && <DropdownMenuSeparator />}
                        {onEdit && (
                            <DropdownMenuItem onClick={handleEditLocal} className="cursor-pointer">
@@ -419,24 +618,23 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
                     الاستحقاق: {dueDateFormatted}
                   </span>
               )}
-              {hasMilestones && !isCompleted && !isOnHold && (
-                  <span className="flex items-center whitespace-nowrap text-primary">
-                      <Percent className="h-3 w-3 ml-1" />
-                      نقاط التتبع: {milestoneProgress}%
-                  </span>
-              )}
+
               {durationFormatted && (
                   <span className="flex items-center whitespace-nowrap">
                   <Clock className="h-3 w-3 ml-1" />
                   المدة: {durationFormatted}
                   </span>
               )}
-              {/* عرض المكلف بالمهمة للمؤسسات فقط */}
-              {task.organizationId && task.assignedToUserId && (
-                  <span className="flex items-center whitespace-nowrap text-blue-600 dark:text-blue-400">
-                  <User className="h-3 w-3 ml-1" />
-                  {assigneeName || 'جاري التحميل...'}
-                  </span>
+              {/* عرض المكلفين بالمهمة للمؤسسات فقط */}
+              {task.organizationId && (task.assignedToUserId || task.assignedToUserIds) && (
+                  <CompactAssigneesList
+                    assignedToUserId={task.assignedToUserId}
+                    assignedToUserIds={task.assignedToUserIds}
+                    organizationId={task.organizationId}
+                    className="text-blue-600 dark:text-blue-400"
+                    maxVisible={2}
+                    size="md"
+                  />
               )}
                {taskCategoryName && (
                   <Badge variant="outline" className="py-0 px-1.5 h-auto text-xs font-normal" style={categoryColor ? { borderColor: categoryColor, color: categoryColor } : {}}>
@@ -507,7 +705,7 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
 
            {hasMilestones && ( // Always show milestone section if milestones exist
                <div className="pt-2 border-t border-border mt-2">
-                    {!isMilestonesExpanded && !isCompleted && !isOnHold && ( // Show progress only if not expanded and task is active
+                    {!isMilestonesExpanded && !isCompleted && ( // Show progress only if not expanded and task is active
                         <div className="flex items-center gap-2 mb-1">
                             <Progress value={milestoneProgress} className="h-1.5 flex-1 bg-secondary/20 dark:bg-secondary/30" indicatorClassName="bg-primary" />
                             <span className="text-xs font-medium text-muted-foreground">{milestoneProgress}%</span>
@@ -541,7 +739,7 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
                </div>
            )}
 
-          {task.priorityReason && !isCompleted && !isOnHold && (
+          {task.priorityReason && !isCompleted && (
             <TooltipProvider delayDuration={100}>
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -592,6 +790,30 @@ export function TaskCardTemp({ task, id, onStatusChange, onEdit, onDelete, getCa
             )}
         </CardContent>
       </Card>
+
+      {/* حوار إعادة الفتح */}
+      <ReopenTaskDialog
+        isOpen={isReopenDialogOpen}
+        onOpenChange={setIsReopenDialogOpen}
+        onConfirm={handleReopenConfirm}
+        taskDescription={task.description}
+        hasMilestones={hasMilestones}
+      />
     </li>
   );
-}
+};
+
+// استخدام React.memo لتجنب إعادة الرسم غير الضرورية
+export const TaskCardTemp = React.memo(TaskCardTempComponent, (prevProps, nextProps) => {
+  // مقارنة مخصصة لتحديد متى يجب إعادة الرسم
+  return (
+    prevProps.task.id === nextProps.task.id &&
+    prevProps.task.status === nextProps.task.status &&
+    prevProps.task.description === nextProps.task.description &&
+    prevProps.task.priority === nextProps.task.priority &&
+    prevProps.task.dueDate === nextProps.task.dueDate &&
+    JSON.stringify(prevProps.task.milestones) === JSON.stringify(nextProps.task.milestones) &&
+    JSON.stringify(prevProps.task.assignedToUserIds) === JSON.stringify(nextProps.task.assignedToUserIds) &&
+    prevProps.currentCategory === nextProps.currentCategory
+  );
+});

@@ -6,11 +6,11 @@ import type { ReactNode, Dispatch, SetStateAction } from 'react';
 import React, { createContext, useContext, useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import type { TaskType, TaskStatus } from '@/types/task';
 import { startOfDay, isPast, isToday, isWithinInterval, isFuture, differenceInDays, startOfMonth, endOfMonth, subMonths, endOfDay } from 'date-fns'; // Added date functions
-import { AlertTriangle, CalendarDays, CalendarCheck2, ListTodo, PauseCircle, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, CalendarDays, CalendarCheck2, ListTodo, CheckCircle2, X } from 'lucide-react';
 
 // Define category types and order
-export type TaskCategory = 'overdue' | 'today' | 'upcoming' | 'scheduled' | 'pending' | 'hold' | 'completed';
-export const categoryOrder: TaskCategory[] = ['overdue', 'today', 'upcoming', 'scheduled', 'pending', 'hold', 'completed'];
+export type TaskCategory = 'overdue' | 'today' | 'upcoming' | 'scheduled' | 'hold' | 'cancelled' | 'completed';
+export const categoryOrder: TaskCategory[] = ['overdue', 'today', 'upcoming', 'scheduled', 'hold', 'cancelled', 'completed'];
 
 // Define category display info
 export const categoryInfo: Record<TaskCategory, { title: string; icon: React.ElementType; color: string }> = {
@@ -18,38 +18,74 @@ export const categoryInfo: Record<TaskCategory, { title: string; icon: React.Ele
     today: { title: 'اليوم', icon: CalendarDays, color: 'text-blue-500' },
     upcoming: { title: 'قادمة', icon: CalendarCheck2, color: 'text-amber-500' },
     scheduled: { title: 'مجدولة', icon: ListTodo, color: 'text-purple-500' },
-    pending: { title: 'قيد الانتظار', icon: ListTodo, color: 'text-gray-500' }, // Represents tasks without specific dates fitting other categories
-    hold: { title: 'معلقة', icon: PauseCircle, color: 'text-gray-500' },
+    hold: { title: 'معلقة', icon: ListTodo, color: 'text-gray-500' }, // Represents tasks without specific dates fitting other categories or on hold
+
+    cancelled: { title: 'ملغية', icon: X, color: 'text-destructive' },
     completed: { title: 'مكتملة', icon: CheckCircle2, color: 'text-status-completed' },
 };
 
-// Function to determine the category of a task
+// دالة تحديد فئة المهمة بناءً على الحالة والتاريخ
 const getTaskCategory = (task: TaskType): TaskCategory => {
      const todayStart = startOfDay(new Date());
-     // Ensure dates are valid Date objects
-     const startDate = task.startDate instanceof Date && !isNaN(task.startDate.getTime()) ? startOfDay(task.startDate) : null;
-     const dueDate = task.dueDate instanceof Date && !isNaN(task.dueDate.getTime()) ? startOfDay(task.dueDate) : null;
 
-     if (task.status === 'completed') return 'completed';
-     if (task.status === 'hold') return 'hold';
+     // التأكد من صحة التواريخ وتحويلها إذا لزم الأمر
+     let startDate: Date | null = null;
+     let dueDate: Date | null = null;
 
-     // If pending status, categorize based on dates
-     if (task.status === 'pending') {
-         if (dueDate && isPast(dueDate) && !isToday(dueDate)) return 'overdue';
-         if (dueDate && isToday(dueDate)) return 'today'; // Explicitly check due today first
-         if (startDate && isToday(startDate)) return 'today'; // Check start today
-         // Check if today falls between start and due date (inclusive)
-         if (startDate && dueDate && isWithinInterval(todayStart, { start: startDate, end: dueDate })) return 'today';
-         // Check upcoming (within 7 days)
-         if ((startDate && isFuture(startDate) && differenceInDays(startDate, todayStart) <= 7) ||
-             (dueDate && isFuture(dueDate) && differenceInDays(dueDate, todayStart) <= 7)) return 'upcoming';
-         // Check scheduled (more than 7 days away)
-         if ((startDate && isFuture(startDate) && differenceInDays(startDate, todayStart) > 7) ||
-             (dueDate && isFuture(dueDate) && differenceInDays(dueDate, todayStart) > 7)) return 'scheduled';
+     if (task.startDate) {
+         if (task.startDate instanceof Date && !isNaN(task.startDate.getTime())) {
+             startDate = startOfDay(task.startDate);
+         } else if (typeof task.startDate === 'object' && 'toDate' in task.startDate) {
+             // Firestore Timestamp
+             startDate = startOfDay((task.startDate as any).toDate());
+         }
      }
 
-     // Default to 'pending' if no other category fits
-     return 'pending';
+     if (task.dueDate) {
+         if (task.dueDate instanceof Date && !isNaN(task.dueDate.getTime())) {
+             dueDate = startOfDay(task.dueDate);
+         } else if (typeof task.dueDate === 'object' && 'toDate' in task.dueDate) {
+             // Firestore Timestamp
+             dueDate = startOfDay((task.dueDate as any).toDate());
+         }
+     }
+
+     // المهام المكتملة والملغية لها فئات ثابتة
+     if (task.status === 'completed') return 'completed';
+     if (task.status === 'cancelled') return 'cancelled';
+
+     // المهام المعلقة تذهب دائماً إلى فئة "المعلقة" بغض النظر عن التاريخ
+     if (task.status === 'hold') return 'hold';
+
+     // للمهام النشطة، نصنف حسب التاريخ بغض النظر عن الحالة
+     // فائتة: تاريخ الاستحقاق مضى ولم يعد اليوم
+     if (dueDate && isPast(dueDate) && !isToday(dueDate)) return 'overdue';
+
+     // اليوم: تستحق اليوم أو تبدأ اليوم أو اليوم ضمن فترة المهمة
+     if (dueDate && isToday(dueDate)) return 'today';
+     if (startDate && isToday(startDate)) return 'today';
+     if (startDate && dueDate && isWithinInterval(todayStart, { start: startDate, end: dueDate })) return 'today';
+
+     // قادمة: خلال 7 أيام
+     if ((startDate && isFuture(startDate) && differenceInDays(startDate, todayStart) <= 7) ||
+         (dueDate && isFuture(dueDate) && differenceInDays(dueDate, todayStart) <= 7)) return 'upcoming';
+
+     // مجدولة: أكثر من 7 أيام
+     if ((startDate && isFuture(startDate) && differenceInDays(startDate, todayStart) > 7) ||
+         (dueDate && isFuture(dueDate) && differenceInDays(dueDate, todayStart) > 7)) return 'scheduled';
+
+     // إذا لم يكن هناك تواريخ، نصنف المهمة كـ "اليوم" للمهام النشطة
+     if (!startDate && !dueDate && (task.status === 'pending' || task.status === 'in-progress' || !task.status)) {
+         return 'today';
+     }
+
+     // افتراضي: اليوم بدلاً من معلقة للمهام النشطة
+     if (task.status === 'pending' || task.status === 'in-progress') {
+         return 'today';
+     }
+
+     // افتراضي: معلقة إذا لم تناسب أي فئة أخرى
+     return 'hold';
 };
 
 // Interface for Date Range Filter
@@ -127,85 +163,65 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
        setDateFilter(value);
    };
 
-   // Set default date filter based on selected category, only if user hasn't set one
+   // تعيين فلتر التاريخ الافتراضي عند تغيير الفئة
    useEffect(() => {
        if (hasUserSetDateFilter.current) {
-           // Reset the flag when category changes, allowing default to apply again if needed
-           // Or keep the user's filter? Let's reset the flag for now.
-           // hasUserSetDateFilter.current = false;
-           return; // Don't override user's manual filter setting immediately
+           return; // لا نغير الفلتر إذا قام المستخدم بتعيينه يدوياً
        }
 
-       console.log(`Applying default date filter for category: ${selectedCategory}`);
-       let defaultStartDate: Date | null = null;
-       let defaultEndDate: Date | null = null;
-
-       // تعيين الفلتر الافتراضي ليكون شهر ماضي وشهر لاحق من تاريخ اليوم لجميع الفئات
+       // تعيين الفلتر الافتراضي: شهر ماضي وشهر لاحق من اليوم
        const now = new Date();
-       defaultStartDate = new Date();
-       defaultEndDate = new Date();
+       const defaultStartDate = new Date();
+       const defaultEndDate = new Date();
        defaultStartDate.setDate(now.getDate() - 30);
        defaultEndDate.setDate(now.getDate() + 30);
 
-       console.log(` - Default date filter for ${selectedCategory}: ${defaultStartDate} to ${defaultEndDate}`);
-
        setDateFilter({ startDate: defaultStartDate, endDate: defaultEndDate });
 
-   }, [selectedCategory]); // Run when selectedCategory changes
+   }, [selectedCategory]);
 
-   // Reset user filter flag when category changes so defaults can apply again
+   // إعادة تعيين علامة فلتر المستخدم عند تغيير الفئة
     useEffect(() => {
         hasUserSetDateFilter.current = false;
     }, [selectedCategory]);
 
-  // Update state if initialTasks prop changes (e.g., due to TaskDataLoader update)
+  // تحديث المهام عند تغيير البيانات الأولية
   useEffect(() => {
-    console.log("TaskPageProvider: initialTasks prop updated, setting tasks state.", initialTasks.length);
     setTasks(initialTasks);
     if (initialTasks.length === 0) {
         initialCategorySet.current = false;
     }
-  }, [initialTasks]); // Only depend on initialTasks
+  }, [initialTasks]);
 
-   // Apply filters
+   // تطبيق الفلاتر على المهام
    const filteredTasks = useMemo(() => {
-       console.log("TaskPageProvider: Applying filters...", { categoryFilter, dateFilter, okrFilter });
        return tasks.filter(task => {
-           // Category Filter
+           // فلتر الفئة
            if (categoryFilter && task.taskCategoryName !== categoryFilter) {
-               // console.log(` - Task ${task.id} filtered out by category: ${task.taskCategoryName} !== ${categoryFilter}`);
                return false;
            }
 
-           // OKR Filter
+           // فلتر OKR
            if (okrFilter && !task.linkedToOkr) {
                return false;
            }
 
-           // Date Filter
-           // Apply based on the selected category's logic
+           // فلتر التاريخ
            let relevantDate: Date | null = null;
 
-           // لا نطبق فلتر التاريخ على المهام المعلقة (hold/blocked) والمهام الفائتة (overdue)
+           // لا نطبق فلتر التاريخ على المهام الفائتة والمعلقة والملغية والمكتملة
            // لتجنب خطر فقدان هذه المهام المهمة
-           if (selectedCategory === 'hold' || selectedCategory === 'overdue' ||
-               task.status === 'hold' || (task.status === 'blocked' as any) ||
-               (task.dueDate && task.dueDate < new Date() && task.status === 'pending')) {
+           if (selectedCategory === 'overdue' || selectedCategory === 'hold' ||
+               selectedCategory === 'cancelled' || selectedCategory === 'completed') {
                // تجاهل فلتر التاريخ لهذه المهام
                return true;
            }
 
+           // تطبيق فلتر التاريخ فقط على الفئات النشطة
            switch (selectedCategory) {
-                case 'completed':
-                    // Assuming 'completed' tasks might have a completion timestamp later,
-                    // but for filtering by range, maybe use dueDate or startDate?
-                    // Using dueDate primarily for completed filtering for now.
-                    relevantDate = task.dueDate || task.startDate || null;
-                    break;
                  case 'today':
                  case 'upcoming':
                  case 'scheduled':
-                 case 'pending': // Apply date range to these based on due date first, then start date
                      relevantDate = task.dueDate || task.startDate || null;
                      break;
                  default:
@@ -239,7 +255,7 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
   const categorizedTasks = useMemo(() => {
     console.log("TaskPageProvider: Recalculating categories for filtered tasks:", filteredTasks.length); // Use filteredTasks
     const categories: Record<TaskCategory, TaskType[]> = {
-      overdue: [], today: [], upcoming: [], scheduled: [], pending: [], hold: [], completed: [],
+      overdue: [], today: [], upcoming: [], scheduled: [], hold: [], cancelled: [], completed: [],
     };
 
     // Categorize only the filtered tasks
@@ -286,14 +302,14 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
              setSelectedCategory('today');
          } else {
              const firstCategoryWithTasks = categoryOrder.find(cat => categorizedTasks[cat]?.length > 0);
-             const initialCategory = firstCategoryWithTasks || 'pending';
+             const initialCategory = firstCategoryWithTasks || 'hold';
              console.log(` - Setting initial category to '${initialCategory}'`);
              setSelectedCategory(initialCategory);
          }
          initialCategorySet.current = true;
      } else if (tasks.length === 0 && !initialCategorySet.current) {
-          console.log(" - No tasks, setting initial category to 'pending'");
-         setSelectedCategory('pending');
+          console.log(" - No tasks, setting initial category to 'hold'");
+         setSelectedCategory('hold');
          initialCategorySet.current = true;
      } else {
           // console.log("TaskPageProvider: Skipping initial category setting."); // Less verbose
@@ -384,8 +400,9 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
     const moveTaskOptimistic = useCallback((taskId: string, targetCategory: TaskCategory) => {
         const newStatus: TaskStatus | null =
             targetCategory === 'completed' ? 'completed' :
+            targetCategory === 'cancelled' ? 'cancelled' :
             targetCategory === 'hold' ? 'hold' :
-            (targetCategory === 'overdue' || targetCategory === 'today' || targetCategory === 'upcoming' || targetCategory === 'scheduled' || targetCategory === 'pending') ? 'pending' :
+            (targetCategory === 'overdue' || targetCategory === 'today' || targetCategory === 'upcoming' || targetCategory === 'scheduled') ? 'pending' :
             null;
 
         if (newStatus !== null) {

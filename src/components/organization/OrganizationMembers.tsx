@@ -114,8 +114,8 @@ export function OrganizationMembers({ organizationId, isOwner, isAdmin }: Organi
         try {
           const membersPromises = snapshot.docs.map(async (memberDoc) => {
             const memberData = memberDoc.data();
-            let userName = 'مستخدم غير معروف';
-            let userEmail = 'غير متاح';
+            let userName = memberData.name || memberData.displayName || 'مستخدم غير معروف';
+            let userEmail = memberData.email || 'غير متاح';
 
             try {
               // Attempt to fetch user details from the top-level 'users' collection

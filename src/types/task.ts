@@ -6,7 +6,7 @@ import type { Timestamp } from 'firebase/firestore';
 export type DurationUnit = 'hours' | 'days' | 'weeks';
 
 // Define Task Status type
-export type TaskStatus = 'pending' | 'completed' | 'hold' | 'in-progress' | 'blocked';
+export type TaskStatus = 'pending' | 'hold' | 'completed' | 'in-progress' | 'cancelled';
 
 // Define Priority Level type (1: Highest, 5: Lowest) or string values
 export type PriorityLevel = 1 | 2 | 3 | 4 | 5 | 'high' | 'medium' | 'low';
@@ -48,7 +48,8 @@ export interface TaskType {
   taskContext?: TaskContext; // individual, department, or organization
   organizationId?: string; // ID of the organization (for department and organization contexts)
   departmentId?: string; // ID of the department (for department context)
-  assignedToUserId?: string; // ID of the user assigned to the task
+  assignedToUserId?: string; // ID of the user assigned to the task (for single assignment)
+  assignedToUserIds?: string[]; // IDs of users assigned to the task (for multiple assignment)
   parentTaskId?: string; // ID of the parent task (for subtasks)
 
   // OKR fields
@@ -92,7 +93,8 @@ export interface TaskFirestoreData {
     taskContext?: TaskContext | null; // individual, department, or organization
     organizationId?: string | null; // ID of the organization (for department and organization contexts)
     departmentId?: string | null; // ID of the department (for department context)
-    assignedToUserId?: string | null; // ID of the user assigned to the task
+    assignedToUserId?: string | null; // ID of the user assigned to the task (for single assignment)
+    assignedToUserIds?: string[] | null; // IDs of users assigned to the task (for multiple assignment)
     parentTaskId?: string | null; // ID of the parent task (for subtasks)
 
     // OKR fields

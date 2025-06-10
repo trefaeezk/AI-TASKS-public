@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,9 @@ import {
   Printer,
   Share2,
   Loader2,
-  ListChecks
+  ListChecks,
+  TrendingUp,
+  Building
 } from 'lucide-react';
 import { db } from '@/config/firebase';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
@@ -39,6 +41,7 @@ import { format, startOfWeek, endOfWeek, subWeeks, isWithinInterval, isBefore, i
 import { ar } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { TaskCardTemp } from '@/components/TaskCardTemp';
+import { PeriodReportCard } from '@/components/PeriodReportCard';
 
 interface WeeklyReportCardProps {
   organizationId?: string;
@@ -52,16 +55,19 @@ interface WeeklyReportCardProps {
 }
 
 export function WeeklyReportCard({ organizationId, departmentId, userId, className, reportPeriod: propReportPeriod }: WeeklyReportCardProps) {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [tasks, setTasks] = useState<TaskType[]>([]);
-  const [report, setReport] = useState<GenerateWeeklyReportOutput | null>(null);
-  const [isLoadingTasks, setIsLoadingTasks] = useState(true);
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [activeTab, setActiveTab] = useState<'summary' | 'completed' | 'inProgress' | 'upcoming' | 'blocked' | 'analysis' | 'planning' | 'today' | 'overdue' | 'scheduled'>('summary');
-  const [error, setError] = useState<string | null>(null);
-  // متغير لتتبع ما إذا تم توليد التقرير بالفعل
-  const [reportGenerated, setReportGenerated] = useState(false);
+  // استخدام المكون الجديد الموحد مع تحديد النوع كأسبوعي
+  return (
+    <PeriodReportCard
+      organizationId={organizationId}
+      departmentId={departmentId}
+      userId={userId}
+      className={className}
+      defaultPeriodType="weekly"
+      reportPeriod={propReportPeriod}
+    />
+  );
+}
+
 
   // دالة لحساب نسبة إكمال المهام في حالة عدم توفرها من الخدمة
   const calculateCompletionRate = (report: GenerateWeeklyReportOutput | null): number => {
@@ -233,12 +239,23 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
               where('departmentId', '==', departmentId)
             );
           } else if (userId) {
-            // مهام مستخدم محدد في مؤسسة
-            q = query(
+            // مهام مستخدم محدد في مؤسسة - نحتاج لاستعلامين منفصلين
+            // الاستعلام الأول للمهام المُسندة فردياً
+            const q1 = query(
               tasksColRef,
               where('organizationId', '==', organizationId),
               where('assignedToUserId', '==', userId)
             );
+
+            // الاستعلام الثاني للمهام المُسندة لمجموعة تتضمن المستخدم
+            const q2 = query(
+              tasksColRef,
+              where('organizationId', '==', organizationId),
+              where('assignedToUserIds', 'array-contains', userId)
+            );
+
+            // سنحتاج لدمج النتائج لاحقاً
+            q = q1; // نبدأ بالاستعلام الأول
           } else {
             // جميع مهام المؤسسة
             q = query(
@@ -287,6 +304,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
             organizationId: data.organizationId || undefined,
             departmentId: data.departmentId || undefined,
             assignedToUserId: data.assignedToUserId || undefined,
+            assignedToUserIds: data.assignedToUserIds || undefined,
             parentTaskId: data.parentTaskId || undefined,
           };
 
@@ -317,6 +335,27 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
 
     fetchTasks();
   }, [user, organizationId, departmentId, userId]);
+
+  // جلب بيانات المقارنة والأقسام
+  useEffect(() => {
+    const fetchAdditionalData = async () => {
+      if (!organizationId) return;
+
+      try {
+        // جلب مقارنة الأسابيع
+        const comparison = await getWeeklyComparison(organizationId, reportPeriod.endDate);
+        setWeeklyComparison(comparison);
+
+        // جلب بيانات الأقسام المحسنة
+        const departments = await getEnhancedDepartmentPerformance(organizationId, reportPeriod.endDate);
+        setDepartmentData(departments);
+      } catch (error) {
+        console.error('Error fetching additional data:', error);
+      }
+    };
+
+    fetchAdditionalData();
+  }, [organizationId, reportPeriod]);
 
   // إنشاء التقرير الأسبوعي
   const handleGenerateReport = async (isAutoGenerate = false) => {
@@ -412,12 +451,12 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
 
       // معالجة إضافية للتقرير بعد استلامه من الخدمة
       // تحديد المهام المعلقة والمهام قيد التنفيذ من قائمة المهام الأصلية
-      const blockedTasks = tasks.filter(task => task.status === 'blocked' as any || task.status === 'hold');
+      const blockedTasks = tasks.filter(task => task.status === 'hold');
       const inProgressTasks = tasks.filter(task => task.status === 'in-progress' as any);
 
       // استخدام المهام المتأخرة من الخدمة الخلفية أو إنشاؤها من المهام الأصلية
       const overdueTasks = result.overdueTasks || tasks.filter(task =>
-        (task.status === 'pending' || task.status === 'in-progress' as any) &&
+        (task.status === 'hold' || task.status === 'in-progress' as any) &&
         task.dueDate &&
         task.dueDate < new Date()
       ).map(task => ({
@@ -579,7 +618,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
   }
 
   return (
-    <Card className={cn("shadow-md", className)}>
+    <Card className={cn("shadow-md", className)} ref={reportElementRef}>
       <CardContent className="space-y-6 pt-6">
         {!report ? (
           <div className="text-center py-8">
@@ -629,7 +668,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
             </div>
 
             <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
-              <TabsList className="grid grid-cols-7 mb-4">
+              <TabsList className="grid grid-cols-4 lg:grid-cols-10 mb-4">
                 <TabsTrigger value="summary">الملخص</TabsTrigger>
                 <TabsTrigger value="analysis">
                   <BarChart className="ml-1 h-4 w-4" />
@@ -650,6 +689,22 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                 </TabsTrigger>
                 <TabsTrigger value="overdue">
                   فائتة ({report?.overdueTasks?.length || 0})
+                </TabsTrigger>
+                <TabsTrigger value="charts">
+                  <BarChart className="ml-1 h-4 w-4" />
+                  الرسوم البيانية
+                </TabsTrigger>
+                <TabsTrigger value="trends">
+                  <TrendingUp className="ml-1 h-4 w-4" />
+                  الاتجاهات
+                </TabsTrigger>
+                <TabsTrigger value="departments">
+                  <Building className="ml-1 h-4 w-4" />
+                  الأقسام
+                </TabsTrigger>
+                <TabsTrigger value="export">
+                  <Download className="ml-1 h-4 w-4" />
+                  تصدير
                 </TabsTrigger>
               </TabsList>
 
@@ -1648,7 +1703,7 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                         id: task.id,
                         description: task.description || task.title || '', // استخدام title إذا كان description غير موجود
                         details: task.comment || task.notes || '', // استخدام notes إذا كان comment غير موجود
-                        status: 'hold',
+                        status: 'pending',
                         progress: task.progress || 0,
                         priority: typeof task.priority === 'string' ?
                           task.priority === 'high' ? 'high' :
@@ -1732,6 +1787,62 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
                     })}
                   </div>
                 )}
+              </TabsContent>
+
+              {/* تبويب الرسوم البيانية */}
+              <TabsContent value="charts" className="space-y-4">
+                <WeeklyReportCharts
+                  completedTasks={report?.completedTasks}
+                  inProgressTasks={report?.inProgressTasks}
+                  upcomingTasks={report?.upcomingTasks}
+                  blockedTasks={report?.blockedTasks}
+                  overdueTasks={report?.overdueTasks}
+                  keyMetrics={report?.keyMetrics}
+                />
+              </TabsContent>
+
+              {/* تبويب تحليل الاتجاهات */}
+              <TabsContent value="trends" className="space-y-4">
+                {weeklyComparison ? (
+                  <WeeklyTrendAnalysis comparison={weeklyComparison} />
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">جاري تحميل بيانات المقارنة...</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* تبويب تحليل الأقسام */}
+              <TabsContent value="departments" className="space-y-4">
+                {departmentData.length > 0 ? (
+                  <DepartmentAnalysis departments={departmentData} />
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">لا توجد بيانات أقسام متاحة أو جاري التحميل...</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* تبويب التصدير */}
+              <TabsContent value="export" className="space-y-4">
+                <AdvancedExport
+                  data={{
+                    title: `التقرير الأسبوعي - ${formatDate(reportPeriod.startDate)} إلى ${formatDate(reportPeriod.endDate)}`,
+                    summary: report?.summary || '',
+                    completedTasks: report?.completedTasks || [],
+                    inProgressTasks: report?.inProgressTasks || [],
+                    upcomingTasks: report?.upcomingTasks || [],
+                    blockedTasks: report?.blockedTasks || [],
+                    keyMetrics: report?.keyMetrics || {
+                      completionRate: 0,
+                      onTimeCompletionRate: 0,
+                      averageProgress: 0
+                    },
+                    recommendations: report?.recommendations || [],
+                    departmentData: departmentData
+                  }}
+                  reportElement={reportElementRef}
+                />
               </TabsContent>
             </Tabs>
           </>

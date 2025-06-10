@@ -197,12 +197,12 @@ export default function KpiPage() {
   // --- KPI Calculations ---
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter(t => t.status === 'completed').length;
-  const pendingTasks = tasks.filter(t => t.status === 'pending').length;
+  const holdTasks = tasks.filter(t => t.status === 'hold').length;
   const onHoldTasks = tasks.filter(t => t.status === 'hold').length;
 
-  // المهام الفائتة هي المهام قيد الانتظار أو قيد التنفيذ التي لها تاريخ استحقاق وتاريخ الاستحقاق قد مر
+  // المهام الفائتة هي المهام معلقة أو قيد التنفيذ التي لها تاريخ استحقاق وتاريخ الاستحقاق قد مر
   const overdueTasks = tasks.filter(t =>
-    (t.status === 'pending' || t.status === 'in-progress') &&
+    (t.status === 'hold' || t.status === 'in-progress') &&
     t.dueDate &&
     new Date(t.dueDate) < new Date()
   ).length;
@@ -278,7 +278,7 @@ export default function KpiPage() {
   const activeTasks = tasks.filter(t =>
     t.status === 'completed' ||
     t.status === 'in-progress' ||
-    (t.status === 'pending' && t.startDate && t.startDate <= new Date())
+    (t.status === 'hold' && t.startDate && t.startDate <= new Date())
   );
 
   // إذا لم تكن هناك مهام نشطة، فإن متوسط التقدم هو 0
@@ -302,8 +302,8 @@ export default function KpiPage() {
         return 50;
       }
 
-      // المهام قيد الانتظار التي بدأت بالفعل تحسب كـ 10% تقدم
-      if (task.status === 'pending' && task.startDate && task.startDate <= new Date()) {
+      // المهام المعلقة التي بدأت بالفعل تحسب كـ 10% تقدم
+      if (task.status === 'hold' && task.startDate && task.startDate <= new Date()) {
         return 10;
       }
 
@@ -318,9 +318,9 @@ export default function KpiPage() {
 
     // --- Chart Data Preparation ---
     const statusChartData = useMemo(() => {
-        // حساب عدد المهام قيد الانتظار (باستثناء المهام الفائتة)
-        const pendingCount = tasks.filter(t =>
-            t.status === 'pending' &&
+        // حساب عدد المهام المعلقة (باستثناء المهام الفائتة)
+        const holdCount = tasks.filter(t =>
+            t.status === 'hold' &&
             !(t.dueDate && new Date(t.dueDate) < new Date())
         ).length;
 
@@ -331,10 +331,9 @@ export default function KpiPage() {
 
         const data = [
             { status: 'مكتملة', count: completedTasks, fill: "hsl(var(--status-completed))" },
-            { status: 'قيد الانتظار', count: pendingCount, fill: "hsl(var(--primary))" },
+            { status: 'معلقة', count: holdCount, fill: "hsl(var(--primary))" },
             { status: 'قيد التنفيذ', count: inProgressCount, fill: "hsl(var(--status-warning))" },
             { status: 'فائتة', count: overdueTasks, fill: "hsl(var(--status-urgent))" },
-            { status: 'معلقة', count: onHoldTasks, fill: "hsl(var(--muted-foreground))" },
         ];
 
         // إظهار جميع الحالات حتى لو كانت بقيمة صفر
@@ -409,7 +408,7 @@ export default function KpiPage() {
                 <CardContent className="p-3 pt-0">
                     <div className="text-lg md:text-xl font-bold">{totalTasks}</div>
                     <p className="text-[10px] md:text-xs text-muted-foreground">
-                      {completedTasks} مكتملة | {pendingTasks} قيد الانتظار
+                      {completedTasks} مكتملة | {holdTasks} معلقة
                     </p>
                 </CardContent>
             </Card>

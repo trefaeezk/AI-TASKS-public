@@ -10,13 +10,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Calendar, AlertTriangle, CheckCircle2, PauseCircle, ListChecks, User, Building2 } from 'lucide-react';
+import { Loader2, Calendar, AlertTriangle, CheckCircle2, ListChecks, User, Building2, X } from 'lucide-react';
 import { db } from '@/config/firebase';
 import { collection, query, where, getDocs, doc, getDoc, updateDoc, Timestamp, onSnapshot } from 'firebase/firestore';
 import { TaskType, TaskFirestoreData, TaskStatus, Milestone } from '@/types/task';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { updateParentTaskStatus, updateParentMilestones, calculateTaskStatusFromMilestones } from '@/services/parentTaskUpdater';
 
 interface AssignedTasksListProps {
   className?: string;
@@ -39,59 +40,83 @@ export function AssignedTasksList({ className }: AssignedTasksListProps) {
 
     setLoading(true);
     
-    // جلب المهام المعينة للمستخدم
-    const tasksQuery = query(
+    // جلب المهام المعينة للمستخدم (سواء كانت مُسندة فردياً أو ضمن مجموعة)
+    const tasksQuery1 = query(
       collection(db, 'tasks'),
       where('assignedToUserId', '==', user.uid)
     );
+
+    const tasksQuery2 = query(
+      collection(db, 'tasks'),
+      where('assignedToUserIds', 'array-contains', user.uid)
+    );
     
-    const unsubscribeTasks = onSnapshot(tasksQuery, async (snapshot) => {
-      try {
-        const tasks: TaskType[] = [];
-        
-        for (const doc of snapshot.docs) {
-          const data = doc.data() as TaskFirestoreData;
-          
-          // تحويل البيانات إلى النوع المطلوب
-          const task: TaskType = {
-            id: doc.id,
-            description: data.description || '',
-            details: data.details || undefined,
-            status: data.status || 'pending',
-            startDate: data.startDate ? data.startDate.toDate() : undefined,
-            dueDate: data.dueDate ? data.dueDate.toDate() : undefined,
-            durationValue: data.durationValue || undefined,
-            durationUnit: data.durationUnit || undefined,
-            priority: data.priority || undefined,
-            priorityReason: data.priorityReason || undefined,
-            taskCategoryName: data.taskCategoryName || undefined,
-            milestones: data.milestones ? data.milestones.map(m => ({
-              id: m.id,
-              description: m.description,
-              completed: m.completed,
-              weight: m.weight,
-              dueDate: m.dueDate ? m.dueDate.toDate() : undefined,
-              assignedToUserId: m.assignedToUserId || undefined
-            })) : undefined,
-            taskContext: data.taskContext || 'individual',
-            organizationId: data.organizationId || undefined,
-            departmentId: data.departmentId || undefined,
-            assignedToUserId: data.assignedToUserId || undefined,
-            parentTaskId: data.parentTaskId || undefined,
-          };
-          
-          tasks.push(task);
-        }
-        
-        setAssignedTasks(tasks);
-      } catch (error) {
-        console.error('Error fetching assigned tasks:', error);
-        toast({
-          title: 'خطأ في جلب المهام المعينة',
-          description: 'حدث خطأ أثناء محاولة جلب المهام المعينة.',
-          variant: 'destructive',
-        });
+    // دمج النتائج من الاستعلامين
+    const processTaskData = (docs1: any[], docs2: any[]) => {
+      const tasks: TaskType[] = [];
+      const processedTaskIds = new Set<string>(); // لتجنب التكرار
+
+      // دمج المستندات من الاستعلامين
+      const allDocs = [...docs1, ...docs2];
+
+      for (const doc of allDocs) {
+        if (processedTaskIds.has(doc.id)) continue; // تجنب التكرار
+        processedTaskIds.add(doc.id);
+
+        const data = doc.data() as TaskFirestoreData;
+
+        // تحويل البيانات إلى النوع المطلوب
+        const task: TaskType = {
+          id: doc.id,
+          description: data.description || '',
+          details: data.details || undefined,
+          status: data.status || 'pending',
+          startDate: data.startDate ? data.startDate.toDate() : undefined,
+          dueDate: data.dueDate ? data.dueDate.toDate() : undefined,
+          durationValue: data.durationValue || undefined,
+          durationUnit: data.durationUnit || undefined,
+          priority: data.priority || undefined,
+          priorityReason: data.priorityReason || undefined,
+          taskCategoryName: data.taskCategoryName || undefined,
+          milestones: data.milestones ? data.milestones.map(m => ({
+            id: m.id,
+            description: m.description,
+            completed: m.completed,
+            weight: m.weight,
+            dueDate: m.dueDate ? m.dueDate.toDate() : undefined,
+            assignedToUserId: m.assignedToUserId || undefined
+          })) : undefined,
+          taskContext: data.taskContext || 'individual',
+          organizationId: data.organizationId || undefined,
+          departmentId: data.departmentId || undefined,
+          assignedToUserId: data.assignedToUserId || undefined,
+          assignedToUserIds: data.assignedToUserIds || undefined,
+          parentTaskId: data.parentTaskId || undefined,
+        };
+
+        tasks.push(task);
       }
+
+      return tasks;
+    };
+
+    // الاستماع للتغييرات في كلا الاستعلامين
+    const unsubscribeTasks1 = onSnapshot(tasksQuery1, (snapshot1) => {
+      const unsubscribeTasks2 = onSnapshot(tasksQuery2, (snapshot2) => {
+        try {
+          const tasks = processTaskData(snapshot1.docs, snapshot2.docs);
+          setAssignedTasks(tasks);
+        } catch (error) {
+          console.error('Error fetching assigned tasks:', error);
+          toast({
+            title: 'خطأ في جلب المهام المعينة',
+            description: 'حدث خطأ أثناء محاولة جلب المهام المعينة.',
+            variant: 'destructive',
+          });
+        }
+      });
+
+      return unsubscribeTasks2;
     });
     
     // جلب المهام التي تحتوي على نقاط تتبع معينة للمستخدم
@@ -136,6 +161,7 @@ export function AssignedTasksList({ className }: AssignedTasksListProps) {
                 organizationId: data.organizationId || undefined,
                 departmentId: data.departmentId || undefined,
                 assignedToUserId: data.assignedToUserId || undefined,
+                assignedToUserIds: data.assignedToUserIds || undefined,
                 parentTaskId: data.parentTaskId || undefined,
               };
               
@@ -171,7 +197,7 @@ export function AssignedTasksList({ className }: AssignedTasksListProps) {
     });
     
     return () => {
-      unsubscribeTasks();
+      unsubscribeTasks1();
       unsubscribeMilestones();
     };
   }, [user, toast]);
@@ -199,16 +225,48 @@ export function AssignedTasksList({ className }: AssignedTasksListProps) {
         }
         return milestone;
       });
-      
-      // تحديث المهمة بنقاط التتبع المعدلة
-      await updateDoc(taskRef, {
+
+      // حساب الحالة الجديدة للمهمة بناءً على نقاط التتبع
+      const newTaskStatus = calculateTaskStatusFromMilestones(updatedMilestones, taskData.status);
+
+      // تحديث المهمة بنقاط التتبع المعدلة والحالة الجديدة
+      const updateData: any = {
         milestones: updatedMilestones,
         updatedAt: Timestamp.now()
-      });
-      
+      };
+
+      if (newTaskStatus !== taskData.status) {
+        updateData.status = newTaskStatus;
+      }
+
+      await updateDoc(taskRef, updateData);
+
+      // تحديث المهمة الرئيسية إذا كانت هذه مهمة فرعية
+      if (taskData.parentTaskId) {
+        try {
+          await updateParentTaskStatus(taskData.parentTaskId);
+          await updateParentMilestones(taskData.parentTaskId);
+        } catch (error) {
+          console.error('Error updating parent task:', error);
+        }
+      }
+
+      let toastMessage = !completed ? 'تم وضع علامة على نقطة التتبع كمكتملة.' : 'تم إعادة فتح نقطة التتبع.';
+      if (newTaskStatus !== taskData.status) {
+        if (newTaskStatus === 'completed') {
+          toastMessage += ' تم إكمال المهمة تلقائياً.';
+        } else if (newTaskStatus === 'in-progress') {
+          toastMessage += ' تم تحديث حالة المهمة إلى قيد التنفيذ.';
+        } else if (newTaskStatus === 'hold') {
+          toastMessage += ' تم تحديث حالة المهمة إلى متوقفة.';
+        } else if (newTaskStatus === 'pending') {
+          toastMessage += ' تم تحديث حالة المهمة إلى معلقة.';
+        }
+      }
+
       toast({
         title: !completed ? 'تم إكمال نقطة التتبع' : 'تم إعادة فتح نقطة التتبع',
-        description: !completed ? 'تم وضع علامة على نقطة التتبع كمكتملة.' : 'تم إعادة فتح نقطة التتبع.',
+        description: toastMessage,
       });
     } catch (error: any) {
       console.error('Error updating milestone completion:', error);
@@ -232,9 +290,9 @@ export function AssignedTasksList({ className }: AssignedTasksListProps) {
 
   // التحقق مما إذا كانت المهمة متأخرة
   const isTaskOverdue = (task: TaskType) => {
-    return task.status !== 'completed' && 
-           task.status !== 'hold' && 
-           task.dueDate && 
+    return task.status !== 'completed' &&
+           task.status !== 'cancelled' &&
+           task.dueDate &&
            task.dueDate < new Date(new Date().setHours(0,0,0,0));
   };
 
@@ -297,16 +355,16 @@ export function AssignedTasksList({ className }: AssignedTasksListProps) {
             return (
               <Card key={task.id} className={cn(
                 "border-r-4",
-                isOverdue ? "border-r-status-urgent" : 
-                task.status === 'completed' ? "border-r-status-completed" : 
-                task.status === 'hold' ? "border-r-muted-foreground/50" : 
+                isOverdue ? "border-r-status-urgent" :
+                task.status === 'completed' ? "border-r-status-completed" :
+                task.status === 'cancelled' ? "border-r-destructive" :
                 "border-r-primary"
               )}>
                 <CardHeader className="py-3 px-4">
                   <div className="space-y-1">
                     <CardTitle className={cn(
                       "text-base",
-                      task.status === 'completed' && "line-through text-muted-foreground"
+                      (task.status === 'completed' || task.status === 'cancelled') && "line-through text-muted-foreground"
                     )}>
                       {task.description}
                     </CardTitle>
@@ -332,14 +390,17 @@ export function AssignedTasksList({ className }: AssignedTasksListProps) {
                         "flex items-center gap-1",
                         isOverdue && "border-status-urgent text-status-urgent",
                         task.status === 'completed' && "border-status-completed text-status-completed",
-                        task.status === 'hold' && "border-muted-foreground/50 text-muted-foreground"
+                        task.status === 'cancelled' && "border-destructive text-destructive"
                       )}>
-                        {task.status === 'pending' && isOverdue ? <AlertTriangle className="h-3.5 w-3.5" /> : 
-                         task.status === 'completed' ? <CheckCircle2 className="h-3.5 w-3.5" /> : 
-                         task.status === 'hold' ? <PauseCircle className="h-3.5 w-3.5" /> : null}
-                        {task.status === 'pending' && isOverdue ? 'متأخرة' : 
-                         task.status === 'completed' ? 'مكتملة' : 
-                         task.status === 'hold' ? 'معلقة' : 'قيد التنفيذ'}
+                        {(task.status === 'hold' || task.status === 'in-progress' || task.status === 'pending') && isOverdue ? <AlertTriangle className="h-3.5 w-3.5" /> :
+                         task.status === 'completed' ? <CheckCircle2 className="h-3.5 w-3.5" /> :
+                         task.status === 'cancelled' ? <X className="h-3.5 w-3.5" /> :
+                         task.status === 'hold' ? <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><rect width="6" height="14" x="4" y="5" rx="2"/><rect width="6" height="14" x="14" y="5" rx="2"/></svg> : null}
+                        {(task.status === 'hold' || task.status === 'in-progress' || task.status === 'pending') && isOverdue ? 'متأخرة' :
+                         task.status === 'completed' ? 'مكتملة' :
+                         task.status === 'cancelled' ? 'ملغية' :
+                         task.status === 'hold' ? 'متوقفة' :
+                         task.status === 'pending' ? 'معلقة' : 'قيد التنفيذ'}
                       </Badge>
                     </div>
                   </div>
