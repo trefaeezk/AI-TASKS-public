@@ -34,6 +34,7 @@ import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrate
 import { useTaskCategories } from '@/hooks/useTaskCategories';
 import { useTaskTypeFilter } from '../../OrganizationLayoutContent';
 import { updateSubtasksFromParent, updateParentTaskComprehensive, resetMilestonesOnReopen } from '@/services/parentTaskUpdater';
+import { PendingApprovalTasks } from '@/components/tasks/PendingApprovalTasks';
 import { ReopenTaskDialog } from '@/components/ReopenTaskDialog';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useThrottledCounter } from '@/hooks/useThrottledCounter';
@@ -49,6 +50,7 @@ export default function OrganizationTasksPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [taskToReopen, setTaskToReopen] = useState<TaskType | null>(null);
   const [isReopenDialogOpen, setIsReopenDialogOpen] = useState(false);
+
 
   const organizationId = userClaims?.organizationId;
 
@@ -578,8 +580,6 @@ export default function OrganizationTasksPage() {
         </div>
       </DndContext>
 
-
-
       {/* مربع حوار تأكيد الحذف */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
@@ -632,6 +632,8 @@ export default function OrganizationTasksPage() {
           hasMilestones={taskToReopen.milestones ? taskToReopen.milestones.length > 0 : false}
         />
       )}
+
+
     </div>
   );
 }

@@ -6,7 +6,7 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 import {
   Home, FileText, Settings, Menu, UserCircle,
   BarChart3, Users, Database, Building, FolderTree, ListTodo,
-  Calendar, Wand2, Target, CalendarDays
+  Calendar, Target, CalendarDays, Clock
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
@@ -40,7 +40,9 @@ import { useLanguage } from '@/context/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Translate } from '@/components/Translate';
 
-import { NotificationsPopover } from '@/components/notifications/NotificationsPopover';
+
+import { PendingApprovalPopover } from '@/components/tasks/PendingApprovalPopover';
+import { MyRequestsNotifications } from '@/components/tasks/MyRequestsNotifications';
 import { useTaskPageContext, type TaskCategory, categoryInfo, categoryOrder } from '@/context/TaskPageContext';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -56,7 +58,8 @@ import {
   Filter,
   ChevronDown,
   ChevronRight,
-  TrendingUp
+  TrendingUp,
+  CheckCircle
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 // import Link from 'next/link'; // غير مستخدم حالياً
@@ -365,6 +368,12 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
               <span><Translate text="sidebar.tasks" /></span>
             </SidebarMenuLink>
 
+            {/* طلباتي - للجميع */}
+            <SidebarMenuLink href="/org/my-requests" active={pathname === '/org/my-requests'}>
+              <Clock className="ml-2 h-5 w-5" />
+              <span>طلباتي</span>
+            </SidebarMenuLink>
+
             {/* الخطة اليومية - للأدوار العليا والمشرفين */}
             {canAccessManagement && (
               <SidebarMenuLink href="/org/reports" active={pathname === '/org/reports'}>
@@ -411,6 +420,12 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
                   icon={<Calendar className="ml-2 h-4 w-4" />}
                   label="التقرير السنوي"
                   active={pathname?.startsWith('/org/kpi') && searchParams.get('view') === 'yearly-report'}
+                />
+                <CollapsibleSidebarSubItem
+                  href="/org/reports/approval"
+                  icon={<CheckCircle className="ml-2 h-4 w-4" />}
+                  label="تقارير الموافقات"
+                  active={pathname?.startsWith('/org/reports/approval')}
                 />
               </CollapsibleSidebarMenu>
             )}
@@ -598,23 +613,19 @@ export function OrganizationLayoutContent({ children }: { children: ReactNode })
             {pathname === '/org/tasks' && user && (
               <AddTaskSheet user={user} />
             )}
-            {user && <NotificationsPopover />}
-            {user && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 relative group"
-                title={t('suggestions.smartSuggestions')}
-                onClick={(e) => e.preventDefault()}
-                disabled
-              >
-                <Wand2 className="h-4 w-4 opacity-50" />
-                <span className="sr-only"><Translate text="suggestions.smartSuggestions" /></span>
-                <span className="absolute top-full right-0 mt-1 w-32 bg-popover text-popover-foreground text-xs p-1 rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50 text-center">
-                  <Translate text="tools.underDevelopment" />
-                </span>
-              </Button>
+
+            {user && userClaims?.organizationId && (userClaims?.isOrgOwner || userClaims?.isOrgAdmin || userClaims?.isOrgSupervisor) && (
+              <PendingApprovalPopover
+                organizationId={userClaims.organizationId}
+                departmentId={userClaims.departmentId}
+                approvalLevel={userClaims.departmentId ? 'department' : 'organization'}
+              />
             )}
+            {/* إشعارات طلبات المستخدم */}
+            {user && userClaims?.organizationId && (
+              <MyRequestsNotifications organizationId={userClaims.organizationId} />
+            )}
+            {/* تم حذف زر الاقتراحات الذكية المعطل */}
           </div>
           </div>
         </header>

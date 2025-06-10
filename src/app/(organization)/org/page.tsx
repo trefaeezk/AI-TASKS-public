@@ -34,6 +34,8 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Translate } from '@/components/Translate';
+import { PendingApprovalTasks } from '@/components/tasks/PendingApprovalTasks';
+import { ApprovalSummaryCard } from '@/components/reports/ApprovalSummaryCard';
 
 interface DashboardStats {
   members: {
@@ -744,61 +746,97 @@ export default function OrganizationDashboard() {
             </Card>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>المهام الأخيرة</CardTitle>
-              <CardDescription>آخر المهام المضافة والمحدثة</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {recentActivity.filter(a => a.type === 'task_completed' || a.type === 'task_overdue').length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <ListTodo className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>لا توجد مهام حديثة</p>
-                  <Button asChild className="mt-4">
-                    <Link href="/org/tasks">
-                      <Plus className="ml-2 h-4 w-4" />
-                      إنشاء مهمة جديدة
-                    </Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {recentActivity.filter(a => a.type === 'task_completed' || a.type === 'task_overdue').slice(0, 8).map((task) => (
-                    <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
-                      <div className="flex items-center space-x-3 space-x-reverse">
-                        <div className={`p-2 rounded-full ${
-                          task.priority === 'high' ? 'bg-red-100 text-red-600' :
-                          task.priority === 'medium' ? 'bg-orange-100 text-orange-600' :
-                          'bg-green-100 text-green-600'
-                        }`}>
-                          <ListTodo className="h-4 w-4" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>المهام الأخيرة</CardTitle>
+                <CardDescription>آخر المهام المضافة والمحدثة</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {recentActivity.filter(a => a.type === 'task_completed' || a.type === 'task_overdue').length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <ListTodo className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>لا توجد مهام حديثة</p>
+                    <Button asChild className="mt-4">
+                      <Link href="/org/tasks">
+                        <Plus className="ml-2 h-4 w-4" />
+                        إنشاء مهمة جديدة
+                      </Link>
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {recentActivity.filter(a => a.type === 'task_completed' || a.type === 'task_overdue').slice(0, 6).map((task) => (
+                      <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
+                        <div className="flex items-center space-x-3 space-x-reverse">
+                          <div className={`p-2 rounded-full ${
+                            task.priority === 'high' ? 'bg-red-100 text-red-600' :
+                            task.priority === 'medium' ? 'bg-orange-100 text-orange-600' :
+                            'bg-green-100 text-green-600'
+                          }`}>
+                            <ListTodo className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium">{task.title}</h4>
+                            <p className="text-sm text-muted-foreground">{task.description}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-medium">{task.title}</h4>
-                          <p className="text-sm text-muted-foreground">{task.description}</p>
+                        <div className="flex items-center space-x-2 space-x-reverse">
+                          <Badge variant={
+                            task.status === 'completed' ? 'default' :
+                            task.status === 'overdue' ? 'destructive' :
+                            'secondary'
+                          }>
+                            {task.status === 'completed' ? 'مكتملة' :
+                             task.status === 'in_progress' ? 'قيد التنفيذ' :
+                             task.status === 'hold' ? 'معلقة' :
+                             task.status === 'overdue' ? 'متأخرة' : task.status}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {task.timestamp.toLocaleDateString()}
+                          </span>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <Badge variant={
-                          task.status === 'completed' ? 'default' :
-                          task.status === 'overdue' ? 'destructive' :
-                          'secondary'
-                        }>
-                          {task.status === 'completed' ? 'مكتملة' :
-                           task.status === 'in_progress' ? 'قيد التنفيذ' :
-                           task.status === 'hold' ? 'معلقة' :
-                           task.status === 'overdue' ? 'متأخرة' : task.status}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {task.timestamp.toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* المهام المعلقة للموافقة */}
+            {organizationId && (userClaims?.isOrgOwner || userClaims?.isOrgAdmin || userClaims?.isOrgSupervisor || userClaims?.isOrgEngineer) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>المهام المعلقة للموافقة</CardTitle>
+                  <CardDescription>المهام التي تحتاج موافقة من المسئولين</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <PendingApprovalTasks
+                    organizationId={organizationId}
+                    departmentId={userClaims?.departmentId}
+                    approvalLevel={
+                      userClaims?.isOrgOwner || userClaims?.isOrgAdmin
+                        ? undefined // يرون جميع المهام
+                        : userClaims?.isOrgSupervisor || userClaims?.isOrgEngineer
+                        ? 'department' // يرون مهام القسم فقط
+                        : undefined
+                    }
+                  />
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* إضافة ملخص الموافقات */}
+          {organizationId && (userClaims?.isOrgOwner || userClaims?.isOrgAdmin || userClaims?.isOrgSupervisor || userClaims?.isOrgEngineer) && (
+            <div className="mt-6">
+              <ApprovalSummaryCard
+                organizationId={organizationId}
+                departmentId={userClaims?.departmentId}
+                title="ملخص نشاط الموافقات"
+              />
+            </div>
+          )}
         </TabsContent>
 
             <TabsContent value="members" className="space-y-4 md:space-y-6">

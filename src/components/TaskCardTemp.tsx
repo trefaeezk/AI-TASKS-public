@@ -503,7 +503,7 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
                          مكتملة
                      </Badge>
                  )}
-                 {priority !== undefined && priority !== null && !isCompleted && !isOverdue && (
+                 {priority !== undefined && priority !== null && !isCompleted && !isCancelled && (
                       <TooltipProvider delayDuration={100}>
                           <Tooltip>
                               <TooltipTrigger asChild>

@@ -36,7 +36,11 @@ import {
 } from '@/services/notifications';
 import Link from 'next/link';
 
-export function NotificationsPopover() {
+interface NotificationsPopoverProps {
+  children?: React.ReactNode;
+}
+
+export function NotificationsPopover({ children }: NotificationsPopoverProps) {
   const { user, userClaims } = useAuth();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -123,6 +127,12 @@ export function NotificationsPopover() {
         return <AlertTriangle className="h-4 w-4 text-destructive" />;
       case 'task_completed':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'task_approval_pending':
+        return <Clock className="h-4 w-4 text-orange-500" />;
+      case 'task_approved':
+        return <Check className="h-4 w-4 text-green-500" />;
+      case 'task_rejected':
+        return <X className="h-4 w-4 text-red-500" />;
       case 'meeting_created':
       case 'meeting_reminder':
       case 'meeting_updated':
@@ -152,18 +162,20 @@ export function NotificationsPopover() {
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-            >
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </Badge>
-          )}
-          <span className="sr-only">الإشعارات</span>
-        </Button>
+        {children || (
+          <Button variant="ghost" size="icon" className="relative">
+            <Bell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <Badge
+                variant="destructive"
+                className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+              >
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </Badge>
+            )}
+            <span className="sr-only">الإشعارات</span>
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
         <div className="flex items-center justify-between p-4">

@@ -3,12 +3,14 @@
 
 import type { FormEvent, MouseEvent } from 'react';
 import React, { useState, useCallback, useEffect } from 'react';
-import { Calendar as CalendarIcon, PlusCircle, Loader2, Wand2, Settings, ListChecks, Target, User as UserIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Loader2, Wand2, Settings, ListChecks, Target, User as UserIcon, Clock, CheckCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import type { User } from 'firebase/auth';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { functions } from '@/config/firebase';
+import { httpsCallable } from 'firebase/functions';
 import { v4 as uuidv4 } from 'uuid';
 
 import { Button } from '@/components/ui/button';
@@ -17,6 +19,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { suggestSmartDueDate, type SuggestSmartDueDateInput, type SuggestSmartDueDateOutput, suggestMilestones, type SuggestMilestonesInput, type SuggestMilestonesOutput } from '@/services/ai';
 import { cn } from '@/lib/utils';
@@ -81,14 +85,18 @@ export function AddTaskSheet({ user, isOpen, onOpenChange, showTrigger = true }:
     assignedToUserId: undefined
   });
 
+  // Approval state - مبسط
+  const [requiresApproval, setRequiresApproval] = useState(false);
+  const [approvalNotes, setApprovalNotes] = useState('');
+
   // User's organization ID from claims
   const organizationIdFromClaims = userClaims?.organizationId;
 
-  // تحديد الأدوار المتدنية التي لا يمكنها إسناد مهام للآخرين أو تغيير مستوى المهمة
-  const isLowLevelRole = userClaims?.isOrgEngineer || userClaims?.isOrgTechnician || userClaims?.isOrgAssistant;
-
-  // إخفاء خيارات الإسناد ومستوى المهمة للأدوار المتدنية
-  const canAssignTasks = !isLowLevelRole;
+  // تبسيط المنطق:
+  // - الجميع يمكنهم إنشاء مهام شخصية أو مهام تتطلب موافقة
+  // - المسئولون فقط يمكنهم إسناد المهام للآخرين وتغيير مستوى المهمة
+  const isManager = userClaims?.isOrgOwner || userClaims?.isOrgAdmin || userClaims?.isOrgSupervisor;
+  const canAssignTasks = isManager;
 
   const [isSuggestingDate, setIsSuggestingDate] = useState(false);
   const [isSuggestingMilestones, setIsSuggestingMilestones] = useState(false);
@@ -231,7 +239,110 @@ export function AddTaskSheet({ user, isOpen, onOpenChange, showTrigger = true }:
         }
     }
 
+    // التحقق من صلاحيات الموافقة - مبسط
+    if (requiresApproval) {
+      // يجب أن يكون المستخدم عضو في مؤسسة
+      if (!organizationIdFromClaims) {
+        toast({
+          title: 'خطأ',
+          description: 'يجب أن تكون عضواً في مؤسسة لإنشاء مهام تتطلب موافقة.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     setIsAddingTask(true);
+
+    // إذا كانت المهمة تتطلب موافقة، استخدم وظيفة الموافقة
+    if (requiresApproval && organizationIdFromClaims) {
+      try {
+        const createTaskWithApprovalFn = httpsCallable<{
+          title: string;
+          description?: string;
+          startDate?: { seconds: number };
+          dueDate?: { seconds: number };
+          priority: string;
+          organizationId: string;
+          approvalLevel: string;
+          departmentId?: string;
+          categoryName?: string;
+          notes?: string;
+          milestones?: Array<{
+            id: string;
+            description: string;
+            completed: boolean;
+            weight: number;
+            dueDate?: { seconds: number };
+          }>;
+          durationValue?: number;
+          durationUnit?: string;
+        }, {
+          success: boolean;
+          taskId?: string;
+          message?: string;
+        }>(functions, 'createTaskWithApproval');
+
+        // تحديد مستوى الموافقة حسب مستوى المهمة المختار
+        const approvalLevel = taskContext.taskContext === 'department' ? 'department' : 'organization';
+        const departmentId = taskContext.taskContext === 'department' ?
+          (taskContext.departmentId || userClaims?.departmentId) :
+          userClaims?.departmentId;
+
+        // تحضير نقاط التتبع للإرسال
+        const milestonesForApproval = validMilestones.length > 0 ? validMilestones.map(m => ({
+          id: m.id || uuidv4(),
+          description: m.description || '',
+          completed: !!m.completed,
+          weight: typeof m.weight === 'number' ? m.weight : 0,
+          dueDate: m.dueDate instanceof Date && !isNaN(m.dueDate.getTime()) ?
+            { seconds: Math.floor(m.dueDate.getTime() / 1000) } : undefined
+        })) : undefined;
+
+        const taskData = {
+          title: trimmedDescription,
+          description: newTaskDetails?.trim() || undefined,
+          priority: newTaskPriority === 3 ? 'medium' : newTaskPriority === 2 ? 'high' : newTaskPriority === 1 ? 'critical' : 'low',
+          organizationId: organizationIdFromClaims,
+          approvalLevel: approvalLevel,
+          departmentId: departmentId || undefined,
+          startDate: newTaskStartDate ? { seconds: Math.floor(newTaskStartDate.getTime() / 1000) } : undefined,
+          dueDate: newTaskDueDate ? { seconds: Math.floor(newTaskDueDate.getTime() / 1000) } : undefined,
+          categoryName: newTaskCategoryName || undefined,
+          milestones: milestonesForApproval,
+          durationValue: (newTaskDurationValue !== undefined && !isNaN(newTaskDurationValue) && newTaskDurationValue >= 0) ? newTaskDurationValue : undefined,
+          durationUnit: (newTaskDurationValue !== undefined && !isNaN(newTaskDurationValue) && newTaskDurationValue >= 0 && newTaskDurationUnit) ? newTaskDurationUnit : undefined,
+          notes: approvalNotes.trim() || undefined
+        };
+
+        console.log('[AddTaskSheet] Calling createTaskWithApproval with data:', taskData);
+        const result = await createTaskWithApprovalFn(taskData);
+        console.log('[AddTaskSheet] createTaskWithApproval result:', result.data);
+
+        if (result.data?.success) {
+          toast({
+            title: 'تم إرسال المهمة للموافقة',
+            description: result.data.message || 'تم إرسال المهمة للمسئول للموافقة عليها',
+          });
+
+          // إعادة تعيين النموذج
+          resetForm();
+          setSheetIsOpen(false);
+        } else {
+          throw new Error(result.data?.message || 'فشل في إنشاء المهمة');
+        }
+      } catch (error: any) {
+        console.error('Error creating task with approval:', error);
+        toast({
+          title: 'خطأ في إنشاء المهمة',
+          description: error.message || 'حدث خطأ أثناء إنشاء المهمة',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsAddingTask(false);
+      }
+      return;
+    }
 
     let startTimestamp: Timestamp | null = null;
     if (newTaskStartDate instanceof Date && !isNaN(newTaskStartDate.getTime())) {
@@ -254,6 +365,7 @@ export function AddTaskSheet({ user, isOpen, onOpenChange, showTrigger = true }:
       }));
      const milestonesToSave = cleanMilestonesToSave.length > 0 ? cleanMilestonesToSave : null;
 
+    // منطق مبسط: إذا لم تتطلب موافقة، فهي مهمة شخصية
     const newTaskData: Omit<TaskFirestoreData, 'userId'> & { userId: string } = {
         userId: user.uid,
         description: trimmedDescription,
@@ -267,11 +379,12 @@ export function AddTaskSheet({ user, isOpen, onOpenChange, showTrigger = true }:
         taskCategoryName: newTaskCategoryName ?? null,
         priorityReason: null,
         milestones: milestonesToSave,
-        taskContext: organizationIdFromClaims ? taskContext.taskContext || 'individual' : 'individual',
+        // استخدام مستوى المهمة المحدد
+        taskContext: taskContext.taskContext || 'individual',
         organizationId: organizationIdFromClaims || null,
-        departmentId: (organizationIdFromClaims && taskContext.taskContext === 'department') ? taskContext.departmentId || null : null,
-        assignedToUserId: !canAssignTasks ? user.uid : ((organizationIdFromClaims && taskContext.taskContext === 'individual') ? taskContext.assignedToUserId || null : (!organizationIdFromClaims ? user.uid : null)),
-        createdBy: user.uid, // إضافة حقل createdBy للتأكد من ربط المهمة بالمستخدم
+        departmentId: taskContext.departmentId || null,
+        assignedToUserId: taskContext.assignedToUserId || user.uid,
+        createdBy: user.uid,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
     };
@@ -280,24 +393,13 @@ export function AddTaskSheet({ user, isOpen, onOpenChange, showTrigger = true }:
         const tasksColRef = collection(db, 'tasks');
         const docRef = await addDoc(tasksColRef, newTaskData);
 
-        setNewTaskDescription('');
-        setNewTaskDetails('');
-        setNewTaskStartDate(undefined);
-        setTempNewTaskStartDate(undefined);
-        setNewTaskDueDate(undefined);
-        setTempNewTaskDueDate(undefined);
-        setNewTaskDurationValue(undefined);
-        setNewTaskDurationUnit(undefined);
-        setNewTaskPriority(3);
-        setNewTaskCategoryName(undefined);
-        setCurrentMilestones([]);
-        setTaskContext({ taskContext: 'individual', departmentId: undefined, assignedToUserId: undefined });
-
         toast({
-            title: 'تمت إضافة المهمة',
-            description: `تمت إضافة "${newTaskData.description}" بنجاح.`,
+            title: 'تمت إضافة المهمة الشخصية',
+            description: `تمت إضافة "${newTaskData.description}" كمهمة شخصية لك.`,
         });
-         setSheetIsOpen(false);
+
+        resetForm();
+        setSheetIsOpen(false);
 
     } catch (error) {
         console.error("Error adding task to Firestore:", error);
@@ -335,24 +437,31 @@ export function AddTaskSheet({ user, isOpen, onOpenChange, showTrigger = true }:
      console.log("Categories updated in dialog, potentially refresh UI.");
   };
 
+  // دالة إعادة تعيين النموذج
+  const resetForm = () => {
+    setNewTaskDescription('');
+    setNewTaskDetails('');
+    setNewTaskStartDate(undefined);
+    setTempNewTaskStartDate(undefined);
+    setNewTaskDueDate(undefined);
+    setTempNewTaskDueDate(undefined);
+    setNewTaskDurationValue(undefined);
+    setNewTaskDurationUnit(undefined);
+    setNewTaskPriority(3);
+    setNewTaskCategoryName(undefined);
+    setCurrentMilestones([]);
+    setTaskContext({
+      taskContext: organizationIdFromClaims ? 'individual' : 'individual',
+      departmentId: undefined,
+      assignedToUserId: organizationIdFromClaims ? undefined : user.uid
+    });
+    setRequiresApproval(false);
+    setApprovalNotes('');
+  };
+
   useEffect(() => {
       if (sheetIsOpen) {
-          setNewTaskDescription('');
-          setNewTaskDetails('');
-          setNewTaskStartDate(undefined);
-          setTempNewTaskStartDate(undefined);
-          setNewTaskDueDate(undefined);
-          setTempNewTaskDueDate(undefined);
-          setNewTaskDurationValue(undefined);
-          setNewTaskDurationUnit(undefined);
-          setNewTaskPriority(3);
-          setNewTaskCategoryName(undefined);
-          setCurrentMilestones([]);
-          setTaskContext({
-            taskContext: organizationIdFromClaims ? 'individual' : 'individual', // Default to individual
-            departmentId: undefined,
-            assignedToUserId: organizationIdFromClaims ? undefined : user.uid // Assign to self if individual
-          });
+          resetForm();
           setIsAddingTask(false);
           setIsSuggestingDate(false);
           setIsSuggestingMilestones(false);
@@ -403,31 +512,22 @@ export function AddTaskSheet({ user, isOpen, onOpenChange, showTrigger = true }:
             />
           </div>
 
-          {organizationIdFromClaims && canAssignTasks && (
-            <>
-              <Separator />
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">سياق المهمة</h3>
-                <TaskContextSelector
-                  value={taskContext}
-                  onChange={setTaskContext}
-                  organizationId={organizationIdFromClaims}
-                  disabled={isAddingTask}
-                />
-              </div>
-            </>
-          )}
+          {/* مستوى المهمة - يظهر للجميع */}
+          <Separator />
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">مستوى المهمة</h3>
+            <TaskContextSelector
+              value={taskContext}
+              onChange={setTaskContext}
+              userClaims={userClaims}
+              organizationId={organizationIdFromClaims}
+              disabled={requiresApproval} // تعطيل عند طلب الموافقة
+              requiresApproval={requiresApproval}
+              onRequiresApprovalChange={setRequiresApproval}
+            />
+          </div>
 
-          {/* رسالة للأدوار المتدنية */}
-          {organizationIdFromClaims && !canAssignTasks && (
-            <>
-              <Separator />
-              <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md">
-                <UserIcon className="inline ml-1 h-4 w-4" />
-                ستتم إضافة هذه المهمة إلى مهامك الشخصية
-              </div>
-            </>
-          )}
+          {/* تم نقل الرسالة التوضيحية إلى TaskContextSelector */}
 
           <Separator />
           <div className="space-y-4">
@@ -651,13 +751,70 @@ export function AddTaskSheet({ user, isOpen, onOpenChange, showTrigger = true }:
                 </div>
              </div>
 
+             {/* خيارات الموافقة - تظهر فقط للمستخدمين في المؤسسات */}
+             {organizationIdFromClaims && (
+               <>
+                 <Separator />
+                 <div className="space-y-4">
+                   <div className="flex items-center space-x-2 space-x-reverse">
+                     <Checkbox
+                       id="requires-approval"
+                       checked={requiresApproval}
+                       onCheckedChange={(checked) => setRequiresApproval(checked as boolean)}
+                     />
+                     <Label htmlFor="requires-approval" className="flex items-center gap-2 text-sm font-medium">
+                       <Clock className="h-4 w-4" />
+                       تتطلب موافقة من المسئول قبل التنفيذ
+                     </Label>
+                   </div>
+
+                   {requiresApproval && (
+                     <div className="space-y-4 pl-6 border-l-2 border-primary/20">
+                       {/* ملاحظات الموافقة */}
+                       <div className="space-y-2">
+                         <Label htmlFor="approval-notes">ملاحظات للمسئول (اختياري)</Label>
+                         <Textarea
+                           id="approval-notes"
+                           placeholder="أضف أي ملاحظات أو تفسيرات للمسئول حول سبب الحاجة للموافقة..."
+                           value={approvalNotes}
+                           onChange={(e) => setApprovalNotes(e.target.value)}
+                           className="bg-input border-input focus:ring-primary placeholder-muted-foreground min-h-[80px]"
+                         />
+                       </div>
+
+                       {/* معلومات إضافية */}
+                       <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-md">
+                         <div className="flex items-start gap-2">
+                           <CheckCircle className="h-4 w-4 mt-0.5 text-primary" />
+                           <div>
+                             <p className="font-medium mb-1">معلومات مهمة:</p>
+                             <ul className="space-y-1">
+                               <li>• ستتم مراجعة المهمة من قبل المسئولين قبل التنفيذ</li>
+                               <li>• ستتلقى إشعاراً عند الموافقة أو الرفض</li>
+                               <li>• إذا لم تفعل هذا الخيار، ستكون المهمة شخصية لك فقط</li>
+                             </ul>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                   )}
+                 </div>
+               </>
+             )}
+
            <SheetFooter className="pt-6 mt-4 border-t">
              <SheetClose asChild>
                 <Button type="button" variant="outline">إلغاء</Button>
              </SheetClose>
             <Button type="submit" disabled={isAddingTask || !newTaskDescription.trim()} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground">
-              {isAddingTask ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <PlusCircle className="ml-2 h-5 w-5" />}
-              أضف المهمة
+              {isAddingTask ? (
+                <Loader2 className="h-4 w-4 animate-spin ml-2" />
+              ) : requiresApproval ? (
+                <Clock className="ml-2 h-5 w-5" />
+              ) : (
+                <PlusCircle className="ml-2 h-5 w-5" />
+              )}
+              {requiresApproval ? 'إرسال للموافقة' : 'أضف المهمة'}
             </Button>
           </SheetFooter>
         </form>

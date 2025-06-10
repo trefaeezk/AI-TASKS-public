@@ -6,11 +6,11 @@ import type { ReactNode, Dispatch, SetStateAction } from 'react';
 import React, { createContext, useContext, useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import type { TaskType, TaskStatus } from '@/types/task';
 import { startOfDay, isPast, isToday, isWithinInterval, isFuture, differenceInDays, startOfMonth, endOfMonth, subMonths, endOfDay } from 'date-fns'; // Added date functions
-import { AlertTriangle, CalendarDays, CalendarCheck2, ListTodo, CheckCircle2, X } from 'lucide-react';
+import { AlertTriangle, CalendarDays, CalendarCheck2, ListTodo, CheckCircle2, X, Clock } from 'lucide-react';
 
 // Define category types and order
-export type TaskCategory = 'overdue' | 'today' | 'upcoming' | 'scheduled' | 'hold' | 'cancelled' | 'completed';
-export const categoryOrder: TaskCategory[] = ['overdue', 'today', 'upcoming', 'scheduled', 'hold', 'cancelled', 'completed'];
+export type TaskCategory = 'overdue' | 'today' | 'upcoming' | 'scheduled' | 'pending-approval' | 'hold' | 'cancelled' | 'completed';
+export const categoryOrder: TaskCategory[] = ['overdue', 'today', 'upcoming', 'scheduled', 'pending-approval', 'hold', 'cancelled', 'completed'];
 
 // Define category display info
 export const categoryInfo: Record<TaskCategory, { title: string; icon: React.ElementType; color: string }> = {
@@ -18,6 +18,7 @@ export const categoryInfo: Record<TaskCategory, { title: string; icon: React.Ele
     today: { title: 'اليوم', icon: CalendarDays, color: 'text-blue-500' },
     upcoming: { title: 'قادمة', icon: CalendarCheck2, color: 'text-amber-500' },
     scheduled: { title: 'مجدولة', icon: ListTodo, color: 'text-purple-500' },
+    'pending-approval': { title: 'تنتظر الموافقة', icon: Clock, color: 'text-orange-500' },
     hold: { title: 'معلقة', icon: ListTodo, color: 'text-gray-500' }, // Represents tasks without specific dates fitting other categories or on hold
 
     cancelled: { title: 'ملغية', icon: X, color: 'text-destructive' },
@@ -53,6 +54,9 @@ const getTaskCategory = (task: TaskType): TaskCategory => {
      // المهام المكتملة والملغية لها فئات ثابتة
      if (task.status === 'completed') return 'completed';
      if (task.status === 'cancelled') return 'cancelled';
+
+     // المهام التي تنتظر الموافقة لها فئة خاصة
+     if (task.status === 'pending-approval') return 'pending-approval';
 
      // المهام المعلقة تذهب دائماً إلى فئة "المعلقة" بغض النظر عن التاريخ
      if (task.status === 'hold') return 'hold';
@@ -209,10 +213,10 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
            // فلتر التاريخ
            let relevantDate: Date | null = null;
 
-           // لا نطبق فلتر التاريخ على المهام الفائتة والمعلقة والملغية والمكتملة
+           // لا نطبق فلتر التاريخ على المهام الفائتة والمعلقة والملغية والمكتملة والتي تنتظر الموافقة
            // لتجنب خطر فقدان هذه المهام المهمة
-           if (selectedCategory === 'overdue' || selectedCategory === 'hold' ||
-               selectedCategory === 'cancelled' || selectedCategory === 'completed') {
+           if (selectedCategory === 'overdue' || selectedCategory === 'pending-approval' ||
+               selectedCategory === 'hold' || selectedCategory === 'cancelled' || selectedCategory === 'completed') {
                // تجاهل فلتر التاريخ لهذه المهام
                return true;
            }
@@ -255,7 +259,7 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
   const categorizedTasks = useMemo(() => {
     console.log("TaskPageProvider: Recalculating categories for filtered tasks:", filteredTasks.length); // Use filteredTasks
     const categories: Record<TaskCategory, TaskType[]> = {
-      overdue: [], today: [], upcoming: [], scheduled: [], hold: [], cancelled: [], completed: [],
+      overdue: [], today: [], upcoming: [], scheduled: [], 'pending-approval': [], hold: [], cancelled: [], completed: [],
     };
 
     // Categorize only the filtered tasks
@@ -401,6 +405,7 @@ export const TaskPageProvider = ({ initialTasks = [], children }: { initialTasks
         const newStatus: TaskStatus | null =
             targetCategory === 'completed' ? 'completed' :
             targetCategory === 'cancelled' ? 'cancelled' :
+            targetCategory === 'pending-approval' ? 'pending-approval' :
             targetCategory === 'hold' ? 'hold' :
             (targetCategory === 'overdue' || targetCategory === 'today' || targetCategory === 'upcoming' || targetCategory === 'scheduled') ? 'pending' :
             null;

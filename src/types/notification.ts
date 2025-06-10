@@ -1,13 +1,16 @@
 import { Timestamp } from 'firebase/firestore';
 
 // نوع الإشعار
-export type NotificationType = 
+export type NotificationType =
   | 'task_created'        // إنشاء مهمة جديدة
   | 'task_assigned'       // تعيين مهمة
   | 'task_due_soon'       // مهمة على وشك الاستحقاق
   | 'task_overdue'        // مهمة متأخرة
   | 'task_completed'      // اكتمال مهمة
   | 'task_status_changed' // تغيير حالة مهمة
+  | 'task_approval_pending' // مهمة تحتاج موافقة
+  | 'task_approved'       // تم الموافقة على مهمة
+  | 'task_rejected'       // تم رفض مهمة
   | 'meeting_created'     // إنشاء اجتماع جديد
   | 'meeting_reminder'    // تذكير باجتماع
   | 'meeting_updated'     // تحديث اجتماع

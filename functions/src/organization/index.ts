@@ -332,6 +332,40 @@ export const removeOrganizationMember = createCallableFunction<RemoveOrganizatio
         // إزالة المستخدم من المؤسسة
         await db.collection('organizations').doc(orgId).collection('members').doc(userId).delete();
 
+        // حذف جميع الدعوات المعلقة للمستخدم في هذه المؤسسة
+        const pendingInvitationsQuery = await db.collection('organizationInvitations')
+            .where('userId', '==', userId)
+            .where('organizationId', '==', orgId)
+            .where('status', '==', 'pending')
+            .get();
+
+        if (!pendingInvitationsQuery.empty) {
+            const batch = db.batch();
+            pendingInvitationsQuery.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+            console.log(`[Organization] Deleted ${pendingInvitationsQuery.size} pending invitations for user ${userId} in organization ${orgId}`);
+        }
+
+        // حذف الدعوات بناءً على البريد الإلكتروني أيضاً (للحالات التي لم يتم ربط userId بها)
+        if (userData?.email) {
+            const emailInvitationsQuery = await db.collection('organizationInvitations')
+                .where('email', '==', userData.email)
+                .where('organizationId', '==', orgId)
+                .where('status', '==', 'pending')
+                .get();
+
+            if (!emailInvitationsQuery.empty) {
+                const batch = db.batch();
+                emailInvitationsQuery.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+                console.log(`[Organization] Deleted ${emailInvitationsQuery.size} email-based pending invitations for ${userData.email} in organization ${orgId}`);
+            }
+        }
+
         // تحديث بيانات المستخدم في مجموعة users
         if (userData) {
             const updateData: any = {
@@ -343,6 +377,7 @@ export const removeOrganizationMember = createCallableFunction<RemoveOrganizatio
                 updateData.accountType = 'individual';
                 updateData.role = 'isIndependent';
                 updateData.organizationId = null;
+                updateData.organizationName = null; // حذف اسم المؤسسة
                 updateData.departmentId = null;
                 updateData.isIndependent = true;
                 updateData.isOrgOwner = false;
@@ -355,6 +390,7 @@ export const removeOrganizationMember = createCallableFunction<RemoveOrganizatio
                 // إذا كان لديه عضويات أخرى، إزالة معرف هذه المؤسسة فقط
                 if (userData.organizationId === orgId) {
                     updateData.organizationId = null;
+                    updateData.organizationName = null; // حذف اسم المؤسسة
                     updateData.departmentId = null;
                 }
             }

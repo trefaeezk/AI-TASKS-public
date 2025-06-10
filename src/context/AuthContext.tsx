@@ -130,7 +130,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         }
 
-        console.log("[AuthContext] ⚠️ فشل في العثور على الوثيقة بعد جميع المحاولات - استخدام البيانات الافتراضية");
+        console.log("[AuthContext] ⚠️ فشل في العثور على الوثيقة بعد جميع المحاولات");
+
+        // التحقق من Firebase Auth Custom Claims أولاً قبل استخدام البيانات الافتراضية
+        try {
+          const idTokenResult = await currentUser.getIdTokenResult(true); // force refresh
+          const claims = idTokenResult.claims;
+
+          if (claims.accountType && claims.role) {
+            console.log("[AuthContext] 🔄 استخدام البيانات من Custom Claims:", claims);
+            return {
+              accountType: claims.accountType as SystemType,
+              role: claims.role as UserRole,
+              organizationId: claims.organizationId || undefined,
+              organizationName: claims.organizationName || undefined,
+              departmentId: claims.departmentId || undefined,
+              isSystemOwner: claims.isSystemOwner || false,
+              isSystemAdmin: claims.isSystemAdmin || false,
+              isOrgOwner: claims.isOrgOwner || false,
+              isOrgAdmin: claims.isOrgAdmin || false,
+              isOrgSupervisor: claims.isOrgSupervisor || false,
+              isOrgEngineer: claims.isOrgEngineer || false,
+              isOrgTechnician: claims.isOrgTechnician || false,
+              isOrgAssistant: claims.isOrgAssistant || false,
+              isIndependent: claims.isIndependent || false,
+              customPermissions: claims.customPermissions || []
+            };
+          }
+        } catch (claimsError) {
+          console.error("[AuthContext] خطأ في جلب Custom Claims:", claimsError);
+        }
+
+        console.log("[AuthContext] استخدام البيانات الافتراضية للمستخدم الجديد");
         // نعيد البيانات الافتراضية للمستخدم الجديد
         return {
           accountType: 'individual',

@@ -6,7 +6,7 @@ import type { Timestamp } from 'firebase/firestore';
 export type DurationUnit = 'hours' | 'days' | 'weeks';
 
 // Define Task Status type
-export type TaskStatus = 'pending' | 'hold' | 'completed' | 'in-progress' | 'cancelled';
+export type TaskStatus = 'pending' | 'hold' | 'completed' | 'in-progress' | 'cancelled' | 'pending-approval';
 
 // Define Priority Level type (1: Highest, 5: Lowest) or string values
 export type PriorityLevel = 1 | 2 | 3 | 4 | 5 | 'high' | 'medium' | 'low';
@@ -56,6 +56,17 @@ export interface TaskType {
   objectiveId?: string; // ID of the objective this task is linked to
   keyResultId?: string; // ID of the key result this task is linked to
   linkedToOkr?: boolean; // Whether this task is linked to any key result
+
+  // Approval fields
+  requiresApproval?: boolean; // Whether this task requires approval
+  approvalLevel?: 'department' | 'organization'; // Level of approval required
+  approvedBy?: string; // ID of the user who approved the task
+  approvedAt?: Timestamp; // When the task was approved
+  rejectedBy?: string; // ID of the user who rejected the task
+  rejectedAt?: Timestamp; // When the task was rejected
+  rejectionReason?: string; // Reason for rejection
+  submittedBy?: string; // ID of the user who submitted the task for approval
+  submittedAt?: Timestamp; // When the task was submitted for approval
 
   // Additional fields for task management
   createdBy?: string; // ID of the user who created the task

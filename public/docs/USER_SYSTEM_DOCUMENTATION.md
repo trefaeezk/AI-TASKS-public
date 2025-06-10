@@ -166,14 +166,28 @@
 
 #### 👨‍🔧 isOrgEngineer
 ```typescript
-// صلاحيات واسعة ولكن أقل من المسؤول
+// صلاحيات واسعة تتناسب مع منصبه العالي في الهيكل التنظيمي
 [
-  'users:view', 'users:assign',
-  'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:approve', 'tasks:assign',
-  'reports:view', 'reports:create', 'reports:edit', 'reports:approve',
-  'settings:view', 'settings:edit',
-  'tools:view', 'tools:create', 'tools:edit',
-  'dashboard:view', 'dashboard:edit'
+  // إدارة المستخدمين - صلاحيات واسعة
+  'users:view', 'users:create', 'users:edit', 'users:assign',
+
+  // إدارة المهام - صلاحيات كاملة
+  'tasks:view', 'tasks:create', 'tasks:edit', 'tasks:delete', 'tasks:approve', 'tasks:assign',
+
+  // إدارة التقارير - صلاحيات كاملة
+  'reports:view', 'reports:create', 'reports:edit', 'reports:delete', 'reports:approve',
+
+  // إدارة الإعدادات - صلاحيات واسعة
+  'settings:view', 'settings:create', 'settings:edit',
+
+  // إدارة الأدوات - صلاحيات كاملة
+  'tools:view', 'tools:create', 'tools:edit', 'tools:delete',
+
+  // إدارة لوحة المعلومات - صلاحيات كاملة
+  'dashboard:view', 'dashboard:create', 'dashboard:edit', 'dashboard:delete',
+
+  // إدارة البيانات - صلاحيات كاملة للاستيراد والتصدير
+  'data:view', 'data:create', 'data:edit', 'data:delete'
 ]
 ```
 

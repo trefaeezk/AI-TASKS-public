@@ -221,7 +221,10 @@ service cloud.firestore {
         hasAdminAccess() ||
         // التأكد من أن المستخدم ينشئ مهمة لنفسه أو لمؤسسته
         (request.resource.data.organizationId == null && request.resource.data.userId == request.auth.uid) ||
-        (request.resource.data.organizationId != null && getUserToken().organizationId == request.resource.data.organizationId)
+        (request.resource.data.organizationId != null && getUserToken().organizationId == request.resource.data.organizationId) ||
+        // السماح بإنشاء مهام تتطلب موافقة
+        (request.resource.data.status == 'pending-approval' && request.resource.data.requiresApproval == true &&
+         request.resource.data.organizationId != null && getUserToken().organizationId == request.resource.data.organizationId)
       );
 
       // تعديل المهام
@@ -233,6 +236,12 @@ service cloud.firestore {
         (resource.data.organizationId == null && resource.data.userId == request.auth.uid) ||
         // للمهام المؤسسية - الأدوار العليا لها صلاحية كاملة
         (resource.data.organizationId != null && getUserToken().organizationId == resource.data.organizationId && hasHighLevelAccess()) ||
+        // موافقة المهام المعلقة - مسئولي الأقسام والمؤسسة
+        (resource.data.status == 'pending-approval' && resource.data.requiresApproval == true &&
+         resource.data.organizationId != null && getUserToken().organizationId == resource.data.organizationId &&
+         ((resource.data.approvalLevel == 'department' && (isOrgSupervisor() || isOrgEngineer() || hasHighLevelAccess()) &&
+           getUserToken().departmentId == resource.data.departmentId) ||
+          (resource.data.approvalLevel == 'organization' && (isOrgOwner() || isOrgAdmin())))) ||
         // للمهام المؤسسية - المهندس يمكنه تحديث المهام المُسندة إليه أو مهام قسمه بحرية كاملة
         (resource.data.organizationId != null && getUserToken().organizationId == resource.data.organizationId &&
          isOrgEngineer() && (

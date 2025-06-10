@@ -32,23 +32,38 @@ interface TaskContextSelectorProps {
     departmentId: string | undefined;
     assignedToUserId: string | undefined;
   }) => void;
+  userClaims?: any;
   organizationId?: string;
   disabled?: boolean;
+  requiresApproval?: boolean;
+  onRequiresApprovalChange?: (required: boolean) => void;
 }
 
 export function TaskContextSelector({
   value,
   onChange,
+  userClaims: propUserClaims,
   organizationId,
-  disabled = false
+  disabled = false,
+  requiresApproval = false,
+  onRequiresApprovalChange
 }: TaskContextSelectorProps) {
-  const { userClaims } = useAuth();
+  const { userClaims: contextUserClaims } = useAuth();
+  const userClaims = propUserClaims || contextUserClaims;
 
-  // تحديد الأدوار المتدنية التي لا يمكنها إسناد مهام للآخرين أو تغيير مستوى المهمة
-  const isLowLevelRole = userClaims?.isOrgEngineer || userClaims?.isOrgTechnician || userClaims?.isOrgAssistant;
+  // تحديد الأدوار والصلاحيات
+  const isOrgOwner = userClaims?.isOrgOwner;
+  const isOrgAdmin = userClaims?.isOrgAdmin;
+  const isOrgSupervisor = userClaims?.isOrgSupervisor;
+  const isOrgEngineer = userClaims?.isOrgEngineer;
+  const isOrgTechnician = userClaims?.isOrgTechnician;
+  const isOrgAssistant = userClaims?.isOrgAssistant;
 
-  // إخفاء خيارات الإسناد ومستوى المهمة للأدوار المتدنية
-  const canAssignToOthers = !isLowLevelRole;
+  // الأدوار العليا يمكنها إسناد مهام للآخرين بدون قيود
+  const canAssignToOthers = isOrgOwner || isOrgAdmin || isOrgSupervisor;
+
+  // المهندسون والفنيون يمكنهم إنشاء مهام قسم بشرط الموافقة
+  const canCreateDepartmentTasksWithApproval = isOrgEngineer || isOrgTechnician;
   const [departments, setDepartments] = useState<Department[]>([]);
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [loadingDepartments, setLoadingDepartments] = useState(false);
@@ -136,9 +151,33 @@ export function TaskContextSelector({
 
   // Handle context change
   const handleContextChange = (newContext: TaskContext) => {
+    // إذا اختار المهندس أو الفني مستوى القسم، يجب تفعيل الموافقة
+    if ((newContext === 'department' || newContext === 'organization') &&
+        canCreateDepartmentTasksWithApproval && !canAssignToOthers &&
+        onRequiresApprovalChange) {
+      onRequiresApprovalChange(true);
+    }
+
+    // تحديد معرف القسم
+    let departmentId = undefined;
+    if (newContext === 'department') {
+      if (canCreateDepartmentTasksWithApproval && !canAssignToOthers) {
+        // للمهندسين والفنيين: استخدام قسمهم الحالي إجبارياً
+        departmentId = userClaims?.departmentId;
+        if (!departmentId) {
+          // إذا لم يكن لديهم قسم، لا يمكنهم إنشاء مهام قسم
+          console.warn('المهندس/الفني ليس لديه قسم محدد');
+          return;
+        }
+      } else {
+        // للأدوار العليا: يمكنهم اختيار أي قسم
+        departmentId = value.departmentId;
+      }
+    }
+
     onChange({
       taskContext: newContext,
-      departmentId: newContext === 'department' ? value.departmentId : undefined,
+      departmentId: departmentId,
       assignedToUserId: newContext === 'individual' ? value.assignedToUserId : undefined,
     });
   };
@@ -182,11 +221,14 @@ export function TaskContextSelector({
                 <span>فرد</span>
               </div>
             </SelectItem>
-            {canAssignToOthers && (
+            {(canAssignToOthers || canCreateDepartmentTasksWithApproval) && (
               <SelectItem value="department">
                 <div className="flex items-center">
                   <Users className="ml-2 h-4 w-4" />
                   <span>قسم</span>
+                  {canCreateDepartmentTasksWithApproval && !canAssignToOthers && (
+                    <span className="mr-2 text-xs text-orange-600">(يتطلب موافقة)</span>
+                  )}
                 </div>
               </SelectItem>
             )}
@@ -202,8 +244,8 @@ export function TaskContextSelector({
         </Select>
       </div>
 
-      {/* Department Selector (visible only when context is department) */}
-      {value.taskContext === 'department' && (
+      {/* Department Selector for higher roles */}
+      {value.taskContext === 'department' && canAssignToOthers && (
         <div className="space-y-2">
           <Label htmlFor="department-select" className="flex items-center">
             <Users className="ml-1 h-4 w-4 text-muted-foreground" />
@@ -229,6 +271,19 @@ export function TaskContextSelector({
               </SelectContent>
             </Select>
           )}
+        </div>
+      )}
+
+      {/* Department Info for Engineers/Technicians (read-only) */}
+      {value.taskContext === 'department' && canCreateDepartmentTasksWithApproval && !canAssignToOthers && (
+        <div className="space-y-2">
+          <Label className="flex items-center">
+            <Users className="ml-1 h-4 w-4 text-muted-foreground" />
+            القسم
+          </Label>
+          <div className="p-3 bg-muted/50 rounded-md border text-sm text-muted-foreground">
+            سيتم إنشاء المهمة في قسمك الحالي (يتطلب موافقة المسئول)
+          </div>
         </div>
       )}
 
@@ -262,11 +317,25 @@ export function TaskContextSelector({
         </div>
       )}
 
-      {/* رسالة للأدوار المتدنية */}
-      {value.taskContext === 'individual' && !canAssignToOthers && (
+      {/* رسالة توضيحية حسب مستوى المهمة */}
+      {value.taskContext === 'individual' && (
         <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md">
           <User className="inline ml-1 h-4 w-4" />
-          ستتم إضافة هذه المهمة إلى مهامك الشخصية
+          {canAssignToOthers
+            ? "يمكنك إنشاء مهام شخصية أو تغيير المستوى لإسناد المهام للآخرين أو طلب الموافقة"
+            : canCreateDepartmentTasksWithApproval
+            ? "يمكنك إنشاء مهام شخصية أو مهام قسم (تتطلب موافقة) أو طلب موافقة المسئول"
+            : "يمكنك إنشاء مهام شخصية أو طلب موافقة المسئول للمهام التي تحتاج موافقة"
+          }
+        </div>
+      )}
+
+      {/* رسالة تحذيرية للمهام التي تتطلب موافقة */}
+      {(value.taskContext === 'department' || value.taskContext === 'organization') &&
+       canCreateDepartmentTasksWithApproval && !canAssignToOthers && (
+        <div className="text-sm text-orange-700 bg-orange-50 border border-orange-200 p-3 rounded-md">
+          <Users className="inline ml-1 h-4 w-4" />
+          مهام {value.taskContext === 'department' ? 'القسم' : 'المؤسسة'} تتطلب موافقة من المسئول قبل التنفيذ
         </div>
       )}
     </div>

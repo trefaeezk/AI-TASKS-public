@@ -2,6 +2,14 @@
 export { DailyPlanReport } from './DailyPlanReport';
 export { WeeklyReport } from './WeeklyReport';
 
+// ===== مكونات تقارير الموافقات =====
+export { ApprovalStatsCard } from './ApprovalStatsCard';
+export { ApprovalTimelineChart } from './ApprovalTimelineChart';
+export { PendingTasksTable } from './PendingTasksTable';
+export { DepartmentApprovalStats } from './DepartmentApprovalStats';
+export { ApprovalReportExport } from './ApprovalReportExport';
+export { ApprovalSummaryCard } from './ApprovalSummaryCard';
+
 // ===== مكونات التقارير الرئيسية =====
 export { PeriodReportCard } from '../PeriodReportCard';
 export { WeeklyReportCard } from '../WeeklyReportCard';
@@ -28,6 +36,15 @@ export type {
   PeriodRange
 } from '../../services/organizationReports';
 
+// ===== أنواع تقارير الموافقات =====
+export type {
+  ApprovalStats,
+  ApprovalTimelineData,
+  DepartmentApprovalStats,
+  PendingTaskDetails,
+  UserApprovalActivity
+} from '../../services/approvalReports';
+
 // ===== الخدمات =====
 export {
   getPeriodStats,
@@ -40,3 +57,12 @@ export {
   getDailyTasks,
   getDailyGoals
 } from '../../services/organizationReports';
+
+// ===== خدمات تقارير الموافقات =====
+export {
+  getApprovalStats,
+  getApprovalTimeline,
+  getDepartmentApprovalStats,
+  getPendingTasksDetails,
+  getUserApprovalActivity
+} from '../../services/approvalReports';

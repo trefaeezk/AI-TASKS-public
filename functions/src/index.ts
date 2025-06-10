@@ -28,6 +28,60 @@ export * from './userDeletion';
 // تصدير وظائف المستخدمين الفرديين
 export * from './individual';
 
+// تصدير وظائف المؤسسات (تصدير محدد لتجنب التضارب)
+export {
+  // وظائف المؤسسات الأساسية
+  createOrganization,
+  getOrganization,
+  updateOrganization,
+  removeOrganizationMember,
+  updateOrganizationMember,
+  getOrganizationMembers,
+
+  // وظائف طلبات المؤسسات
+  requestOrganization,
+  approveOrganizationRequest,
+  rejectOrganizationRequest,
+
+  // وظائف دعوات المؤسسات
+  inviteUserToOrganization,
+  acceptOrganizationInvitation,
+  rejectOrganizationInvitation,
+  getInvitationInfo,
+
+  // وظائف إدارة الحسابات
+  verifyAccountType,
+  updateAccountType,
+
+  // وظائف OKR
+  createOkrPeriod,
+  updateOkrPeriod,
+  getOkrPeriods,
+  createObjective,
+  createKeyResult,
+  updateKeyResult,
+  deleteKeyResult,
+  getKeyResultsByObjective,
+  getKeyResultUpdates,
+
+  // وظائف ربط المهام
+  linkTaskToKeyResult,
+  unlinkTaskFromKeyResult,
+  getTasksForKeyResult,
+  getKeyResultsForTask,
+  getUnlinkedKeyResults,
+  getUnlinkedTasks,
+  createTaskForKeyResult,
+
+  // وظائف إحصائيات OKR
+  getOkrStats,
+  exportOkrReport,
+  exportOkrToExcel
+} from './organization';
+
+// تصدير وظائف موافقة المهام
+export * from './tasks/approval';
+
 // تم حذف دالة fixUserPermissions - لم تعد مطلوبة
 
 /**
@@ -587,43 +641,7 @@ export {
   exportIndividualData
 };
 
-// Import and export organization functions
-export {
-  createOrganization,
-  getOrganization,
-  updateOrganization,
-  updateOrganizationMember,
-  removeOrganizationMember,
-  getOrganizationMembers,
-  requestOrganization,
-  approveOrganizationRequest,
-  rejectOrganizationRequest,
-  // دوال الدعوات
-  inviteUserToOrganization,
-  getInvitationInfo,
-  acceptOrganizationInvitation,
-  rejectOrganizationInvitation,
-  // دوال OKR
-  createOkrPeriod,
-  getOkrPeriods,
-  updateOkrPeriod,
-  createObjective,
-  createKeyResult,
-  getKeyResultsByObjective,
-  updateKeyResult,
-  deleteKeyResult,
-  getKeyResultUpdates,
-  linkTaskToKeyResult,
-  unlinkTaskFromKeyResult,
-  getTasksForKeyResult,
-  getKeyResultsForTask,
-  getUnlinkedKeyResults,
-  getUnlinkedTasks,
-  createTaskForKeyResult,
-  getOkrStats,
-  exportOkrReport,
-  exportOkrToExcel
-} from './organization';
+// تم نقل تصدير وظائف المؤسسات إلى بداية الملف لتجنب التكرار
 
 // وظائف المصادقة والذكاء الاصطناعي تم تصديرها بالفعل في بداية الملف
 

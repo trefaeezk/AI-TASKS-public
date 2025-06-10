@@ -504,31 +504,24 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                     />
                 </div>
 
-                {/* Show TaskContextSelector only if the task being edited has an organizationId and user can assign tasks */}
-                {task.organizationId && canAssignTasks && (
-                  <>
-                    <Separator />
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-medium text-muted-foreground mb-2">سياق المهمة</h3>
-                      <TaskContextSelector
-                        value={taskContext}
-                        onChange={setTaskContext}
-                        organizationId={task.organizationId} // Pass task's orgId
-                        disabled={isUpdatingTask}
-                      />
-                    </div>
-                  </>
-                )}
+                {/* مستوى المهمة - يظهر للجميع */}
+                <Separator />
+                <div className="space-y-4">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">مستوى المهمة</h3>
+                  <TaskContextSelector
+                    value={taskContext}
+                    onChange={setTaskContext}
+                    userClaims={userClaims}
+                    disabled={isUpdatingTask || !canAssignTasks} // تعطيل للأدوار المتدنية
+                  />
+                </div>
 
                 {/* رسالة للأدوار المتدنية */}
-                {task.organizationId && !canAssignTasks && (
-                  <>
-                    <Separator />
-                    <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md">
-                      <UserIcon className="inline ml-1 h-4 w-4" />
-                      هذه مهمة شخصية - لا يمكن تغيير الإسناد
-                    </div>
-                  </>
+                {!canAssignTasks && (
+                  <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md">
+                    <UserIcon className="inline ml-1 h-4 w-4" />
+                    لا يمكن تغيير مستوى المهمة أو الإسناد بصلاحياتك الحالية
+                  </div>
                 )}
 
                  <Separator />

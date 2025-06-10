@@ -38,6 +38,7 @@ import { cn } from '@/lib/utils';
 import { AddTaskSheet } from '@/components/AddTaskSheet';
 import { useAuth } from '@/context/AuthContext';
 import { useTaskPageContext, type TaskCategory, categoryInfo, categoryOrder } from '@/context/TaskPageContext';
+import { NotificationBadge } from '@/components/notifications/NotificationBadge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAccountType } from '@/hooks/useAccountType';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -492,7 +493,11 @@ export function AppLayoutContent({ children }: { children: ReactNode }) {
                     <div className="flex items-center gap-2">
                         {user && <AddTaskSheet user={user} />}
                         <FilterPopover />
-                        {user && <NotificationsPopover />}
+                        {user && (
+                          <NotificationsPopover>
+                            <NotificationBadge />
+                          </NotificationsPopover>
+                        )}
                         {user && (
                           <Link href="/suggestions">
                             <Button
