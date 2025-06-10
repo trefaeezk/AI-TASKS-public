@@ -55,18 +55,20 @@ interface WeeklyReportCardProps {
 }
 
 export function WeeklyReportCard({ organizationId, departmentId, userId, className, reportPeriod: propReportPeriod }: WeeklyReportCardProps) {
-  // استخدام المكون الجديد الموحد مع تحديد النوع كأسبوعي
-  return (
-    <PeriodReportCard
-      organizationId={organizationId}
-      departmentId={departmentId}
-      userId={userId}
-      className={className}
-      defaultPeriodType="weekly"
-      reportPeriod={propReportPeriod}
-    />
-  );
-}
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const reportElementRef = useRef<HTMLDivElement>(null);
+
+  // State variables
+  const [tasks, setTasks] = useState<TaskType[]>([]);
+  const [isLoadingTasks, setIsLoadingTasks] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [report, setReport] = useState<GenerateWeeklyReportOutput | null>(null);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [reportGenerated, setReportGenerated] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>('summary');
+  const [weeklyComparison, setWeeklyComparison] = useState<any>(null);
+  const [departmentData, setDepartmentData] = useState<any[]>([]);
 
 
   // دالة لحساب نسبة إكمال المهام في حالة عدم توفرها من الخدمة
@@ -335,6 +337,17 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
 
     fetchTasks();
   }, [user, organizationId, departmentId, userId]);
+
+  // دوال مساعدة مؤقتة (يمكن استبدالها بالدوال الفعلية لاحقاً)
+  const getWeeklyComparison = async (orgId: string, endDate: Date) => {
+    // دالة مؤقتة - يجب استبدالها بالتنفيذ الفعلي
+    return null;
+  };
+
+  const getEnhancedDepartmentPerformance = async (orgId: string, endDate: Date) => {
+    // دالة مؤقتة - يجب استبدالها بالتنفيذ الفعلي
+    return [];
+  };
 
   // جلب بيانات المقارنة والأقسام
   useEffect(() => {
@@ -1791,58 +1804,30 @@ export function WeeklyReportCard({ organizationId, departmentId, userId, classNa
 
               {/* تبويب الرسوم البيانية */}
               <TabsContent value="charts" className="space-y-4">
-                <WeeklyReportCharts
-                  completedTasks={report?.completedTasks}
-                  inProgressTasks={report?.inProgressTasks}
-                  upcomingTasks={report?.upcomingTasks}
-                  blockedTasks={report?.blockedTasks}
-                  overdueTasks={report?.overdueTasks}
-                  keyMetrics={report?.keyMetrics}
-                />
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">الرسوم البيانية قيد التطوير</p>
+                </div>
               </TabsContent>
 
               {/* تبويب تحليل الاتجاهات */}
               <TabsContent value="trends" className="space-y-4">
-                {weeklyComparison ? (
-                  <WeeklyTrendAnalysis comparison={weeklyComparison} />
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">جاري تحميل بيانات المقارنة...</p>
-                  </div>
-                )}
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">تحليل الاتجاهات قيد التطوير</p>
+                </div>
               </TabsContent>
 
               {/* تبويب تحليل الأقسام */}
               <TabsContent value="departments" className="space-y-4">
-                {departmentData.length > 0 ? (
-                  <DepartmentAnalysis departments={departmentData} />
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">لا توجد بيانات أقسام متاحة أو جاري التحميل...</p>
-                  </div>
-                )}
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">تحليل الأقسام قيد التطوير</p>
+                </div>
               </TabsContent>
 
               {/* تبويب التصدير */}
               <TabsContent value="export" className="space-y-4">
-                <AdvancedExport
-                  data={{
-                    title: `التقرير الأسبوعي - ${formatDate(reportPeriod.startDate)} إلى ${formatDate(reportPeriod.endDate)}`,
-                    summary: report?.summary || '',
-                    completedTasks: report?.completedTasks || [],
-                    inProgressTasks: report?.inProgressTasks || [],
-                    upcomingTasks: report?.upcomingTasks || [],
-                    blockedTasks: report?.blockedTasks || [],
-                    keyMetrics: report?.keyMetrics || {
-                      completionRate: 0,
-                      onTimeCompletionRate: 0,
-                      averageProgress: 0
-                    },
-                    recommendations: report?.recommendations || [],
-                    departmentData: departmentData
-                  }}
-                  reportElement={reportElementRef}
-                />
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">خيارات التصدير المتقدمة قيد التطوير</p>
+                </div>
               </TabsContent>
             </Tabs>
           </>

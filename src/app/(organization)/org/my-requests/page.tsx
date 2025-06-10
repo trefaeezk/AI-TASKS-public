@@ -27,7 +27,7 @@ import { ar } from 'date-fns/locale';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { useAuth } from '@/context/AuthContext';
-import { Task } from '@/types/task';
+import { TaskType } from '@/types/task';
 
 export default function MyRequestsPage() {
   const { user } = useAuth();
