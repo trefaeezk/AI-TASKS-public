@@ -8,11 +8,14 @@ import path from 'path';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
   try {
+    // انتظار الحصول على المعاملات
+    const resolvedParams = await params;
+
     // بناء مسار الملف
-    const filePath = path.join(process.cwd(), 'docs', ...params.path);
+    const filePath = path.join(process.cwd(), 'docs', ...resolvedParams.path);
     
     // التحقق من وجود الملف
     if (!fs.existsSync(filePath)) {
