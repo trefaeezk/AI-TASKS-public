@@ -172,9 +172,9 @@ export function ApprovalSummaryCard({
               'border-red-500 text-red-600'
             }
           >
-            {stats.averageApprovalTime < 24 
-              ? `${stats.averageApprovalTime.toFixed(1)} ساعة`
-              : `${(stats.averageApprovalTime / 24).toFixed(1)} يوم`
+            {stats.averageApprovalTime < 24
+              ? `${Math.round(stats.averageApprovalTime)} ساعة`
+              : `${Math.round(stats.averageApprovalTime / 24)} يوم`
             }
           </Badge>
         </div>

@@ -289,6 +289,33 @@ export function AddTaskSheet({ user, isOpen, onOpenChange, showTrigger = true }:
           (taskContext.departmentId || userClaims?.departmentId) :
           userClaims?.departmentId;
 
+        // التحقق من تحديد القسم للمهام على مستوى القسم
+        if (approvalLevel === 'department') {
+          // للأدوار الإدارية: يجب اختيار قسم يدوياً
+          const isAdminRole = userClaims?.isOrgOwner || userClaims?.isOrgAdmin;
+
+          if (isAdminRole && !taskContext.departmentId) {
+            toast({
+              title: 'خطأ',
+              description: 'يجب اختيار قسم لإنشاء مهمة على مستوى القسم',
+              variant: 'destructive',
+            });
+            setIsAddingTask(false);
+            return;
+          }
+
+          // للأدوار غير الإدارية: يجب أن يكون لديهم قسم حالي
+          if (!isAdminRole && !userClaims?.departmentId) {
+            toast({
+              title: 'خطأ',
+              description: 'يجب أن تكون عضواً في قسم لإنشاء مهام على مستوى القسم',
+              variant: 'destructive',
+            });
+            setIsAddingTask(false);
+            return;
+          }
+        }
+
         // تحضير نقاط التتبع للإرسال
         const milestonesForApproval = validMilestones.length > 0 ? validMilestones.map(m => ({
           id: m.id || uuidv4(),

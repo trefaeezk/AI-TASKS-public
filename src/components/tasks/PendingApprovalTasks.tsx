@@ -25,6 +25,7 @@ import { functions, db } from '@/config/firebase';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { Task } from '@/types/task';
+import { getPriorityColor, getPriorityText } from '@/utils/priority';
 
 interface PendingApprovalTasksProps {
   organizationId: string;
@@ -95,10 +96,10 @@ export function PendingApprovalTasks({
         rejectionReason: approved ? undefined : rejectionReason[taskId]
       });
       
-      if (result.data.success) {
+      if ((result.data as any)?.success) {
         toast({
           title: approved ? 'تمت الموافقة' : 'تم الرفض',
-          description: result.data.message,
+          description: (result.data as any)?.message,
         });
         
         // مسح سبب الرفض
@@ -122,23 +123,7 @@ export function PendingApprovalTasks({
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'destructive';
-      case 'medium': return 'default';
-      case 'low': return 'secondary';
-      default: return 'default';
-    }
-  };
 
-  const getPriorityText = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'عالية';
-      case 'medium': return 'متوسطة';
-      case 'low': return 'منخفضة';
-      default: return priority;
-    }
-  };
 
   if (loading) {
     return (
@@ -197,8 +182,8 @@ export function PendingApprovalTasks({
               </div>
               
               <div className="flex items-center gap-2">
-                <Badge variant={getPriorityColor(task.priority || 'medium')}>
-                  {getPriorityText(task.priority || 'medium')}
+                <Badge variant={getPriorityColor(task.priority)}>
+                  {getPriorityText(task.priority)}
                 </Badge>
                 <Badge variant="outline">
                   {task.approvalLevel === 'department' ? 'قسم' : 'مؤسسة'}
@@ -228,7 +213,13 @@ export function PendingApprovalTasks({
             {task.dueDate && (
               <div className="flex items-center gap-2 text-sm">
                 <Calendar className="h-4 w-4" />
-                <span>تاريخ الاستحقاق: {format(task.dueDate.toDate(), 'PPP', { locale: ar })}</span>
+                <span>تاريخ الاستحقاق: {format(
+                  task.dueDate instanceof Date
+                    ? task.dueDate
+                    : new Date((task.dueDate as any).seconds * 1000),
+                  'PPP',
+                  { locale: ar }
+                )}</span>
               </div>
             )}
 

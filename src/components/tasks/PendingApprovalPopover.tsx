@@ -21,6 +21,7 @@ import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestor
 import { db } from '@/config/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { Task } from '@/types/task';
+import { getPriorityColor, getPriorityText } from '@/utils/priority';
 import {
   Popover,
   PopoverContent,
@@ -96,23 +97,7 @@ export function PendingApprovalPopover({
     setSelectedTask(null);
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'destructive';
-      case 'medium': return 'default';
-      case 'low': return 'secondary';
-      default: return 'default';
-    }
-  };
 
-  const getPriorityText = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'عالية';
-      case 'medium': return 'متوسطة';
-      case 'low': return 'منخفضة';
-      default: return priority;
-    }
-  };
 
   // لا تظهر المكون إذا لم يكن المستخدم مسئولاً
   if (!userClaims || (!userClaims.isOrgOwner && !userClaims.isOrgAdmin && !userClaims.isOrgSupervisor)) {
@@ -181,10 +166,10 @@ export function PendingApprovalPopover({
                           </p>
                           <div className="flex items-center gap-1 mr-2 flex-shrink-0">
                             <Badge
-                              variant={getPriorityColor(task.priority || 'medium')}
+                              variant={getPriorityColor(task.priority)}
                               className="text-xs"
                             >
-                              {getPriorityText(task.priority || 'medium')}
+                              {getPriorityText(task.priority)}
                             </Badge>
                             <Badge variant="outline" className="text-xs">
                               {task.approvalLevel === 'department' ? 'قسم' : 'مؤسسة'}

@@ -39,6 +39,7 @@ export interface TaskType {
   status: TaskStatus;
   progress?: number; // Progress percentage (0-100)
   taskCategoryName?: string;
+  categoryId?: string; // ID of the task category
   milestones?: Milestone[]; // Array of milestones with JS Date dueDate
   title?: string; // Alternative to description, used in some contexts
   notes?: string; // Additional notes
@@ -60,15 +61,20 @@ export interface TaskType {
   // Approval fields
   requiresApproval?: boolean; // Whether this task requires approval
   approvalLevel?: 'department' | 'organization'; // Level of approval required
+  approved?: boolean; // Whether the task is approved (true/false/undefined)
   approvedBy?: string; // ID of the user who approved the task
+  approvedByName?: string; // Name of the user who approved the task
   approvedAt?: Timestamp; // When the task was approved
   rejectedBy?: string; // ID of the user who rejected the task
   rejectedAt?: Timestamp; // When the task was rejected
   rejectionReason?: string; // Reason for rejection
   submittedBy?: string; // ID of the user who submitted the task for approval
+  submittedByName?: string; // Name of the user who submitted the task for approval
   submittedAt?: Timestamp; // When the task was submitted for approval
+  notificationRead?: boolean; // Whether the notification has been read
 
   // Additional fields for task management
+  userId?: string; // ID of the user who owns the task (for backward compatibility)
   createdBy?: string; // ID of the user who created the task
   order?: number; // Order for sorting tasks
   createdAt?: Date; // When the task was created
@@ -127,3 +133,6 @@ export interface TaskCategoryDefinition {
     name: string;
     color?: string;
 }
+
+// Export Task as an alias for TaskType for backward compatibility
+export type Task = TaskType;

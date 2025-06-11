@@ -105,7 +105,7 @@ export function ApprovalStatsCard({ stats, loading, title = "إحصائيات ا
             <div className="flex justify-between items-center mb-1">
               <span className="text-sm font-medium">معدل الموافقة</span>
               <span className="text-sm text-green-600 font-medium">
-                {stats.approvalRate.toFixed(1)}%
+                {Math.round(stats.approvalRate)}%
               </span>
             </div>
             <Progress value={stats.approvalRate} className="h-2" />
@@ -115,7 +115,7 @@ export function ApprovalStatsCard({ stats, loading, title = "إحصائيات ا
             <div className="flex justify-between items-center mb-1">
               <span className="text-sm font-medium">معدل الرفض</span>
               <span className="text-sm text-red-600 font-medium">
-                {stats.rejectionRate.toFixed(1)}%
+                {Math.round(stats.rejectionRate)}%
               </span>
             </div>
             <Progress value={stats.rejectionRate} className="h-2" />
@@ -130,9 +130,9 @@ export function ApprovalStatsCard({ stats, loading, title = "إحصائيات ا
               <span className="text-sm font-medium">متوسط وقت الموافقة</span>
             </div>
             <Badge variant="outline">
-              {stats.averageApprovalTime < 24 
-                ? `${stats.averageApprovalTime.toFixed(1)} ساعة`
-                : `${(stats.averageApprovalTime / 24).toFixed(1)} يوم`
+              {stats.averageApprovalTime < 24
+                ? `${Math.round(stats.averageApprovalTime)} ساعة`
+                : `${Math.round(stats.averageApprovalTime / 24)} يوم`
               }
             </Badge>
           </div>

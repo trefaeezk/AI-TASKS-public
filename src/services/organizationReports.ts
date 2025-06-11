@@ -279,7 +279,10 @@ export async function getWeeklyStats(
       meetingsHeld,
       meetingsPlanned: meetingsHeld, // افتراضياً نفس العدد
       goalsAchieved: 0, // يمكن حسابها لاحقاً
-      goalsTotal: 0
+      goalsTotal: 0,
+      periodType: 'weekly' as const,
+      startDate: weekStart,
+      endDate: weekEnd
     };
   } catch (error) {
     console.error('Error fetching weekly stats:', error);
@@ -291,7 +294,10 @@ export async function getWeeklyStats(
       meetingsHeld: 0,
       meetingsPlanned: 0,
       goalsAchieved: 0,
-      goalsTotal: 0
+      goalsTotal: 0,
+      periodType: 'weekly' as const,
+      startDate: new Date(),
+      endDate: new Date()
     };
   }
 }
@@ -416,7 +422,7 @@ export async function getWeeklyHighlights(
         type: 'achievement',
         title: `إنجاز مهمة مهمة: ${taskData.description || taskData.title}`,
         description: taskData.details || 'تم إنجاز مهمة ذات أولوية عالية بنجاح',
-        date: taskData.completedDate ? taskData.completedDate.toDate() : new Date(),
+        date: taskData.completedDate ? (taskData.completedDate instanceof Date ? taskData.completedDate : taskData.completedDate.toDate()) : new Date(),
         department: departmentName
       });
     }
@@ -581,8 +587,8 @@ export async function getEnhancedDepartmentPerformance(
 
           // حساب الالتزام بالموعد
           if (taskData.completedDate && taskData.dueDate) {
-            const completedDate = taskData.completedDate.toDate();
-            const dueDate = taskData.dueDate.toDate();
+            const completedDate = taskData.completedDate instanceof Date ? taskData.completedDate : taskData.completedDate.toDate();
+            const dueDate = taskData.dueDate instanceof Date ? taskData.dueDate : taskData.dueDate.toDate();
             if (completedDate <= dueDate) {
               onTimeCompleted++;
             }

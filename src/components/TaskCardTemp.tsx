@@ -134,7 +134,7 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
         }
         // أو المهام المُسندة إليهم شخصياً
         if (task.assignedToUserId === user?.uid ||
-            (task.assignedToUserIds && task.assignedToUserIds.includes(user?.uid))) {
+            (task.assignedToUserIds && user?.uid && task.assignedToUserIds.includes(user.uid))) {
           return true;
         }
         // أو المهام التي أنشأوها
@@ -147,7 +147,7 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
       // الفني والمساعد الفني يمكنهم تعديل المهام المُسندة إليهم فقط
       if (userClaims?.isOrgTechnician || userClaims?.isOrgAssistant) {
         return task.assignedToUserId === user?.uid ||
-               (task.assignedToUserIds && task.assignedToUserIds.includes(user?.uid)) ||
+               (task.assignedToUserIds && user?.uid && task.assignedToUserIds.includes(user.uid)) ||
                (task.userId === user?.uid || task.createdBy === user?.uid);
       }
 

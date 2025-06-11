@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/config/firebase';
 import { Task } from '@/types/task';
+import { getPriorityColor, getPriorityText } from '@/utils/priority';
 import {
   Dialog,
   DialogContent,
@@ -61,10 +62,10 @@ export function TaskApprovalDialog({
         rejectionReason: approved ? undefined : rejectionReason
       });
       
-      if (result.data.success) {
+      if ((result.data as any)?.success) {
         toast({
           title: approved ? 'تمت الموافقة' : 'تم الرفض',
-          description: result.data.message,
+          description: (result.data as any)?.message,
         });
         
         // إغلاق الحوار ومسح البيانات
@@ -88,23 +89,7 @@ export function TaskApprovalDialog({
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'destructive';
-      case 'medium': return 'default';
-      case 'low': return 'secondary';
-      default: return 'default';
-    }
-  };
 
-  const getPriorityText = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'عالية';
-      case 'medium': return 'متوسطة';
-      case 'low': return 'منخفضة';
-      default: return priority;
-    }
-  };
 
   if (!task) return null;
 
@@ -139,8 +124,8 @@ export function TaskApprovalDialog({
               </div>
               
               <div className="flex items-center gap-2">
-                <Badge variant={getPriorityColor(task.priority || 'medium')}>
-                  {getPriorityText(task.priority || 'medium')}
+                <Badge variant={getPriorityColor(task.priority)}>
+                  {getPriorityText(task.priority)}
                 </Badge>
                 <Badge variant="outline">
                   {task.approvalLevel === 'department' ? 'قسم' : 'مؤسسة'}
@@ -170,7 +155,7 @@ export function TaskApprovalDialog({
             {task.dueDate && (
               <div className="flex items-center gap-2 text-sm">
                 <Calendar className="h-4 w-4" />
-                <span>تاريخ الاستحقاق: {format(task.dueDate.toDate(), 'PPP', { locale: ar })}</span>
+                <span>تاريخ الاستحقاق: {format(task.dueDate instanceof Date ? task.dueDate : (task.dueDate as any).toDate(), 'PPP', { locale: ar })}</span>
               </div>
             )}
 

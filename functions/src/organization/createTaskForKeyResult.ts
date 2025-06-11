@@ -150,6 +150,7 @@ export const createTaskForKeyResult = createCallableFunction(async (request: Cal
     // إنشاء المهمة
     const taskData = {
       id: taskId,
+      userId: userId, // إضافة userId المطلوب
       description: title,
       details: description || '',
       status: 'active',
@@ -158,6 +159,7 @@ export const createTaskForKeyResult = createCallableFunction(async (request: Cal
       createdBy: userId,
       dueDate: dueDate || null,
       priority: priority || 'medium',
+      priorityReason: null, // إضافة priorityReason
       assignedToUserId: assignedToUserId || null,
       assigneeName: assigneeName,
       departmentId: departmentId || null,

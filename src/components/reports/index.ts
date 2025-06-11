@@ -40,7 +40,7 @@ export type {
 export type {
   ApprovalStats,
   ApprovalTimelineData,
-  DepartmentApprovalStats,
+  DepartmentApprovalStats as DepartmentApprovalStatsType,
   PendingTaskDetails,
   UserApprovalActivity
 } from '../../services/approvalReports';

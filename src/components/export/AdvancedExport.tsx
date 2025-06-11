@@ -90,11 +90,11 @@ export function AdvancedExport({ data, reportElement }: AdvancedExportProps) {
       yPosition += 15;
       
       pdf.setFontSize(12);
-      pdf.text(`نسبة الإكمال: ${data.keyMetrics.completionRate.toFixed(1)}%`, 20, yPosition);
+      pdf.text(`نسبة الإكمال: ${Math.round(data.keyMetrics.completionRate)}%`, 20, yPosition);
       yPosition += 8;
-      pdf.text(`الالتزام بالمواعيد: ${data.keyMetrics.onTimeCompletionRate.toFixed(1)}%`, 20, yPosition);
+      pdf.text(`الالتزام بالمواعيد: ${Math.round(data.keyMetrics.onTimeCompletionRate)}%`, 20, yPosition);
       yPosition += 8;
-      pdf.text(`متوسط التقدم: ${data.keyMetrics.averageProgress.toFixed(1)}%`, 20, yPosition);
+      pdf.text(`متوسط التقدم: ${Math.round(data.keyMetrics.averageProgress)}%`, 20, yPosition);
       yPosition += 15;
       
       // إحصائيات المهام
@@ -190,13 +190,13 @@ export function AdvancedExport({ data, reportElement }: AdvancedExportProps) {
       summarySheet.getCell('A3').font = { bold: true };
       
       summarySheet.getCell('A4').value = 'نسبة الإكمال';
-      summarySheet.getCell('B4').value = `${data.keyMetrics.completionRate.toFixed(1)}%`;
-      
+      summarySheet.getCell('B4').value = `${Math.round(data.keyMetrics.completionRate)}%`;
+
       summarySheet.getCell('A5').value = 'الالتزام بالمواعيد';
-      summarySheet.getCell('B5').value = `${data.keyMetrics.onTimeCompletionRate.toFixed(1)}%`;
-      
+      summarySheet.getCell('B5').value = `${Math.round(data.keyMetrics.onTimeCompletionRate)}%`;
+
       summarySheet.getCell('A6').value = 'متوسط التقدم';
-      summarySheet.getCell('B6').value = `${data.keyMetrics.averageProgress.toFixed(1)}%`;
+      summarySheet.getCell('B6').value = `${Math.round(data.keyMetrics.averageProgress)}%`;
       
       // ورقة المهام المكتملة
       if (includeTasks && data.completedTasks.length > 0) {
@@ -360,38 +360,38 @@ export function AdvancedExport({ data, reportElement }: AdvancedExportProps) {
           <Label>المحتوى المطلوب تضمينه</Label>
           
           <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="charts" 
-              checked={includeCharts} 
-              onCheckedChange={setIncludeCharts}
+            <Checkbox
+              id="charts"
+              checked={includeCharts}
+              onCheckedChange={(checked) => setIncludeCharts(checked === true)}
             />
             <Label htmlFor="charts">الرسوم البيانية والمخططات</Label>
           </div>
-          
+
           <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="tasks" 
-              checked={includeTasks} 
-              onCheckedChange={setIncludeTasks}
+            <Checkbox
+              id="tasks"
+              checked={includeTasks}
+              onCheckedChange={(checked) => setIncludeTasks(checked === true)}
             />
             <Label htmlFor="tasks">تفاصيل المهام</Label>
           </div>
-          
+
           <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="recommendations" 
-              checked={includeRecommendations} 
-              onCheckedChange={setIncludeRecommendations}
+            <Checkbox
+              id="recommendations"
+              checked={includeRecommendations}
+              onCheckedChange={(checked) => setIncludeRecommendations(checked === true)}
             />
             <Label htmlFor="recommendations">التوصيات والاقتراحات</Label>
           </div>
-          
+
           {data.departmentData && (
             <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="departments" 
-                checked={includeDepartments} 
-                onCheckedChange={setIncludeDepartments}
+              <Checkbox
+                id="departments"
+                checked={includeDepartments}
+                onCheckedChange={(checked) => setIncludeDepartments(checked === true)}
               />
               <Label htmlFor="departments">تحليل الأقسام</Label>
             </div>

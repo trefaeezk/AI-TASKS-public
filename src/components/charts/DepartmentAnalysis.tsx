@@ -231,7 +231,7 @@ export function DepartmentAnalysis({ departments }: DepartmentAnalysisProps) {
               <div>
                 <div className="flex justify-between text-sm mb-1">
                   <span>نسبة الإكمال</span>
-                  <span className="font-medium">{dept.completionRate.toFixed(1)}%</span>
+                  <span className="font-medium">{Math.round(dept.completionRate)}%</span>
                 </div>
                 <Progress value={dept.completionRate} className="h-2" />
               </div>

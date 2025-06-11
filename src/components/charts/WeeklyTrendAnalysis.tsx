@@ -109,7 +109,7 @@ export function WeeklyTrendAnalysis({ comparison }: WeeklyTrendAnalysisProps) {
         borderWidth: 1,
         callbacks: {
           label: function(context: any) {
-            return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`;
+            return `${context.dataset.label}: ${Math.round(context.parsed.y)}%`;
           }
         }
       },
@@ -158,7 +158,7 @@ export function WeeklyTrendAnalysis({ comparison }: WeeklyTrendAnalysisProps) {
       <div className={`flex items-center space-x-1 ${bgColor} px-2 py-1 rounded-md`}>
         <Icon className={`h-4 w-4 ${color}`} />
         <span className={`text-sm font-medium ${color}`}>
-          {difference > 0 ? '+' : ''}{difference.toFixed(1)}%
+          {difference > 0 ? '+' : ''}{Math.round(difference)}%
         </span>
       </div>
     );
@@ -190,9 +190,9 @@ export function WeeklyTrendAnalysis({ comparison }: WeeklyTrendAnalysisProps) {
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold">{currentWeek.completionRate.toFixed(1)}%</div>
+                <div className="text-2xl font-bold">{Math.round(currentWeek.completionRate)}%</div>
                 <div className="text-sm text-muted-foreground">
-                  السابق: {previousWeek.completionRate.toFixed(1)}%
+                  السابق: {Math.round(previousWeek.completionRate)}%
                 </div>
               </div>
               <TrendIndicator 

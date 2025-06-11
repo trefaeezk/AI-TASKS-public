@@ -135,26 +135,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // التحقق من Firebase Auth Custom Claims أولاً قبل استخدام البيانات الافتراضية
         try {
           const idTokenResult = await currentUser.getIdTokenResult(true); // force refresh
-          const claims = idTokenResult.claims;
+          const claims = idTokenResult.claims as any;
 
           if (claims.accountType && claims.role) {
             console.log("[AuthContext] 🔄 استخدام البيانات من Custom Claims:", claims);
             return {
               accountType: claims.accountType as SystemType,
               role: claims.role as UserRole,
-              organizationId: claims.organizationId || undefined,
-              organizationName: claims.organizationName || undefined,
-              departmentId: claims.departmentId || undefined,
-              isSystemOwner: claims.isSystemOwner || false,
-              isSystemAdmin: claims.isSystemAdmin || false,
-              isOrgOwner: claims.isOrgOwner || false,
-              isOrgAdmin: claims.isOrgAdmin || false,
-              isOrgSupervisor: claims.isOrgSupervisor || false,
-              isOrgEngineer: claims.isOrgEngineer || false,
-              isOrgTechnician: claims.isOrgTechnician || false,
-              isOrgAssistant: claims.isOrgAssistant || false,
-              isIndependent: claims.isIndependent || false,
-              customPermissions: claims.customPermissions || []
+              organizationId: (claims.organizationId as string) || undefined,
+              organizationName: (claims.organizationName as string) || undefined,
+              departmentId: (claims.departmentId as string) || undefined,
+              isSystemOwner: Boolean(claims.isSystemOwner),
+              isSystemAdmin: Boolean(claims.isSystemAdmin),
+              isOrgOwner: Boolean(claims.isOrgOwner),
+              isOrgAdmin: Boolean(claims.isOrgAdmin),
+              isOrgSupervisor: Boolean(claims.isOrgSupervisor),
+              isOrgEngineer: Boolean(claims.isOrgEngineer),
+              isOrgTechnician: Boolean(claims.isOrgTechnician),
+              isOrgAssistant: Boolean(claims.isOrgAssistant),
+              isIndependent: Boolean(claims.isIndependent),
+              customPermissions: (claims.customPermissions as any) || []
             };
           }
         } catch (claimsError) {
@@ -180,7 +180,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
       }
 
-      const userData = userDocSnap.data();
+      const userData = userDocSnap.data() as any;
       console.log("[AuthContext] ✅ بيانات المستخدم الأساسية:", userData);
 
       // 2️⃣ تحديد نوع الحساب أولاً
@@ -236,7 +236,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           return { accountType: 'individual', role: 'isIndependent' };
         }
 
-        const orgData = orgDocSnap.data();
+        const orgData = orgDocSnap.data() as any;
         console.log("[AuthContext] 🏢 بيانات المؤسسة:", orgData);
 
         console.log("[AuthContext] 🎯 الخطوة 4: تحديد دور المستخدم في المؤسسة");
@@ -271,7 +271,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.log("  - memberDocSnap.exists():", memberDocSnap.exists());
 
           if (memberDocSnap.exists()) {
-            const memberData = memberDocSnap.data();
+            const memberData = memberDocSnap.data() as any;
             console.log("  - memberData:", memberData);
             userRole = memberData.role || userData.role || 'assistant';
 
@@ -577,7 +577,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const unsubscribeFirestore = onSnapshot(userDocRef, async (docSnapshot) => {
           console.log("[AuthContext] Firestore snapshot for", docPath, "exists:", docSnapshot.exists());
           if (docSnapshot.exists()) {
-            const firestoreData = docSnapshot.data();
+            const firestoreData = docSnapshot.data() as any;
             // Check if relevant data (like role) changed in Firestore
             if (firestoreData.role && userClaims.role !== firestoreData.role) {
               console.log("[AuthContext] Role changed in Firestore for path", docPath, "forcing claims refresh.");

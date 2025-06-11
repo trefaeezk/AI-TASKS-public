@@ -228,7 +228,7 @@ export function DailyPlanReport({ organizationId, onBack }: DailyPlanReportProps
               const isGeneralDeptTask = firestoreData.taskContext === 'department' && (firestoreData.parentTaskId === undefined || firestoreData.parentTaskId === null);
               const isMyPersonalTask = firestoreData.taskContext === 'individual' &&
                                       (firestoreData.assignedToUserId === permissions.userId ||
-                                       (firestoreData.assignedToUserIds && firestoreData.assignedToUserIds.includes(permissions.userId)) ||
+                                       (firestoreData.assignedToUserIds && permissions.userId && firestoreData.assignedToUserIds.includes(permissions.userId)) ||
                                        firestoreData.createdBy === permissions.userId);
 
               return isGeneralDeptTask || isMyPersonalTask;

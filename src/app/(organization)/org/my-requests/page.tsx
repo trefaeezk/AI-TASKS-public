@@ -27,7 +27,8 @@ import { ar } from 'date-fns/locale';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { useAuth } from '@/context/AuthContext';
-import { TaskType } from '@/types/task';
+import { Task } from '@/types/task';
+import { getPriorityColor, getPriorityText } from '@/utils/priority';
 
 export default function MyRequestsPage() {
   const { user } = useAuth();
@@ -108,23 +109,7 @@ export default function MyRequestsPage() {
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'destructive';
-      case 'medium': return 'default';
-      case 'low': return 'secondary';
-      default: return 'default';
-    }
-  };
 
-  const getPriorityText = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'عالية';
-      case 'medium': return 'متوسطة';
-      case 'low': return 'منخفضة';
-      default: return priority;
-    }
-  };
 
   const pendingCount = requests.filter(r => r.status === 'pending-approval').length;
   const approvedCount = requests.filter(r => r.approved === true).length;
@@ -279,8 +264,8 @@ export default function MyRequestsPage() {
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      <Badge variant={getPriorityColor(request.priority || 'medium')}>
-                        {getPriorityText(request.priority || 'medium')}
+                      <Badge variant={getPriorityColor(request.priority)}>
+                        {getPriorityText(request.priority)}
                       </Badge>
                       <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${statusInfo.color}`}>
                         {statusInfo.icon}

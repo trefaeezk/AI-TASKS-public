@@ -42,6 +42,11 @@ export async function createDepartmentSubtasks(
 
     const parentTaskData = parentTaskSnapshot.data() as TaskFirestoreData;
 
+    // التحقق من وجود البيانات الأساسية
+    if (!parentTaskData.description) {
+      throw new Error('المهمة الأم لا تحتوي على وصف صالح');
+    }
+
     // التحقق من أن المهمة الأم هي مهمة مؤسسة
     if (parentTaskData.taskContext !== 'organization') {
       throw new Error('يمكن إنشاء مهام فرعية للأقسام فقط من مهام المؤسسة');
@@ -87,7 +92,7 @@ export async function createDepartmentSubtasks(
       // إنشاء بيانات المهمة الفرعية
       const subtaskData: TaskFirestoreData = {
         description: parentTaskData.description,
-        userId: parentTaskData.userId, // استخدام نفس المستخدم الذي أنشأ المهمة الأم
+        userId: parentTaskData.userId || parentTaskData.createdBy || 'unknown', // استخدام نفس المستخدم الذي أنشأ المهمة الأم
         status: 'pending',
         details: parentTaskData.details,
         startDate: parentTaskData.startDate,

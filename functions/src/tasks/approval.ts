@@ -97,15 +97,32 @@ export const createTaskWithApproval = createCallableFunction<CreateTaskWithAppro
             );
         }
 
+        // تحديد معرف القسم النهائي
+        let finalDepartmentId: string | null = null;
+
         // التحقق من صلاحيات إنشاء المهام حسب مستوى الموافقة
         if (approvalLevel === 'department') {
-            // للمهام على مستوى القسم، يجب أن يكون المستخدم عضو في قسم أو تحديد قسم
-            const finalDepartmentId = departmentId || userData?.departmentId;
-            if (!finalDepartmentId) {
-                throw new functions.https.HttpsError(
-                    'permission-denied',
-                    'يجب تحديد قسم لإنشاء مهمة على مستوى القسم.'
-                );
+            // التحقق من نوع الدور
+            const isAdminRole = userData?.role === 'isOrgOwner' || userData?.role === 'isOrgAdmin';
+
+            if (isAdminRole) {
+                // للأدوار الإدارية: يجب تحديد قسم يدوياً
+                finalDepartmentId = departmentId || null;
+                if (!finalDepartmentId) {
+                    throw new functions.https.HttpsError(
+                        'permission-denied',
+                        'يجب اختيار قسم لإنشاء مهمة على مستوى القسم.'
+                    );
+                }
+            } else {
+                // للأدوار غير الإدارية: استخدام قسمهم الحالي تلقائياً
+                finalDepartmentId = userData?.departmentId || null;
+                if (!finalDepartmentId) {
+                    throw new functions.https.HttpsError(
+                        'permission-denied',
+                        'يجب أن تكون عضواً في قسم لإنشاء مهام على مستوى القسم.'
+                    );
+                }
             }
 
             // التحقق من صلاحيات إنشاء مهام القسم
@@ -138,8 +155,8 @@ export const createTaskWithApproval = createCallableFunction<CreateTaskWithAppro
             }
         }
 
-        if (departmentId) {
-            const departmentDoc = await db.collection('organizations').doc(organizationId).collection('departments').doc(departmentId).get();
+        if (finalDepartmentId) {
+            const departmentDoc = await db.collection('organizations').doc(organizationId).collection('departments').doc(finalDepartmentId).get();
             if (departmentDoc.exists) {
                 departmentName = departmentDoc.data()?.name || 'قسم غير معروف';
             }
@@ -166,6 +183,7 @@ export const createTaskWithApproval = createCallableFunction<CreateTaskWithAppro
 
         // إنشاء المهمة مع حالة pending-approval
         const taskData = {
+            userId: userId, // إضافة userId المطلوب
             description: title,
             details: description || '',
             status: 'pending-approval',
@@ -175,9 +193,10 @@ export const createTaskWithApproval = createCallableFunction<CreateTaskWithAppro
             startDate: startDate ? admin.firestore.Timestamp.fromMillis(startDate.seconds * 1000) : null,
             dueDate: dueDate ? admin.firestore.Timestamp.fromMillis(dueDate.seconds * 1000) : null,
             priority: priority || 'medium',
+            priorityReason: null, // إضافة priorityReason
             assignedToUserId: assignedToUserId || null,
             assigneeName: assigneeName,
-            departmentId: departmentId || userData?.departmentId || null,
+            departmentId: finalDepartmentId || null,
             departmentName: departmentName,
             taskCategoryName: categoryName || null,
             organizationId,

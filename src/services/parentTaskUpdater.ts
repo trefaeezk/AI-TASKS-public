@@ -29,7 +29,7 @@ export async function updateParentTaskStatus(parentTaskId: string): Promise<void
     const subtasks = subtasksSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
-    }));
+    } as any));
 
     if (subtasks.length === 0) {
       // لا توجد مهام فرعية، لا حاجة للتحديث
@@ -221,7 +221,7 @@ export async function updateParentMilestones(parentTaskId: string): Promise<void
     );
 
     const subtasksSnapshot = await getDocs(subtasksQuery);
-    const subtasks = subtasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const subtasks = subtasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
 
     console.log(`[PARENT MILESTONES] Found ${subtasks.length} subtasks for parent ${parentTaskId}`);
 

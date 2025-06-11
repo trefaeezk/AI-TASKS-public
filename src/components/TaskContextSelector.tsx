@@ -161,16 +161,18 @@ export function TaskContextSelector({
     // تحديد معرف القسم
     let departmentId = undefined;
     if (newContext === 'department') {
-      if (canCreateDepartmentTasksWithApproval && !canAssignToOthers) {
-        // للمهندسين والفنيين: استخدام قسمهم الحالي إجبارياً
+      // التحقق من نوع الدور
+      const isAdminRole = userClaims?.isOrgOwner || userClaims?.isOrgAdmin;
+
+      if (!isAdminRole) {
+        // للأدوار غير الإدارية (مهندسين، فنيين، مشرفين): استخدام قسمهم الحالي تلقائياً
         departmentId = userClaims?.departmentId;
         if (!departmentId) {
-          // إذا لم يكن لديهم قسم، لا يمكنهم إنشاء مهام قسم
-          console.warn('المهندس/الفني ليس لديه قسم محدد');
+          console.warn('المستخدم ليس لديه قسم محدد');
           return;
         }
       } else {
-        // للأدوار العليا: يمكنهم اختيار أي قسم
+        // للأدوار الإدارية: يمكنهم اختيار أي قسم
         departmentId = value.departmentId;
       }
     }
@@ -244,8 +246,8 @@ export function TaskContextSelector({
         </Select>
       </div>
 
-      {/* Department Selector for higher roles */}
-      {value.taskContext === 'department' && canAssignToOthers && (
+      {/* Department Selector for admin roles only */}
+      {value.taskContext === 'department' && (userClaims?.isOrgOwner || userClaims?.isOrgAdmin) && (
         <div className="space-y-2">
           <Label htmlFor="department-select" className="flex items-center">
             <Users className="ml-1 h-4 w-4 text-muted-foreground" />
@@ -274,15 +276,15 @@ export function TaskContextSelector({
         </div>
       )}
 
-      {/* Department Info for Engineers/Technicians (read-only) */}
-      {value.taskContext === 'department' && canCreateDepartmentTasksWithApproval && !canAssignToOthers && (
+      {/* Department Info for non-admin roles (read-only) */}
+      {value.taskContext === 'department' && !(userClaims?.isOrgOwner || userClaims?.isOrgAdmin) && (
         <div className="space-y-2">
           <Label className="flex items-center">
             <Users className="ml-1 h-4 w-4 text-muted-foreground" />
             القسم
           </Label>
           <div className="p-3 bg-muted/50 rounded-md border text-sm text-muted-foreground">
-            سيتم إنشاء المهمة في قسمك الحالي (يتطلب موافقة المسئول)
+            سيتم إنشاء المهمة في قسمك الحالي تلقائياً (يتطلب موافقة المسئول)
           </div>
         </div>
       )}

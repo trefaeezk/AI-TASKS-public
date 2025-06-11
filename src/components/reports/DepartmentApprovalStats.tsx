@@ -226,9 +226,9 @@ export function DepartmentApprovalStats({
                     variant="outline" 
                     className={getApprovalTimeColor(department.averageApprovalTime)}
                   >
-                    {department.averageApprovalTime < 24 
-                      ? `${department.averageApprovalTime.toFixed(1)} ساعة`
-                      : `${(department.averageApprovalTime / 24).toFixed(1)} يوم`
+                    {department.averageApprovalTime < 24
+                      ? `${Math.round(department.averageApprovalTime)} ساعة`
+                      : `${Math.round(department.averageApprovalTime / 24)} يوم`
                     }
                   </Badge>
                 </div>

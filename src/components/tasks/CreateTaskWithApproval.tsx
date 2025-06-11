@@ -54,7 +54,7 @@ export function CreateTaskWithApproval({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.title.trim()) {
       toast({
         title: 'خطأ',
@@ -62,6 +62,33 @@ export function CreateTaskWithApproval({
         variant: 'destructive',
       });
       return;
+    }
+
+    // التحقق من تحديد القسم للمهام على مستوى القسم
+    if (formData.approvalLevel === 'department') {
+      const finalDepartmentId = departmentId || userClaims?.departmentId;
+
+      // للأدوار الإدارية: يجب اختيار قسم يدوياً
+      const isAdminRole = userClaims?.isOrgOwner || userClaims?.isOrgAdmin;
+
+      if (isAdminRole && !departmentId) {
+        toast({
+          title: 'خطأ',
+          description: 'يجب اختيار قسم لإنشاء مهمة على مستوى القسم',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // للأدوار غير الإدارية: يجب أن يكون لديهم قسم حالي
+      if (!isAdminRole && !userClaims?.departmentId) {
+        toast({
+          title: 'خطأ',
+          description: 'يجب أن تكون عضواً في قسم لإنشاء مهام على مستوى القسم',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
     setLoading(true);
@@ -82,10 +109,10 @@ export function CreateTaskWithApproval({
 
       const result = await createTaskWithApproval(taskData);
       
-      if (result.data.success) {
+      if ((result.data as any)?.success) {
         toast({
           title: 'تم إرسال المهمة للموافقة',
-          description: result.data.message || 'تم إرسال المهمة للموافقة بنجاح',
+          description: (result.data as any)?.message || 'تم إرسال المهمة للموافقة بنجاح',
         });
         
         // إعادة تعيين النموذج
