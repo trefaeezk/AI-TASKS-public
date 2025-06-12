@@ -15,7 +15,7 @@ import { ar } from 'date-fns/locale';
 
 interface MilestoneItemProps {
   milestone: Milestone;
-  isEditing: boolean;
+  isEditing: boolean; // This prop now controls if details (desc, weight, date) can be edited
   onToggleComplete: (id: string, completed: boolean) => void;
   onDescriptionChange: (id: string, description: string) => void;
   onWeightChange: (id: string, weight: number) => void;
@@ -27,7 +27,7 @@ interface MilestoneItemProps {
 
 export function MilestoneItem({
   milestone,
-  isEditing,
+  isEditing, // Controls editability of description, weight, due date
   onToggleComplete,
   onDescriptionChange,
   onWeightChange,
@@ -43,7 +43,6 @@ export function MilestoneItem({
         let initialDate: Date | undefined = undefined;
         if (milestone.dueDate) {
             try {
-                // Ensure milestone.dueDate is treated as a Date object or a string that can be parsed
                 const dateInput = milestone.dueDate instanceof Date ? milestone.dueDate : new Date(milestone.dueDate);
                 if (!isNaN(dateInput.getTime())) {
                     initialDate = dateInput;
@@ -56,6 +55,7 @@ export function MilestoneItem({
     }, [milestone.dueDate, milestone.id]);
 
     const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!isEditing) return;
         let value = parseInt(e.target.value);
         if (isNaN(value) || value < 0) {
             value = 0;
@@ -66,21 +66,25 @@ export function MilestoneItem({
     };
 
     const handleDescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!isEditing) return;
         onDescriptionChange(milestone.id, e.target.value);
     }
 
     const handleToggleComplete = (checked: boolean | 'indeterminate') => {
+        // Completion toggle is always allowed
         onToggleComplete(milestone.id, !!checked);
     }
 
     const handleDateConfirm = useCallback(() => {
+        if (!isEditing) return;
         const dateToSave = (pickerDate instanceof Date && !isNaN(pickerDate.getTime())) ? pickerDate : undefined;
         const dateToSaveCopy = dateToSave ? new Date(dateToSave.getTime()) : undefined;
         onDueDateChange(milestone.id, dateToSaveCopy);
         setIsPopoverOpen(false);
-    }, [milestone.id, pickerDate, onDueDateChange]);
+    }, [milestone.id, pickerDate, onDueDateChange, isEditing]);
 
     const handleDateCancel = useCallback(() => {
+        if (!isEditing) return;
         let originalDate: Date | undefined = undefined;
         if (milestone.dueDate) {
             try {
@@ -94,9 +98,10 @@ export function MilestoneItem({
         }
         setPickerDate(originalDate);
         setIsPopoverOpen(false);
-    }, [milestone.dueDate, milestone.id]);
+    }, [milestone.dueDate, milestone.id, isEditing]);
 
     const handleTriggerClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+        if (!isEditing) return;
         e.stopPropagation();
         let currentDate: Date | undefined = undefined;
         if (milestone.dueDate) {
@@ -109,7 +114,7 @@ export function MilestoneItem({
         }
         setPickerDate(currentDate || new Date());
         setIsPopoverOpen(true);
-    }, [milestone.dueDate]);
+    }, [milestone.dueDate, isEditing]);
 
     const showDetailsInDisplayMode = !isEditing && parentTaskStatus !== 'completed' && parentTaskStatus !== 'hold';
 
@@ -136,7 +141,7 @@ export function MilestoneItem({
                 id={`milestone-${milestone.id}`}
                 checked={milestone.completed}
                 onCheckedChange={handleToggleComplete}
-                disabled={isEditing}
+                // Checkbox is always enabled for toggling completion
                 aria-label={`Mark milestone ${milestone.description || 'untitled'} as complete`}
             />
        </div>
@@ -154,6 +159,7 @@ export function MilestoneItem({
                 )}
                 placeholder="وصف النقطة..."
                 onClick={(e) => e.stopPropagation()}
+                disabled={!isEditing} // Controlled by the 'isEditing' prop
             />
           ) : (
             <label
@@ -188,6 +194,7 @@ export function MilestoneItem({
                                         : 'text-muted-foreground',
                                  )}
                                 onClick={handleTriggerClick}
+                                disabled={!isEditing} // Controlled by the 'isEditing' prop
                             >
                                 <CalendarIcon className="h-3 w-3 flex-shrink-0" />
                                 <span className="min-w-[35px] sm:min-w-[45px] text-center text-xs">
@@ -222,6 +229,7 @@ export function MilestoneItem({
                             min="0"
                             max="100"
                             aria-label={`وزن النقطة ${milestone.description || 'بدون عنوان'}`}
+                            disabled={!isEditing} // Controlled by the 'isEditing' prop
                         />
                         <span className="text-xs text-muted-foreground">%</span>
                     </div>
@@ -236,6 +244,7 @@ export function MilestoneItem({
                             onDelete(milestone.id);
                         }}
                         aria-label={`حذف النقطة ${milestone.description || 'بدون عنوان'}`}
+                        disabled={!isEditing} // Controlled by the 'isEditing' prop
                     >
                         <Trash2 className="h-3 w-3" />
                     </Button>
@@ -243,14 +252,12 @@ export function MilestoneItem({
             ) : (
                 showDetailsInDisplayMode && (
                     <div className="flex items-center gap-x-2 text-xs text-muted-foreground">
-                        {/* Display logic for due date */}
                         {milestone.dueDate && typeof milestone.dueDate.getMonth === 'function' && !isNaN(milestone.dueDate.getTime()) ? (
                             <span className="flex items-center whitespace-nowrap">
                                 <CalendarIcon className="h-3 w-3 ml-1" />
                                 {format(milestone.dueDate, 'd MMM', { locale: ar })}
                             </span>
                         ) : null}
-                        {/* Display logic for weight */}
                         {milestone.weight > 0 && (
                             <span className="flex items-center whitespace-nowrap">
                                 <Percent className="h-3 w-3 ml-0.5" />

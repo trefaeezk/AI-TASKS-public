@@ -30,7 +30,8 @@ interface MilestoneTrackerProps {
   taskDetails?: string;
   initialMilestones?: Milestone[];
   onMilestonesChange: (milestones: Milestone[]) => void;
-  parentTaskStatus?: TaskStatus; // Added parentTaskStatus
+  parentTaskStatus?: TaskStatus; 
+  milestoneEditingDisabled?: boolean; // New prop to disable editing features
 }
 
 export function MilestoneTracker({
@@ -39,7 +40,8 @@ export function MilestoneTracker({
   taskDetails,
   initialMilestones = [],
   onMilestonesChange,
-  parentTaskStatus, // Destructure parentTaskStatus
+  parentTaskStatus, 
+  milestoneEditingDisabled = false, // Default to false
 }: MilestoneTrackerProps) {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -80,6 +82,7 @@ export function MilestoneTracker({
   }
 
   const handleAddMilestone = () => {
+     if (milestoneEditingDisabled) return; // Prevent adding if editing is disabled
      if (!isEditing) setIsEditing(true);
     const newMilestone: Milestone = {
       id: uuidv4(),
@@ -146,6 +149,7 @@ export function MilestoneTracker({
   };
 
    const handleSuggestMilestones = useCallback(async () => {
+       if (milestoneEditingDisabled) return;
        if (!taskDescription) {
            toast({ title: 'خطأ', description: 'وصف المهمة مطلوب لاقتراح نقاط التتبع.', variant: 'destructive' });
            return;
@@ -180,9 +184,10 @@ export function MilestoneTracker({
        } finally {
            setIsSuggestingMilestones(false);
        }
-   }, [taskId, taskDescription, taskDetails, toast, onMilestonesChange]);
+   }, [taskId, taskDescription, taskDetails, toast, onMilestonesChange, milestoneEditingDisabled]);
 
     const handleSuggestWeights = useCallback(async () => {
+         if (milestoneEditingDisabled) return;
          if (!Array.isArray(milestones) || milestones.length === 0) {
             toast({ title: 'لا توجد نقاط تتبع', description: 'أضف نقاط تتبع أولاً لاقتراح الأوزان.', variant: 'default' });
             return;
@@ -228,9 +233,10 @@ export function MilestoneTracker({
         } finally {
             setIsSuggestingWeights(false);
         }
-    }, [taskId, milestones, taskDescription, taskDetails, toast, onMilestonesChange]);
+    }, [taskId, milestones, taskDescription, taskDetails, toast, onMilestonesChange, milestoneEditingDisabled]);
 
     const handleSuggestDueDates = useCallback(async () => {
+        if (milestoneEditingDisabled) return;
         if (!Array.isArray(milestones) || milestones.length === 0) {
             toast({ title: 'لا توجد نقاط تتبع', description: 'أضف نقاط تتبع أولاً لاقتراح تواريخ الاستحقاق.', variant: 'default' });
             return;
@@ -352,9 +358,10 @@ export function MilestoneTracker({
         } finally {
             setIsSuggestingDueDates(false);
         }
-    }, [taskId, milestones, taskDescription, taskDetails, toast, onMilestonesChange]);
+    }, [taskId, milestones, taskDescription, taskDetails, toast, onMilestonesChange, milestoneEditingDisabled]);
 
   const handleEditToggle = () => {
+      if (milestoneEditingDisabled) return; // Prevent entering edit mode if disabled
       if (isEditing) {
             if (!Array.isArray(milestones)) return;
           const validMilestones = milestones.filter(m => m.description.trim() !== '');
@@ -391,21 +398,23 @@ export function MilestoneTracker({
 
         {/* الأزرار الأساسية */}
         <div className="flex flex-wrap gap-1 justify-start sm:justify-end">
-             <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs text-primary hover:bg-primary/10 flex-shrink-0"
-                onClick={handleSuggestMilestones}
-                disabled={isSuggestingMilestones || isEditing || isSuggestingWeights || isSuggestingDueDates || !taskDescription?.trim()}
-                aria-label="اقترح نقاط تتبع بالذكاء الاصطناعي"
-            >
-                 {isSuggestingMilestones ? <Loader2 className="h-3.5 w-3.5 animate-spin ml-1" /> : <Wand2 className="h-3.5 w-3.5 ml-1" />}
-                 <span className="hidden xs:inline">اقترح نقاط</span>
-                 <span className="xs:hidden">اقترح</span>
-            </Button>
+             {!milestoneEditingDisabled && (
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs text-primary hover:bg-primary/10 flex-shrink-0"
+                    onClick={handleSuggestMilestones}
+                    disabled={isSuggestingMilestones || isEditing || isSuggestingWeights || isSuggestingDueDates || !taskDescription?.trim()}
+                    aria-label="اقترح نقاط تتبع بالذكاء الاصطناعي"
+                >
+                    {isSuggestingMilestones ? <Loader2 className="h-3.5 w-3.5 animate-spin ml-1" /> : <Wand2 className="h-3.5 w-3.5 ml-1" />}
+                    <span className="hidden xs:inline">اقترح نقاط</span>
+                    <span className="xs:hidden">اقترح</span>
+                </Button>
+             )}
 
-             { (currentMilestonesArray.length > 0 || isEditing) && (
+             { (currentMilestonesArray.length > 0 || isEditing) && !milestoneEditingDisabled && (
                 <Button
                     type="button"
                     variant="ghost"
@@ -423,7 +432,7 @@ export function MilestoneTracker({
       </div>
 
       {/* أزرار الذكاء الاصطناعي الإضافية في وضع التعديل */}
-      {isEditing && (
+      {isEditing && !milestoneEditingDisabled && (
         <div className="flex flex-wrap gap-1 justify-start">
             <Button
                 type="button"
@@ -462,7 +471,7 @@ export function MilestoneTracker({
          </div>
        )}
 
-       {isEditing && currentMilestonesArray.length > 0 && (
+       {isEditing && currentMilestonesArray.length > 0 && !milestoneEditingDisabled && (
              <div className={cn(
                 "text-xs flex items-center gap-1 p-1.5 rounded-md mb-2 border",
                  getCurrentTotalWeight() === 100 ? "text-muted-foreground bg-muted/30 border-muted/50" : "text-destructive bg-destructive/10 border-destructive/30"
@@ -479,13 +488,13 @@ export function MilestoneTracker({
               <MilestoneItem
                 key={milestone.id}
                 milestone={milestone}
-                isEditing={isEditing}
-                onToggleComplete={handleToggleComplete}
+                isEditing={isEditing && !milestoneEditingDisabled} // Pass effective editing state
+                onToggleComplete={handleToggleComplete} // This should always be enabled
                 onDescriptionChange={handleDescriptionChange}
                 onWeightChange={handleWeightChange}
                 onDueDateChange={handleDueDateChange}
                 onDelete={handleDeleteMilestone}
-                parentTaskStatus={parentTaskStatus} // Pass down parentTaskStatus
+                parentTaskStatus={parentTaskStatus}
               />
             ))}
              {currentMilestonesArray.length === 0 && !isEditing && (
@@ -495,7 +504,7 @@ export function MilestoneTracker({
           <ScrollBar orientation="vertical" />
         </ScrollArea>
 
-      {isEditing && (
+      {isEditing && !milestoneEditingDisabled && (
         <Button
           type="button"
           variant="outline"

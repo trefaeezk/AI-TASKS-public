@@ -144,7 +144,16 @@ export function AssignTaskToMembersDialog({ task, onTaskAssigned }: AssignTaskTo
 
   // تعيين المهمة للأعضاء المحددين
   const handleAssignTask = async () => {
-    if (!user || !task.id || (assignMode === 'whole-task' && selectedMembers.length === 0)) {
+    if (!user || !task.id) {
+      toast({
+        title: 'خطأ',
+        description: 'بيانات المهمة أو المستخدم غير متوفرة.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (assignMode === 'whole-task' && selectedMembers.length === 0) {
       toast({
         title: 'خطأ',
         description: 'يرجى تحديد عضو واحد على الأقل.',
@@ -164,28 +173,25 @@ export function AssignTaskToMembersDialog({ task, onTaskAssigned }: AssignTaskTo
 
     setLoading(true);
     try {
+      const taskRef = doc(db, 'tasks', task.id);
+      const taskDocSnap = await getDoc(taskRef);
+      
+      if (!taskDocSnap.exists()) { 
+        throw new Error('المهمة الأصلية غير موجودة');
+      }
+      const taskData = taskDocSnap.data();
+
       if (assignMode === 'whole-task') {
-        // Directly update the original task instead of creating a sub-task
-        const taskRef = doc(db, 'tasks', task.id);
+        // **التعديل هنا: تحديث المهمة الأصلية مباشرة**
         await updateDoc(taskRef, {
           assignedToUserIds: selectedMembers,
-          assignedToUserId: null, // Clear single assignee if multiple selected
-          // taskContext: 'individual', // Set context if assigning to individuals from a department task
-          // Keep task.departmentId if it's a department task being assigned to its members
+          assignedToUserId: null, // مسح التعيين الفردي إذا كان هناك تعيين جماعي
           updatedAt: Timestamp.now(),
         });
+        console.log(`Original task ${task.id} updated with multiple assignees.`);
       } else { // assignMode === 'milestones'
-        const taskRef = doc(db, 'tasks', task.id);
-        const taskDocSnap = await getDoc(taskRef); 
-        
-        if (!taskDocSnap.exists()) { 
-          throw new Error('المهمة غير موجودة');
-        }
-        
-        const taskData = taskDocSnap.data(); 
         const milestones = taskData.milestones || [];
         
-        // تحديث معلومات التعيين لكل نقطة تتبع
         const updatedMilestones = milestones.map((milestone: any) => {
           if (milestoneAssignments[milestone.id]) {
             return {
@@ -196,25 +202,24 @@ export function AssignTaskToMembersDialog({ task, onTaskAssigned }: AssignTaskTo
           return milestone;
         });
         
-        // تحديث المهمة بنقاط التتبع المعدلة
         await updateDoc(taskRef, {
           milestones: updatedMilestones,
           updatedAt: Timestamp.now()
         });
+        console.log(`Milestones for task ${task.id} updated with individual assignees.`);
       }
       
       toast({
         title: 'تم تعيين المهمة',
         description: assignMode === 'whole-task' 
-          ? `تم تعيين المهمة لـ ${selectedMembers.length} عضو.`
-          : 'تم تعيين نقاط التتبع للأعضاء المحددين.',
+          ? `تم تحديث المهمة الأصلية وتعيينها لـ ${selectedMembers.length} عضو.`
+          : 'تم تعيين نقاط التتبع للأعضاء المحددين في المهمة الأصلية.',
       });
       
       setOpen(false);
       setSelectedMembers([]);
       setMilestoneAssignments({});
       
-      // استدعاء دالة رد الاتصال إذا تم توفيرها
       if (onTaskAssigned) {
         onTaskAssigned();
       }
@@ -230,8 +235,8 @@ export function AssignTaskToMembersDialog({ task, onTaskAssigned }: AssignTaskTo
     }
   };
 
-  // التحقق من صلاحية المهمة للتعيين
-  const isValidTask = task && task.taskContext === 'department' && task.departmentId;
+  // التحقق من صلاحية المهمة للتعيين (يمكن تعيين مهام القسم لأعضائه)
+  const isValidTaskForAssignment = task && task.taskContext === 'department' && task.departmentId;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -240,8 +245,8 @@ export function AssignTaskToMembersDialog({ task, onTaskAssigned }: AssignTaskTo
           variant="outline" 
           size="sm" 
           className="gap-1"
-          disabled={!isValidTask}
-          title={!isValidTask ? 'يمكن تعيين المهام فقط للمهام على مستوى القسم' : 'تعيين المهمة لأعضاء القسم'}
+          disabled={!isValidTaskForAssignment}
+          title={!isValidTaskForAssignment ? 'يمكن تعيين المهام فقط لأعضاء القسم من مهام القسم' : 'تعيين المهمة لأعضاء القسم'}
         >
           <UserPlus className="h-4 w-4 ml-1" />
           تعيين للأعضاء
@@ -251,7 +256,10 @@ export function AssignTaskToMembersDialog({ task, onTaskAssigned }: AssignTaskTo
         <DialogHeader>
           <DialogTitle>تعيين المهمة لأعضاء القسم</DialogTitle>
           <DialogDescription>
-            يمكنك تعيين المهمة بالكامل لعدة أعضاء، أو تعيين نقاط تتبع محددة لأعضاء مختلفين.
+            {assignMode === 'whole-task' 
+              ? 'اختر الأعضاء لتعيين المهمة الأصلية لهم.'
+              : 'اختر عضوًا لكل نقطة تتبع في المهمة الأصلية.'
+            }
           </DialogDescription>
         </DialogHeader>
         
@@ -385,5 +393,3 @@ export function AssignTaskToMembersDialog({ task, onTaskAssigned }: AssignTaskTo
     </Dialog>
   );
 }
-    
-    

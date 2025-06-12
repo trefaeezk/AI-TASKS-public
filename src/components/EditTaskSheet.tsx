@@ -52,10 +52,7 @@ interface EditTaskSheetProps {
 export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated }: EditTaskSheetProps) {
   const { toast } = useToast();
   const { categories: userCategories, loading: categoriesLoading, addCategory, deleteCategory, editCategory, getCategoryColor } = useTaskCategories(user.uid);
-  const { userClaims } = useAuth(); // Get userClaims to determine context for new tasks
-
-  const isLowLevelRole = userClaims?.isOrgEngineer || userClaims?.isOrgTechnician || userClaims?.isOrgAssistant;
-  const canAssignTasks = !isLowLevelRole;
+  const { userClaims } = useAuth(); 
 
   const [description, setDescription] = useState('');
   const [details, setDetails] = useState('');
@@ -98,6 +95,11 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
   const [isSuggestingDate, setIsSuggestingDate] = useState(false);
   const [isSuggestingMilestones, setIsSuggestingMilestones] = useState(false);
   const [isUpdatingTask, setIsUpdatingTask] = useState(false);
+
+  // Determine if the current user has a restricted role for this task
+  const isRestrictedRole = userClaims?.isOrgTechnician || userClaims?.isOrgAssistant;
+  const isAssignedToCurrentUser = task?.assignedToUserId === user.uid || task?.assignedToUserIds?.includes(user.uid);
+  const isDepartmentTaskAssignedToRestrictedRole = isRestrictedRole && task?.taskContext === 'department' && isAssignedToCurrentUser;
 
   useEffect(() => {
     if (userClaims?.organizationId) {
@@ -300,9 +302,64 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
         }
     }, [description, details, toast]);
 
-    const handleMilestonesChange = useCallback((updatedMilestones: Milestone[]) => {
+    const handleMilestonesChange = useCallback(async (updatedMilestones: Milestone[]) => {
         setCurrentMilestones(updatedMilestones);
-    }, []);
+         if (!task?.id) return;
+
+        const taskDocRef = doc(db, 'tasks', task.id);
+        try {
+            const cleanMilestones: MilestoneFirestoreData[] = updatedMilestones
+                .filter(m => m != null && m.description?.trim() !== '')
+                .map(m => {
+                    let firestoreDueDate = null;
+                    if (m.dueDate instanceof Date && !isNaN(m.dueDate.getTime())) {
+                        try {
+                            firestoreDueDate = Timestamp.fromDate(m.dueDate);
+                        } catch (e) {
+                            console.error(`[EditTaskSheet ${task.id}] Error converting dueDate for milestone ${m.id}:`, e);
+                            firestoreDueDate = null;
+                        }
+                    }
+                    return {
+                        id: m.id || uuidv4(),
+                        description: m.description || '',
+                        completed: !!m.completed,
+                        weight: typeof m.weight === 'number' ? m.weight : 0,
+                        dueDate: firestoreDueDate,
+                        assignedToUserId: m.assignedToUserId || null
+                    };
+                });
+            const milestonesToSave = cleanMilestones.length > 0 ? cleanMilestones : null;
+
+            const newStatusFromMilestones = calculateTaskStatusFromMilestones(cleanMilestones, task.status);
+            const finalStatus = newStatusFromMilestones === 'completed' && task.status !== 'cancelled' ? 'completed' : newStatusFromMilestones;
+
+
+            const updateDataForFirestore: Partial<TaskFirestoreData> & {updatedAt: Timestamp} = {
+                milestones: milestonesToSave,
+                updatedAt: Timestamp.now(),
+            };
+
+            if (finalStatus !== task.status) {
+                updateDataForFirestore.status = finalStatus;
+            }
+
+            await updateDoc(taskDocRef, updateDataForFirestore);
+
+            if (task.parentTaskId) {
+              await updateParentTaskComprehensive(task.parentTaskId);
+            }
+            if (updateDataForFirestore.status && updateDataForFirestore.status !== task.status) {
+                await updateSubtasksFromParent(task.id, updateDataForFirestore.status as TaskStatus);
+            }
+
+            onTaskUpdated(); // Notify parent component
+            toast({ title: 'تم تحديث نقاط التتبع', duration: 2000 });
+        } catch (error) {
+            console.error("Error updating milestones in Firestore:", error);
+            toast({ title: 'خطأ في تحديث نقاط التتبع', variant: 'destructive' });
+        }
+    }, [task?.id, task?.status, task?.parentTaskId, onTaskUpdated, toast]);
 
   const handleUpdateTask = async (e: FormEvent) => {
     e.preventDefault();
@@ -356,7 +413,6 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
        }));
     const milestonesToSave = cleanMilestonesToSave.length > 0 ? cleanMilestonesToSave : null;
 
-    // Preserve the original status unless it's calculated from milestones
     let newStatus = task.status;
     if (milestonesToSave) {
       newStatus = calculateTaskStatusFromMilestones(cleanMilestonesToSave, task.status);
@@ -378,7 +434,6 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
      if (newStatus !== task.status) {
         updatedData.status = newStatus;
     }
-
 
     if (task.organizationId) {
         updatedData.taskContext = taskContext.taskContext || task.taskContext || 'individual';
@@ -412,7 +467,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
             });
           }
         }
-
+        
         if (updatedData.status && updatedData.status !== task.status) {
           try {
             await updateSubtasksFromParent(task.id, updatedData.status as TaskStatus);
@@ -466,6 +521,8 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
        console.log("Categories updated in dialog, potentially refresh UI.");
    };
 
+   const canModifyTaskDetails = !isDepartmentTaskAssignedToRestrictedRole;
+
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent side="left" className="w-full sm:max-w-lg overflow-y-auto p-4 sm:p-6">
@@ -488,6 +545,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                     className="bg-input border-input focus:ring-primary placeholder-muted-foreground"
                     aria-label="تعديل وصف المهمة"
                     required
+                    disabled={!canModifyTaskDetails}
                     />
                 </div>
                 <div className="space-y-2">
@@ -499,6 +557,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                     onChange={(e) => setDetails(e.target.value)}
                     className="bg-input border-input focus:ring-primary placeholder-muted-foreground min-h-[100px]"
                     aria-label="تعديل تفاصيل المهمة"
+                    disabled={!canModifyTaskDetails}
                     />
                 </div>
 
@@ -509,13 +568,13 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                     value={taskContext}
                     onChange={setTaskContext}
                     userClaims={userClaims}
-                    disabled={isUpdatingTask || !canAssignTasks}
+                    disabled={isUpdatingTask || !canModifyTaskDetails}
                   />
                 </div>
-                {!canAssignTasks && (
+                {!canModifyTaskDetails && (
                   <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md">
                     <UserIcon className="inline ml-1 h-4 w-4" />
-                    لا يمكن تغيير مستوى المهمة أو الإسناد بصلاحياتك الحالية
+                    لا يمكنك تعديل مستوى المهمة أو الإسناد بصلاحياتك الحالية لهذه المهمة.
                   </div>
                 )}
 
@@ -540,6 +599,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                                             setTempStartDate(startDate || new Date());
                                             setIsStartPopoverOpen(true);
                                         }}
+                                        disabled={!canModifyTaskDetails}
                                     >
                                         <CalendarIcon className="ml-2 h-4 w-4" />
                                         {formatDateSafe(startDate) ?? <span className="text-muted-foreground">اختر تاريخًا</span>}
@@ -579,6 +639,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                                              setTempDueDate(dueDate || new Date());
                                              setIsDuePopoverOpen(true);
                                          }}
+                                         disabled={!canModifyTaskDetails}
                                     >
                                         <CalendarIcon className="ml-2 h-4 w-4" />
                                         {formatDateSafe(dueDate) ?? <span className="text-muted-foreground">اختر تاريخًا</span>}
@@ -603,7 +664,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                     </div>
                  </div>
 
-                 {canAssignTasks && (
+                 {canModifyTaskDetails && (
                    <div className="flex pt-1">
                       <Button
                       type="button"
@@ -638,6 +699,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                                 min="0"
                                 className="bg-input border-input focus:ring-primary placeholder-muted-foreground"
                                 aria-label="تعديل قيمة المدة"
+                                disabled={!canModifyTaskDetails}
                             />
                         </div>
                         <div className="space-y-2">
@@ -646,7 +708,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                                 value={durationUnit}
                                 onValueChange={(value) => setDurationUnit(value as DurationUnit)}
                                 dir="rtl"
-                                disabled={durationValue === undefined || durationValue === null || durationValue <= 0}
+                                disabled={durationValue === undefined || durationValue === null || durationValue <= 0 || !canModifyTaskDetails}
                             >
                                 <SelectTrigger id="edit-duration-unit" className="w-full bg-input border-input focus:ring-primary">
                                     <SelectValue placeholder="اختر وحدة..." />
@@ -673,7 +735,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                           <TaskKeyResultsSection
                             taskId={task.id}
                             organizationId={task.organizationId}
-                            disabled={isUpdatingTask}
+                            disabled={isUpdatingTask || !canModifyTaskDetails}
                             onTaskUpdated={onTaskUpdated}
                           />
                         )}
@@ -687,7 +749,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                                         setSelectedKeyResultId(undefined);
                                     }}
                                     dir="rtl"
-                                    disabled={loadingObjectives}
+                                    disabled={loadingObjectives || !canModifyTaskDetails}
                                 >
                                     <SelectTrigger id="edit-objective" className="w-full bg-input border-input focus:ring-primary">
                                         <SelectValue placeholder={loadingObjectives ? "تحميل الأهداف..." : "اختر هدف..."} />
@@ -713,7 +775,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                                         value={selectedKeyResultId || "none"}
                                         onValueChange={(value) => setSelectedKeyResultId(value === "none" ? undefined : value)}
                                         dir="rtl"
-                                        disabled={!selectedObjectiveId}
+                                        disabled={!selectedObjectiveId || !canModifyTaskDetails}
                                     >
                                         <SelectTrigger id="edit-key-result" className="w-full bg-input border-input focus:ring-primary">
                                             <SelectValue placeholder="اختر نتيجة رئيسية..." />
@@ -751,6 +813,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                                 value={priority?.toString() ?? '3'}
                                 onValueChange={(value) => setPriority(value ? parseInt(value) as PriorityLevel : undefined)}
                                 dir="rtl"
+                                disabled={!canModifyTaskDetails}
                             >
                                 <SelectTrigger id="edit-priority" className="w-full bg-input border-input focus:ring-primary">
                                     <SelectValue placeholder="اختر الأولوية..." />
@@ -769,7 +832,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                             <div className="flex justify-between items-center">
                                <Label htmlFor="edit-category">الفئة</Label>
                                 <ManageCategoriesDialog userId={user.uid} onCategoriesUpdated={handleCategoriesUpdated}>
-                                   <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" aria-label="إدارة الفئات">
+                                   <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" aria-label="إدارة الفئات"  disabled={!canModifyTaskDetails}>
                                       <Settings className="h-4 w-4" />
                                    </Button>
                                 </ManageCategoriesDialog>
@@ -778,7 +841,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                                 value={taskCategoryName}
                                 onValueChange={setTaskCategoryName}
                                 dir="rtl"
-                                disabled={categoriesLoading}
+                                disabled={categoriesLoading || !canModifyTaskDetails}
                             >
                                 <SelectTrigger id="edit-category" className="w-full bg-input border-input focus:ring-primary">
                                     <SelectValue placeholder={categoriesLoading ? "تحميل الفئات..." : "اختر فئة..."} />
@@ -818,6 +881,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                              initialMilestones={currentMilestones}
                              onMilestonesChange={handleMilestonesChange}
                              parentTaskStatus={task.status}
+                             milestoneEditingDisabled={isDepartmentTaskAssignedToRestrictedRole}
                          />
                      </div>
                  </div>
