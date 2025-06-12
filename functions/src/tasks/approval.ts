@@ -37,6 +37,7 @@ interface CreateTaskWithApprovalRequest {
     durationValue?: number;
     durationUnit?: string;
     requiresApproval?: boolean; // Added to determine if approval is actually needed
+    taskContext?: 'department' | 'organization' | 'individual'; // Added this line
 }
 
 /**
@@ -134,7 +135,8 @@ export const createTaskWithApproval = createCallableFunction<CreateTaskWithAppro
             milestones,
             durationValue,
             durationUnit,
-            requiresApproval = false // Default to false if not provided
+            requiresApproval = false, // Default to false if not provided
+            taskContext // This is now available from the interface
         } = data;
 
         // التحقق من صلاحيات المستخدم
@@ -157,7 +159,10 @@ export const createTaskWithApproval = createCallableFunction<CreateTaskWithAppro
         }
 
         let finalDepartmentId: string | null = null;
-        if (approvalLevel === 'department' || data.taskContext === 'department') {
+        // Use approvalLevel if requiresApproval is true, otherwise use taskContext from data
+        const effectiveContext = requiresApproval ? approvalLevel : taskContext;
+
+        if (effectiveContext === 'department') {
             finalDepartmentId = departmentId || userData?.departmentId || null;
             if (!finalDepartmentId) {
                 throw new functions.https.HttpsError(
@@ -203,7 +208,7 @@ export const createTaskWithApproval = createCallableFunction<CreateTaskWithAppro
             }));
         }
 
-        const taskData: any = {
+        const taskDataForFirestore: any = {
             userId: userId,
             description: title,
             details: description || '',
@@ -222,7 +227,7 @@ export const createTaskWithApproval = createCallableFunction<CreateTaskWithAppro
             departmentName: departmentName,
             taskCategoryName: categoryName || null,
             organizationId,
-            taskContext: approvalLevel === 'department' ? 'department' : (approvalLevel === 'organization' ? 'organization' : 'individual'),
+            taskContext: requiresApproval ? (approvalLevel === 'department' ? 'department' : 'organization') : (taskContext || 'individual'),
             accountType: 'organization',
             order: Date.now(),
             milestones: processedMilestones,
@@ -236,24 +241,18 @@ export const createTaskWithApproval = createCallableFunction<CreateTaskWithAppro
             notes: notes || null
         };
 
-        const taskRef = await db.collection('tasks').add(taskData);
+        const taskRef = await db.collection('tasks').add(taskDataForFirestore);
 
         if (requiresApproval) {
-            await createApprovalNotifications({ ...taskData, id: taskRef.id }, organizationId);
-            toast({
-                title: 'تم إرسال المهمة للموافقة',
-                description: `تم إرسال المهمة "${title}" للموافقة على مستوى ${approvalLevel === 'department' ? 'القسم' : 'المؤسسة'}.`,
-            });
+            await createApprovalNotifications({ ...taskDataForFirestore, id: taskRef.id }, organizationId);
+            // Removed toast call from here
         } else {
             // If no approval is needed, send assignment notifications directly
-            const assignees = taskData.assignedToUserIds || (taskData.assignedToUserId ? [taskData.assignedToUserId] : []);
+            const assignees = taskDataForFirestore.assignedToUserIds || (taskDataForFirestore.assignedToUserId ? [taskDataForFirestore.assignedToUserId] : []);
             if (assignees.length > 0) {
-                await sendTaskAssignmentNotification({ ...taskData, id: taskRef.id }, assignees);
+                await sendTaskAssignmentNotification({ ...taskDataForFirestore, id: taskRef.id }, assignees);
             }
-            toast({
-                title: 'تم إنشاء المهمة',
-                description: `تم إنشاء المهمة "${title}" بنجاح.`,
-            });
+            // Removed toast call from here
         }
 
 
@@ -313,7 +312,7 @@ export const approveTask = createCallableFunction<ApproveTaskRequest>(async (req
         if (!taskDoc.exists) {
             throw new functions.https.HttpsError('not-found', 'المهمة غير موجودة.');
         }
-        const taskData = taskDoc.data();
+        const taskData = taskDoc.data() as Task; // Assuming Task type from types/task.ts
         if (!taskData?.requiresApproval || taskData.status !== 'pending-approval') {
             throw new functions.https.HttpsError('failed-precondition', 'هذه المهمة لا تتطلب موافقة أو تمت معالجتها بالفعل.');
         }
@@ -345,7 +344,7 @@ export const approveTask = createCallableFunction<ApproveTaskRequest>(async (req
             updateData.rejectedBy = userId;
             updateData.rejectedAt = admin.firestore.FieldValue.serverTimestamp();
             updateData.rejectionReason = rejectionReason || 'لم يتم تحديد سبب الرفض';
-            updateData.approvedByName = approverName;
+            updateData.approvedByName = approverName; // Keep approver name for rejection as well for consistency
         }
 
         await taskDocRef.update(updateData);
@@ -396,7 +395,7 @@ async function createApprovalNotifications(taskData: any, organizationId: string
             const supervisorQuery = db.collection('users')
                 .where('organizationId', '==', organizationId)
                 .where('departmentId', '==', departmentIdForTask) // Specific department of the task
-                .where('role', '==', 'isOrgSupervisor'); // Supervisor of THIS department
+                .where('isOrgSupervisor', '==', true); // Ensure role field matches what's in custom claims and Firestore
 
             const supervisorSnapshot = await supervisorQuery.get();
             supervisorSnapshot.docs.forEach(doc => {
@@ -417,14 +416,43 @@ async function createApprovalNotifications(taskData: any, organizationId: string
         }
 
         // 2. Notify Org Owners and Org Admins for both department and organization level approvals
-        const orgAdminRoles = ['isOrgOwner', 'isOrgAdmin'];
+        // Query for Org Owners
+        const orgOwnerQuery = db.collection('users')
+            .where('organizationId', '==', organizationId)
+            .where('isOrgOwner', '==', true);
+        const orgOwnerSnapshot = await orgOwnerQuery.get();
+
+        orgOwnerSnapshot.docs.forEach(doc => {
+             if (!notifiedUserIds.has(doc.id)) {
+                const notificationRef = db.collection('notifications').doc();
+                const title = approvalLevel === 'department'
+                    ? `مهمة قسم ("${taskData.departmentName || departmentIdForTask}") تحتاج موافقة`
+                    : 'مهمة مؤسسة تحتاج موافقة';
+                const message = approvalLevel === 'department'
+                    ? `مهمة "${taskData.description}" في قسم "${taskData.departmentName || departmentIdForTask}" تحتاج موافقتك.`
+                    : `مهمة "${taskData.description}" تحتاج موافقتك (مؤسسة).`;
+
+                batch.set(notificationRef, {
+                    userId: doc.id, organizationId, departmentId: approvalLevel === 'department' ? departmentIdForTask : null,
+                    type: 'task_approval_pending', title, message,
+                    priority: 'medium', status: 'unread', createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    actionLink: `/org/tasks?taskId=${taskData.id}`, actionText: 'عرض المهمة',
+                    relatedEntityId: taskData.id, relatedEntityType: 'task',
+                    metadata: { taskId: taskData.id, approvalLevel, submittedBy: taskData.submittedBy }
+                });
+                notifiedUserIds.add(doc.id);
+                notificationCount++;
+            }
+        });
+
+        // Query for Org Admins
         const orgAdminQuery = db.collection('users')
             .where('organizationId', '==', organizationId)
-            .where('role', 'in', orgAdminRoles);
-
+            .where('isOrgAdmin', '==', true);
         const orgAdminSnapshot = await orgAdminQuery.get();
+
         orgAdminSnapshot.docs.forEach(doc => {
-             if (!notifiedUserIds.has(doc.id)) { // Avoid duplicate notifications if an Org Admin is also a Dept Supervisor for this task
+             if (!notifiedUserIds.has(doc.id)) { // Avoid duplicate notifications
                 const notificationRef = db.collection('notifications').doc();
                 const title = approvalLevel === 'department'
                     ? `مهمة قسم ("${taskData.departmentName || departmentIdForTask}") تحتاج موافقة`
@@ -532,7 +560,12 @@ async function updatePendingApprovalNotifications(taskId: string): Promise<void>
  */
 async function checkApprovalPermissions(userData: any, taskData: any): Promise<boolean> {
     const approvalLevel = taskData.approvalLevel;
-    const userRole = userData.role; // This should be the role like 'isOrgOwner', 'isOrgSupervisor' etc.
+    // Ensure role field matches what's in custom claims and Firestore for user
+    const userRole = userData.isOrgOwner ? 'isOrgOwner' :
+                     userData.isOrgAdmin ? 'isOrgAdmin' :
+                     userData.isOrgSupervisor ? 'isOrgSupervisor' :
+                     userData.role; // Fallback to general role if specific flags aren't true
+
     const userOrganizationId = userData.organizationId;
     const userDepartmentId = userData.departmentId;
 
@@ -603,7 +636,7 @@ export const getPendingApprovalTasksForCurrentUser = createCallableFunction(asyn
         const snapshot = await tasksQuery.get();
         const tasks = snapshot.docs.map(doc => ({
             id: doc.id,
-            ...doc.data()
+            ...(doc.data() as Task) // Cast to Task to resolve spread type error
         }));
 
         logFunctionEnd(functionName, { count: tasks.length });
@@ -614,3 +647,13 @@ export const getPendingApprovalTasksForCurrentUser = createCallableFunction(asyn
         throw new functions.https.HttpsError('internal', `Failed to get pending approval tasks: ${error.message || 'Unknown error'}`);
     }
 });
+
+interface Task {
+  id: string;
+  description: string;
+  status: string;
+  // Add other necessary fields from your Task type
+  [key: string]: any; // To allow other properties
+}
+
+    
