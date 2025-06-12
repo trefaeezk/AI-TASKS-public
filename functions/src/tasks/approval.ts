@@ -5,11 +5,11 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import { db } from '../shared/utils';
+import { db } from '../shared/utils'; // Correct import for Admin SDK Firestore instance
 import { validateInput, logFunctionStart, logFunctionEnd, logFunctionError } from '../shared/logging-utils';
 import { createCallableFunction } from '../shared/function-utils';
 import { CallableRequest } from '../shared/types';
-// Removed client-side imports: import { query, collection, where, orderBy, getDocs } from 'firebase/firestore';
+// Removed client-side imports
 
 /**
  * نوع بيانات طلب إنشاء مهمة تتطلب موافقة
@@ -21,6 +21,7 @@ interface CreateTaskWithApprovalRequest {
     dueDate?: { seconds: number };
     priority?: string;
     assignedToUserId?: string;
+    assignedToUserIds?: string[]; // For multiple assignees
     departmentId?: string;
     categoryName?: string;
     organizationId: string;
@@ -35,7 +36,61 @@ interface CreateTaskWithApprovalRequest {
     }>;
     durationValue?: number;
     durationUnit?: string;
+    requiresApproval?: boolean; // Added to determine if approval is actually needed
 }
+
+/**
+ * إنشاء إشعار للمكلفين بالمهمة
+ */
+async function sendTaskAssignmentNotification(
+    taskData: {
+        id: string;
+        description: string;
+        organizationId: string;
+        departmentId?: string | null;
+        approvalLevel?: string;
+    },
+    assigneeUids: string[]
+): Promise<void> {
+    if (!assigneeUids || assigneeUids.length === 0) {
+        console.log(`[sendTaskAssignmentNotification] No assignees for task ${taskData.id}, skipping notification.`);
+        return;
+    }
+
+    const batch = db.batch();
+    let notificationCount = 0;
+
+    for (const assigneeUid of assigneeUids) {
+        const notificationRef = db.collection('notifications').doc(); // Auto-generate ID
+        const notificationPayload = {
+            userId: assigneeUid,
+            organizationId: taskData.organizationId,
+            departmentId: taskData.departmentId || null,
+            type: 'task_assigned' as const,
+            title: 'تم إسناد مهمة جديدة إليك',
+            message: `مهمة "${taskData.description}" تم إسنادها إليك.`,
+            priority: 'medium' as const,
+            status: 'unread' as const,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            actionLink: `/org/tasks?taskId=${taskData.id}`,
+            actionText: 'عرض المهمة',
+            relatedEntityId: taskData.id,
+            relatedEntityType: 'task' as const,
+            metadata: {
+                taskId: taskData.id,
+                approvalLevel: taskData.approvalLevel,
+            }
+        };
+        batch.set(notificationRef, notificationPayload);
+        notificationCount++;
+    }
+
+    if (notificationCount > 0) {
+        await batch.commit();
+        console.log(`[sendTaskAssignmentNotification] Created ${notificationCount} assignment notifications for task ${taskData.id}.`);
+    }
+}
+
 
 /**
  * إنشاء مهمة تتطلب موافقة
@@ -60,7 +115,7 @@ export const createTaskWithApproval = createCallableFunction<CreateTaskWithAppro
         validateInput(data, [
             'title',
             'organizationId',
-            'approvalLevel'
+            // approvalLevel is only required if requiresApproval is true
         ]);
 
         const {
@@ -70,14 +125,16 @@ export const createTaskWithApproval = createCallableFunction<CreateTaskWithAppro
             dueDate,
             priority,
             assignedToUserId,
+            assignedToUserIds,
             departmentId,
             categoryName,
             organizationId,
-            approvalLevel,
+            approvalLevel, // This dictates where the approval request goes
             notes,
             milestones,
             durationValue,
-            durationUnit
+            durationUnit,
+            requiresApproval = false // Default to false if not provided
         } = data;
 
         // التحقق من صلاحيات المستخدم
@@ -90,7 +147,7 @@ export const createTaskWithApproval = createCallableFunction<CreateTaskWithAppro
         }
 
         const userData = userDoc.data();
-        
+
         // التحقق من عضوية المستخدم في المؤسسة
         if (userData?.organizationId !== organizationId) {
             throw new functions.https.HttpsError(
@@ -99,50 +156,19 @@ export const createTaskWithApproval = createCallableFunction<CreateTaskWithAppro
             );
         }
 
-        // تحديد معرف القسم النهائي
         let finalDepartmentId: string | null = null;
-
-        // التحقق من صلاحيات إنشاء المهام حسب مستوى الموافقة
-        if (approvalLevel === 'department') {
-            const isAdminRole = userData?.isOrgOwner || userData?.isOrgAdmin;
-
-            if (isAdminRole) {
-                finalDepartmentId = departmentId || null;
-                if (!finalDepartmentId) {
-                    throw new functions.https.HttpsError(
-                        'permission-denied',
-                        'يجب اختيار قسم لإنشاء مهمة على مستوى القسم.'
-                    );
-                }
-            } else {
-                finalDepartmentId = userData?.departmentId || null;
-                if (!finalDepartmentId) {
-                    throw new functions.https.HttpsError(
-                        'permission-denied',
-                        'يجب أن تكون عضواً في قسم لإنشاء مهام على مستوى القسم.'
-                    );
-                }
-            }
-
-            const departmentTaskCreationRoles = ['isOrgOwner', 'isOrgAdmin', 'isOrgSupervisor', 'isOrgEngineer', 'isOrgTechnician'];
-            if (!departmentTaskCreationRoles.includes(userData?.role)) {
+        if (approvalLevel === 'department' || data.taskContext === 'department') {
+            finalDepartmentId = departmentId || userData?.departmentId || null;
+            if (!finalDepartmentId) {
                 throw new functions.https.HttpsError(
-                    'permission-denied',
-                    'ليس لديك صلاحية لإنشاء مهام على مستوى القسم.'
-                );
-            }
-        } else if (approvalLevel === 'organization') {
-            const allowedRoles = ['isOrgOwner', 'isOrgAdmin', 'isOrgSupervisor', 'isOrgEngineer'];
-            if (!allowedRoles.includes(userData?.role)) {
-                throw new functions.https.HttpsError(
-                    'permission-denied',
-                    'ليس لديك صلاحية لإنشاء مهام على مستوى المؤسسة.'
+                    'invalid-argument',
+                    'يجب تحديد القسم للمهام على مستوى القسم.'
                 );
             }
         }
 
+
         let assigneeName = null;
-        let departmentName = null;
 
         if (assignedToUserId) {
             const assigneeDoc = await db.collection('users').doc(assignedToUserId).get();
@@ -151,6 +177,7 @@ export const createTaskWithApproval = createCallableFunction<CreateTaskWithAppro
             }
         }
 
+        let departmentName = null;
         if (finalDepartmentId) {
             const departmentDoc = await db.collection('organizations').doc(organizationId).collection('departments').doc(finalDepartmentId).get();
             if (departmentDoc.exists) {
@@ -176,11 +203,11 @@ export const createTaskWithApproval = createCallableFunction<CreateTaskWithAppro
             }));
         }
 
-        const taskData = {
+        const taskData: any = {
             userId: userId,
             description: title,
             details: description || '',
-            status: 'pending-approval',
+            status: requiresApproval ? 'pending-approval' : 'pending', // Set to pending if no approval needed
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             createdBy: userId,
@@ -189,33 +216,54 @@ export const createTaskWithApproval = createCallableFunction<CreateTaskWithAppro
             priority: priority || 'medium',
             priorityReason: null,
             assignedToUserId: assignedToUserId || null,
+            assignedToUserIds: assignedToUserIds || null,
             assigneeName: assigneeName,
-            departmentId: finalDepartmentId || null,
+            departmentId: finalDepartmentId,
             departmentName: departmentName,
             taskCategoryName: categoryName || null,
             organizationId,
-            taskContext: approvalLevel === 'department' ? 'department' : 'organization',
+            taskContext: approvalLevel === 'department' ? 'department' : (approvalLevel === 'organization' ? 'organization' : 'individual'),
             accountType: 'organization',
             order: Date.now(),
             milestones: processedMilestones,
             durationValue: durationValue || null,
             durationUnit: durationUnit || null,
-            requiresApproval: true,
-            approvalLevel: approvalLevel,
-            submittedBy: userId,
-            submittedByName: userData?.name || userData?.displayName || 'مستخدم غير معروف',
-            submittedAt: admin.firestore.FieldValue.serverTimestamp(),
+            requiresApproval: requiresApproval,
+            approvalLevel: requiresApproval ? approvalLevel : null, // Only set if approval is required
+            submittedBy: requiresApproval ? userId : null,
+            submittedByName: requiresApproval ? (userData?.name || userData?.displayName || 'مستخدم غير معروف') : null,
+            submittedAt: requiresApproval ? admin.firestore.FieldValue.serverTimestamp() : null,
             notes: notes || null
         };
 
         const taskRef = await db.collection('tasks').add(taskData);
-        await createApprovalNotifications({ ...taskData, id: taskRef.id }, organizationId);
+
+        if (requiresApproval) {
+            await createApprovalNotifications({ ...taskData, id: taskRef.id }, organizationId);
+            toast({
+                title: 'تم إرسال المهمة للموافقة',
+                description: `تم إرسال المهمة "${title}" للموافقة على مستوى ${approvalLevel === 'department' ? 'القسم' : 'المؤسسة'}.`,
+            });
+        } else {
+            // If no approval is needed, send assignment notifications directly
+            const assignees = taskData.assignedToUserIds || (taskData.assignedToUserId ? [taskData.assignedToUserId] : []);
+            if (assignees.length > 0) {
+                await sendTaskAssignmentNotification({ ...taskData, id: taskRef.id }, assignees);
+            }
+            toast({
+                title: 'تم إنشاء المهمة',
+                description: `تم إنشاء المهمة "${title}" بنجاح.`,
+            });
+        }
+
 
         logFunctionEnd(functionName, { taskId: taskRef.id });
         return {
             success: true,
             taskId: taskRef.id,
-            message: `تم إرسال المهمة للموافقة على مستوى ${approvalLevel === 'department' ? 'القسم' : 'المؤسسة'}`
+            message: requiresApproval
+                ? `تم إرسال المهمة للموافقة على مستوى ${approvalLevel === 'department' ? 'القسم' : 'المؤسسة'}`
+                : 'تم إنشاء المهمة بنجاح'
         };
 
     } catch (error: any) {
@@ -259,7 +307,9 @@ export const approveTask = createCallableFunction<ApproveTaskRequest>(async (req
         validateInput(data, ['taskId', 'approved']);
         const { taskId, approved, rejectionReason } = data;
 
-        const taskDoc = await db.collection('tasks').doc(taskId).get();
+        const taskDocRef = db.collection('tasks').doc(taskId);
+        const taskDoc = await taskDocRef.get();
+
         if (!taskDoc.exists) {
             throw new functions.https.HttpsError('not-found', 'المهمة غير موجودة.');
         }
@@ -283,24 +333,34 @@ export const approveTask = createCallableFunction<ApproveTaskRequest>(async (req
             approved: approved,
             approvedAt: admin.firestore.FieldValue.serverTimestamp()
         };
-        const approverDoc = await db.collection('users').doc(userId).get(); // جلب اسم الموافق
+        const approverDoc = await db.collection('users').doc(userId).get();
         const approverName = approverDoc.exists ? approverDoc.data()?.name || approverDoc.data()?.displayName || 'مسئول غير معروف' : 'مسئول غير معروف';
 
         if (approved) {
-            updateData.status = 'pending';
+            updateData.status = 'pending'; // Task becomes active pending
             updateData.approvedBy = userId;
             updateData.approvedByName = approverName;
         } else {
-            updateData.status = 'cancelled';
+            updateData.status = 'cancelled'; // Or another appropriate status for rejected tasks
             updateData.rejectedBy = userId;
             updateData.rejectedAt = admin.firestore.FieldValue.serverTimestamp();
             updateData.rejectionReason = rejectionReason || 'لم يتم تحديد سبب الرفض';
-            updateData.approvedByName = approverName; // Still set approver name on rejection
+            updateData.approvedByName = approverName;
         }
 
-        await db.collection('tasks').doc(taskId).update(updateData);
+        await taskDocRef.update(updateData);
         await updatePendingApprovalNotifications(taskId);
         await createApprovalResultNotification(taskData, approved, userId, rejectionReason);
+
+        // If approved and assigned, send assignment notification
+        if (approved) {
+            const finalTaskData = { ...taskData, ...updateData, id: taskId }; // Merge for full task data
+            const assignees = finalTaskData.assignedToUserIds || (finalTaskData.assignedToUserId ? [finalTaskData.assignedToUserId] : []);
+            if (assignees.length > 0) {
+                await sendTaskAssignmentNotification(finalTaskData, assignees);
+            }
+        }
+
 
         logFunctionEnd(functionName, { taskId, approved });
         return {
@@ -326,63 +386,72 @@ export const approveTask = createCallableFunction<ApproveTaskRequest>(async (req
 async function createApprovalNotifications(taskData: any, organizationId: string): Promise<void> {
     try {
         const approvalLevel = taskData.approvalLevel;
-        const departmentId = taskData.departmentId;
-        let approversQuery: admin.firestore.Query;
-
-        // تحديد الأدوار التي يمكنها الموافقة على مستوى القسم
-        const departmentApprovalRoles = ['isOrgOwner', 'isOrgAdmin', 'isOrgSupervisor'];
-
-        if (approvalLevel === 'department' && departmentId) {
-            approversQuery = db.collection('users')
-                .where('organizationId', '==', organizationId)
-                .where('departmentId', '==', departmentId)
-                .where('role', 'in', departmentApprovalRoles); // المشرفون + إدارة المؤسسة ضمن هذا القسم
-        } else if (approvalLevel === 'organization') {
-            approversQuery = db.collection('users')
-                .where('organizationId', '==', organizationId)
-                .where('role', 'in', ['isOrgOwner', 'isOrgAdmin']); // مالك وأدمن المؤسسة فقط
-        } else {
-            console.warn(`[ApprovalNotifications] Invalid approval level or missing departmentId for task ${taskData.id}`);
-            return;
-        }
-
-        const approversSnapshot = await approversQuery.get();
+        const departmentIdForTask = taskData.departmentId; // Use departmentId from task
+        const notifiedUserIds = new Set<string>();
         const batch = db.batch();
         let notificationCount = 0;
 
-        approversSnapshot.docs.forEach(doc => {
-            const userData = doc.data();
-            // لا داعي للتحقق من الصلاحيات هنا مرة أخرى، الاستعلام قام بذلك
-            const notificationRef = db.collection('notifications').doc();
-            const notificationData = {
-                userId: doc.id,
-                organizationId: organizationId,
-                departmentId: approvalLevel === 'department' ? departmentId : null,
-                type: 'task_approval_pending',
-                title: 'مهمة تحتاج موافقة',
-                message: `مهمة جديدة "${taskData.description}" تحتاج موافقتك على مستوى ${approvalLevel === 'department' ? 'القسم' : 'المؤسسة'}`,
-                priority: 'medium',
-                status: 'unread',
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                actionLink: `/org/tasks?taskId=${taskData.id}`, // رابط مباشر للمهمة
-                actionText: 'عرض المهمة',
-                relatedEntityId: taskData.id,
-                relatedEntityType: 'task',
-                metadata: {
-                    taskId: taskData.id,
-                    approvalLevel: approvalLevel,
-                    submittedBy: taskData.submittedBy
+        // 1. Notify department supervisors if department-level approval
+        if (approvalLevel === 'department' && departmentIdForTask) {
+            const supervisorQuery = db.collection('users')
+                .where('organizationId', '==', organizationId)
+                .where('departmentId', '==', departmentIdForTask) // Specific department of the task
+                .where('role', '==', 'isOrgSupervisor'); // Supervisor of THIS department
+
+            const supervisorSnapshot = await supervisorQuery.get();
+            supervisorSnapshot.docs.forEach(doc => {
+                if (!notifiedUserIds.has(doc.id)) {
+                    const notificationRef = db.collection('notifications').doc();
+                    batch.set(notificationRef, {
+                        userId: doc.id, organizationId, departmentId: departmentIdForTask, type: 'task_approval_pending',
+                        title: 'مهمة تحتاج موافقة قسم', message: `مهمة "${taskData.description}" تحتاج موافقتك (قسم).`,
+                        priority: 'medium', status: 'unread', createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                        actionLink: `/org/tasks?taskId=${taskData.id}`, actionText: 'عرض المهمة',
+                        relatedEntityId: taskData.id, relatedEntityType: 'task',
+                        metadata: { taskId: taskData.id, approvalLevel, submittedBy: taskData.submittedBy }
+                    });
+                    notifiedUserIds.add(doc.id);
+                    notificationCount++;
                 }
-            };
-            batch.set(notificationRef, notificationData);
-            notificationCount++;
+            });
+        }
+
+        // 2. Notify Org Owners and Org Admins for both department and organization level approvals
+        const orgAdminRoles = ['isOrgOwner', 'isOrgAdmin'];
+        const orgAdminQuery = db.collection('users')
+            .where('organizationId', '==', organizationId)
+            .where('role', 'in', orgAdminRoles);
+
+        const orgAdminSnapshot = await orgAdminQuery.get();
+        orgAdminSnapshot.docs.forEach(doc => {
+             if (!notifiedUserIds.has(doc.id)) { // Avoid duplicate notifications if an Org Admin is also a Dept Supervisor for this task
+                const notificationRef = db.collection('notifications').doc();
+                const title = approvalLevel === 'department'
+                    ? `مهمة قسم ("${taskData.departmentName || departmentIdForTask}") تحتاج موافقة`
+                    : 'مهمة مؤسسة تحتاج موافقة';
+                const message = approvalLevel === 'department'
+                    ? `مهمة "${taskData.description}" في قسم "${taskData.departmentName || departmentIdForTask}" تحتاج موافقتك.`
+                    : `مهمة "${taskData.description}" تحتاج موافقتك (مؤسسة).`;
+
+                batch.set(notificationRef, {
+                    userId: doc.id, organizationId, departmentId: approvalLevel === 'department' ? departmentIdForTask : null,
+                    type: 'task_approval_pending', title, message,
+                    priority: 'medium', status: 'unread', createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    actionLink: `/org/tasks?taskId=${taskData.id}`, actionText: 'عرض المهمة',
+                    relatedEntityId: taskData.id, relatedEntityType: 'task',
+                    metadata: { taskId: taskData.id, approvalLevel, submittedBy: taskData.submittedBy }
+                });
+                notifiedUserIds.add(doc.id);
+                notificationCount++;
+            }
         });
+
 
         if (notificationCount > 0) {
             await batch.commit();
-            console.log(`[ApprovalNotifications] Created ${notificationCount} notifications for ${approvalLevel} level approval of task ${taskData.id}`);
+            console.log(`[ApprovalNotifications] Created ${notificationCount} notifications for ${approvalLevel} approval of task ${taskData.id}`);
         } else {
-            console.log(`[ApprovalNotifications] No approvers found for ${approvalLevel} level approval of task ${taskData.id}. Department: ${departmentId}`);
+            console.log(`[ApprovalNotifications] No approvers found for ${approvalLevel} approval of task ${taskData.id}. Department: ${departmentIdForTask}`);
         }
 
     } catch (error) {
@@ -435,22 +504,23 @@ async function createApprovalResultNotification(taskData: any, approved: boolean
  */
 async function updatePendingApprovalNotifications(taskId: string): Promise<void> {
     try {
-        const notificationsQuery = await db.collection('notifications')
+        const notificationsQuery = db.collection('notifications')
             .where('type', '==', 'task_approval_pending')
             .where('relatedEntityId', '==', taskId)
-            .where('status', '==', 'unread')
-            .get();
+            .where('status', '==', 'unread');
 
-        if (!notificationsQuery.empty) {
+        const notificationsSnapshot = await notificationsQuery.get();
+
+        if (!notificationsSnapshot.empty) {
             const batch = db.batch();
-            notificationsQuery.docs.forEach(doc => {
+            notificationsSnapshot.docs.forEach(doc => {
                 batch.update(doc.ref, {
-                    status: 'read',
+                    status: 'read', // Mark as read instead of deleting
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 });
             });
             await batch.commit();
-            console.log(`[PendingApprovalNotifications] Updated ${notificationsQuery.size} pending approval notifications for task ${taskId}`);
+            console.log(`[PendingApprovalNotifications] Updated ${notificationsSnapshot.size} pending approval notifications for task ${taskId}`);
         }
     } catch (error) {
         console.error('[PendingApprovalNotifications] Error updating pending notifications:', error);
@@ -462,26 +532,32 @@ async function updatePendingApprovalNotifications(taskId: string): Promise<void>
  */
 async function checkApprovalPermissions(userData: any, taskData: any): Promise<boolean> {
     const approvalLevel = taskData.approvalLevel;
-    const userRole = userData.role;
+    const userRole = userData.role; // This should be the role like 'isOrgOwner', 'isOrgSupervisor' etc.
+    const userOrganizationId = userData.organizationId;
+    const userDepartmentId = userData.departmentId;
 
-    // الأدوار التي يمكنها الموافقة على مستوى القسم
-    const departmentApprovalRoles = ['isOrgOwner', 'isOrgAdmin', 'isOrgSupervisor'];
+    const taskOrganizationId = taskData.organizationId;
+    const taskDepartmentId = taskData.departmentId;
 
-    // الأدوار التي يمكنها الموافقة على مستوى المؤسسة
-    const orgApprovalRoles = ['isOrgOwner', 'isOrgAdmin'];
-
-    if (approvalLevel === 'department') {
-        // للموافقة على مستوى القسم: مشرف القسم أو أعلى، ويجب أن يكون المستخدم في نفس القسم أو يكون مالك/أدمن المؤسسة
-        const isApproverRole = departmentApprovalRoles.includes(userRole);
-        const isInSameDepartment = userData.departmentId === taskData.departmentId;
-        const isOrgAdminOrOwner = orgApprovalRoles.includes(userRole); // مالك أو أدمن المؤسسة يمكنه الموافقة على مهام الأقسام
-
-        return (isApproverRole && isInSameDepartment) || isOrgAdminOrOwner;
-    } else if (approvalLevel === 'organization') {
-        // للموافقة على مستوى المؤسسة: مالك أو أدمن المؤسسة فقط
-        return orgApprovalRoles.includes(userRole) &&
-               userData.organizationId === taskData.organizationId;
+    // Basic check: User must belong to the same organization as the task
+    if (userOrganizationId !== taskOrganizationId) {
+        return false;
     }
+
+    // Org Owners and Admins can approve any task in their organization
+    if (userRole === 'isOrgOwner' || userRole === 'isOrgAdmin') {
+        return true;
+    }
+
+    // Department-level approval
+    if (approvalLevel === 'department') {
+        // Supervisors can approve tasks in their own department
+        if (userRole === 'isOrgSupervisor' && userDepartmentId === taskDepartmentId) {
+            return true;
+        }
+    }
+    // Organization-level approval is already covered by OrgOwner/OrgAdmin check
+
     return false;
 }
 
@@ -507,16 +583,16 @@ export const getPendingApprovalTasksForCurrentUser = createCallableFunction(asyn
             tasksQuery = db.collection('tasks')
                 .where('status', '==', 'pending-approval')
                 .where('requiresApproval', '==', true)
-                .where('organizationId', '==', userClaims.organizationId)
+                .where('organizationId', '==', userClaims.organizationId) // Filter by user's org
                 .orderBy('submittedAt', 'desc');
         } else if (userClaims.isOrgSupervisor && userClaims.departmentId) {
             // إذا كان مشرف قسم، يرى مهام قسمه فقط التي تتطلب موافقة قسم
             tasksQuery = db.collection('tasks')
                 .where('status', '==', 'pending-approval')
                 .where('requiresApproval', '==', true)
-                .where('organizationId', '==', userClaims.organizationId)
+                .where('organizationId', '==', userClaims.organizationId) // Filter by user's org
                 .where('approvalLevel', '==', 'department')
-                .where('departmentId', '==', userClaims.departmentId)
+                .where('departmentId', '==', userClaims.departmentId) // Filter by user's dept
                 .orderBy('submittedAt', 'desc');
         } else {
             // الأدوار الأخرى لا ترى أي مهام للموافقة عبر هذه الدالة
@@ -538,5 +614,3 @@ export const getPendingApprovalTasksForCurrentUser = createCallableFunction(asyn
         throw new functions.https.HttpsError('internal', `Failed to get pending approval tasks: ${error.message || 'Unknown error'}`);
     }
 });
-
-    

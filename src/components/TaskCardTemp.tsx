@@ -5,7 +5,7 @@ import type { TaskType, DurationUnit, TaskStatus, PriorityLevel, Milestone, Mile
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar as CalendarIcon, ChevronDown, ChevronUp, Clock, AlertTriangle, CheckCircle2, MoreHorizontal, Edit, Trash2, GripVertical, Tag, CircleHelp, Info, ListChecks, Share2, Target, User, X } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronDown, ChevronUp, Clock, AlertTriangle, CheckCircle2, MoreHorizontal, Edit, Trash2, GripVertical, Tag, CircleHelp, Info, ListChecks, Share2, Target, User as UserIcon, X } from 'lucide-react'; // Renamed User to UserIcon
 import { CreateSubtasksDialog } from './CreateSubtasksDialog';
 import { SubtasksList } from './SubtasksList';
 import { AssignTaskToMembersDialog } from './AssignTaskToMembersDialog';
@@ -33,10 +33,10 @@ import { updateParentTaskComprehensive, updateSubtasksFromParent, calculateTaskS
 import { OkrTaskBadge } from './okr/OkrTaskBadge';
 import { TaskKeyResultBadge } from './okr/TaskKeyResultBadge';
 import { CompactAssigneesList } from './CompactAssigneesList';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext'; // Import useAuth
 import { ReopenTaskDialog } from './ReopenTaskDialog';
 import { useDebounce } from '@/hooks/useDebounce';
-import { categoryInfo, TaskCategory } from '@/context/TaskPageContext'; // Added TaskCategory import
+import { categoryInfo, TaskCategory } from '@/context/TaskPageContext';
 
 interface TaskCardTempProps {
   task: TaskType;
@@ -46,7 +46,7 @@ interface TaskCardTempProps {
   onDelete?: (taskId: string) => void;
   getCategoryColor?: (categoryName?: string) => string | undefined;
   aiReasoning?: string;
-  currentCategory?: string; // إضافة الفئة الحالية لتحديد الخيارات المناسبة
+  currentCategory?: string;
 }
 
 // Helper to safely format date
@@ -107,7 +107,7 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
   const [isReopenDialogOpen, setIsReopenDialogOpen] = useState(false);
 
   const { toast } = useToast();
-  const { user, userClaims } = useAuth();
+  const { user, userClaims } = useAuth(); // Get userClaims from useAuth
 
   const getAvailableActions = () => {
     const actions = {
@@ -188,6 +188,11 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
   };
 
   const availableActions = getAvailableActions();
+
+  const isTechnicianOrAssistant = userClaims?.isOrgTechnician || userClaims?.isOrgAssistant;
+  const isTaskAssignedToCurrentUser = task.assignedToUserId === user?.uid || (task.assignedToUserIds && user?.uid && task.assignedToUserIds.includes(user.uid));
+  const shouldHideEditAndAssignButtons = isTechnicianOrAssistant && isTaskAssignedToCurrentUser;
+
 
   const {
       attributes,
@@ -325,19 +330,17 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
   const handleStatusChangeLocal = async (e: React.MouseEvent, newStatus: TaskStatus) => {
      e.stopPropagation();
     if (newStatus === 'pending' && (task.status === 'completed' || task.status === 'cancelled')) {
-      setTaskToReopen(task); // Set task to reopen for the dialog
-      setIsReopenDialogOpen(true);
+      setIsReopenDialogOpen(true); // Set task to reopen for the dialog
       return;
     }
     await executeStatusChange(newStatus);
   };
 
   const handleReopenConfirm = (resetMilestonesChoice: boolean) => {
-    if (taskToReopen) {
-      executeStatusChange('pending', resetMilestonesChoice);
-      setTaskToReopen(null); // Clear taskToReopen after handling
-    }
+    // The 'task' from closure is the correct one to reopen here
+    executeStatusChange('pending', resetMilestonesChoice);
   };
+
 
   const handleEditLocal = (e: React.MouseEvent) => {
      e.stopPropagation();
@@ -462,7 +465,7 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
              {...listeners}
              className={cn(
                  "absolute top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring cursor-grab",
-                 "right-1 z-10" // Adjusted for RTL
+                 "right-1 z-10" // Adjusted for RTL handle
               )}
               aria-label="اسحب لإعادة الترتيب"
               onClick={(e) => e.stopPropagation()}
@@ -567,7 +570,7 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
                           </>
                       )}
                        {onStatusChange && (onEdit || onDelete) && <DropdownMenuSeparator />}
-                       {onEdit && (
+                       {onEdit && !shouldHideEditAndAssignButtons && (
                            <DropdownMenuItem onClick={handleEditLocal} className="cursor-pointer">
                               <Edit className="ml-2 h-4 w-4" />
                               <span>تعديل</span>
@@ -621,7 +624,7 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
                     {taskCategoryName}
                   </Badge>
                )}
-               {task.taskContext === 'organization' && task.organizationId && (
+               {task.taskContext === 'organization' && task.organizationId && !shouldHideEditAndAssignButtons && (
                   <div className="flex-shrink-0">
                     <CreateSubtasksDialog
                       task={task}
@@ -634,7 +637,7 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
                     />
                   </div>
                )}
-               {task.taskContext === 'department' && task.departmentId && task.organizationId && (
+               {task.taskContext === 'department' && task.departmentId && task.organizationId && !shouldHideEditAndAssignButtons && (
                   <div className="flex-shrink-0">
                     <AssignTaskToMembersDialog
                       task={task}
@@ -742,7 +745,7 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
                      <p className="flex-1"><strong className="font-medium">{isOverdue ? 'تحذير:' : 'ملاحظة الخطة:'}</strong> {aiReasoning}</p>
                  </div>
             )}
-            {task.taskContext === 'organization' && task.organizationId && (
+            {task.taskContext === 'organization' && task.organizationId && !shouldHideEditAndAssignButtons && (
               <div className="pt-2 border-t border-border mt-2">
                 <Button
                   variant="ghost"
