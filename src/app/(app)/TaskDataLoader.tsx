@@ -4,11 +4,13 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
-import { db } from '@/config/firebase';
+import { db, auth as firebaseAuthInstance } from '@/config/firebase'; // Import auth for direct check
 import { collection, query, where, onSnapshot, Timestamp, orderBy } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { TaskPageProvider } from '@/context/TaskPageContext';
 import type { TaskType, TaskFirestoreData, PriorityLevel, Milestone, MilestoneFirestoreData } from '@/types/task';
+import { firestoreListenerManager, handleFirestoreError } from '@/utils/firestoreListenerManager';
+import { useToast } from '@/hooks/use-toast'; // Import useToast
 
 // Function to map Firestore data to TaskType
 const mapFirestoreTaskToTaskType = (id: string, data: TaskFirestoreData): TaskType | null => {
@@ -30,7 +32,7 @@ const mapFirestoreTaskToTaskType = (id: string, data: TaskFirestoreData): TaskTy
 
     // --- Correct Milestone Mapping ---
     const firestoreMilestones = data.milestones;
-    console.log(`[TaskDataLoader ${id}] Mapping task. Raw milestones data:`, firestoreMilestones);
+    // console.log(`[TaskDataLoader ${id}] Mapping task. Raw milestones data:`, firestoreMilestones); // Reduced verbosity
 
     // Ensure milestones are correctly mapped or defaulted to an empty array
     const mappedMilestones: Milestone[] = Array.isArray(firestoreMilestones)
@@ -45,7 +47,6 @@ const mapFirestoreTaskToTaskType = (id: string, data: TaskFirestoreData): TaskTy
                     mappedDueDate = undefined; // Keep undefined on error
                 }
             }
-            // console.log(`  [Milestone ${m.id}] Firestore dueDate: ${m.dueDate}, Mapped dueDate: ${mappedDueDate}`); // Log individual mapping
             return {
                 id: m.id || 'missing-id-' + Math.random().toString(36).substring(7), // Generate temporary ID if missing
                 description: m.description || '',
@@ -56,7 +57,7 @@ const mapFirestoreTaskToTaskType = (id: string, data: TaskFirestoreData): TaskTy
           })
         : []; // Default to empty array if null, undefined, or not an array
 
-     console.log(`[TaskDataLoader ${id}] Mapped milestones:`, JSON.stringify(mappedMilestones));
+     // console.log(`[TaskDataLoader ${id}] Mapped milestones:`, JSON.stringify(mappedMilestones)); // Reduced verbosity
 
     const mappedTask: TaskType = {
         id,
@@ -79,13 +80,14 @@ const mapFirestoreTaskToTaskType = (id: string, data: TaskFirestoreData): TaskTy
         assignedToUserId: data.assignedToUserId ?? undefined,
         parentTaskId: data.parentTaskId ?? undefined,
     };
-    console.log(`[TaskDataLoader ${id}] Successfully mapped task:`, mappedTask);
+    // console.log(`[TaskDataLoader ${id}] Successfully mapped task:`, mappedTask); // Reduced verbosity
     return mappedTask;
 };
 
 // --- Task Data Loader Component ---
 export function TaskDataLoader({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const { toast } = useToast(); // Initialize useToast
   const [tasks, setTasks] = useState<TaskType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,23 +109,17 @@ export function TaskDataLoader({ children }: { children: React.ReactNode }) {
     const q = query(
         tasksColRef,
         where('userId', '==', user.uid),
-        orderBy('createdAt', 'desc') // استخدام الفهرس المركب userId + createdAt لتحسين الأداء
+        orderBy('createdAt', 'desc')
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        console.log(`TaskDataLoader: Firestore snapshot received. Has pending writes: ${querySnapshot.metadata.hasPendingWrites}`);
+        // console.log(`TaskDataLoader: Firestore snapshot received. Has pending writes: ${querySnapshot.metadata.hasPendingWrites}`); // Reduced verbosity
         const fetchedTasks: TaskType[] = [];
-        // querySnapshot.docChanges().forEach((change) => {
-        //    console.log(`  - Change type: ${change.type}, Doc ID: ${change.doc.id}`);
-        // });
-
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-            // console.log(`  - Processing doc: ${doc.id}`);
             if (data && typeof data === 'object' && 'userId' in data && data.userId === user.uid) {
                  const mappedTask = mapFirestoreTaskToTaskType(doc.id, data as TaskFirestoreData);
                  if (mappedTask) {
-                    // console.log(`    - Mapped task successfully:`, mappedTask);
                     fetchedTasks.push(mappedTask);
                  } else {
                     console.warn(`TaskDataLoader: Failed to map task ${doc.id}. Raw data:`, data);
@@ -132,33 +128,42 @@ export function TaskDataLoader({ children }: { children: React.ReactNode }) {
                 console.warn(`TaskDataLoader: Query returned task ${doc.id} with unexpected data or wrong user. Raw data:`, data);
             }
         });
-        console.log(`TaskDataLoader: Processed ${fetchedTasks.length} tasks from snapshot. Updating state.`);
+        // console.log(`TaskDataLoader: Processed ${fetchedTasks.length} tasks from snapshot. Updating state.`); // Reduced verbosity
         setTasks(fetchedTasks);
         setIsLoading(false);
     }, (err) => {
-        console.error("TaskDataLoader: Error fetching tasks:", err);
+        // Use the corrected context string here
+        const isPermissionError = handleFirestoreError(err, 'TaskDataLoader');
 
-        // التعامل مع أخطاء الصلاحيات بعد تسجيل الخروج
-        if (err.code === 'permission-denied' || err.message?.includes('Missing or insufficient permissions')) {
-          console.warn("TaskDataLoader: Permission denied, user may have been signed out.");
-          // لا نعرض خطأ للمستخدم في هذه الحالة لأنه قد يكون بسبب تسجيل الخروج
+        // Check if the error is a permission error AND the user is now logged out
+        if (isPermissionError && !firebaseAuthInstance.currentUser) {
+          console.warn("TaskDataLoader: Permission denied after logout, likely normal cleanup. Suppressing error toast.");
+          setError(null); // Clear local error state
+          setTasks([]);   // Clear tasks
           setIsLoading(false);
-          setTasks([]);
-          return;
+          return; // Exit without showing a toast
         }
 
-        setError('حدث خطأ أثناء تحميل المهام.');
+        // For other errors or permission errors while user is still logged in
+        if (!isPermissionError || (isPermissionError && firebaseAuthInstance.currentUser)) {
+          setError('حدث خطأ أثناء تحميل المهام.');
+          toast({ title: 'خطأ', description: 'حدث خطأ أثناء تحميل المهام.', variant: 'destructive' });
+        }
         setIsLoading(false);
-        setTasks([]);
+        setTasks([]); // Clear tasks on error
     });
 
-    return () => {
-        console.log("TaskDataLoader: Unsubscribing from Firestore listener.");
-        unsubscribe();
-    };
-  }, [user]);
+    // Add listener to the manager
+    firestoreListenerManager.addListener(`task-data-loader-${user.uid}`, unsubscribe);
 
-  if (isLoading && tasks.length === 0) {
+    return () => {
+        console.log(`TaskDataLoader: Unsubscribing from Firestore listener for user: ${user.uid}.`);
+        // Remove the specific listener using its key
+        firestoreListenerManager.removeListener(`task-data-loader-${user.uid}`);
+    };
+  }, [user, toast]); // Added toast to dependencies
+
+  if (isLoading && tasks.length === 0) { // Show loading only if tasks are empty and still loading
       return (
            <div className="flex justify-center items-center flex-1 h-full">
                <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -174,7 +179,7 @@ export function TaskDataLoader({ children }: { children: React.ReactNode }) {
         );
     }
 
-  console.log(`[TaskDataLoader Provider] Rendering TaskPageProvider with ${tasks.length} tasks.`);
+  // console.log(`[TaskDataLoader Provider] Rendering TaskPageProvider with ${tasks.length} tasks.`); // Reduced verbosity
   return (
     <TaskPageProvider initialTasks={tasks}>
       {children}

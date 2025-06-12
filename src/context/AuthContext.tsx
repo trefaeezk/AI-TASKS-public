@@ -69,100 +69,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const getUserDataFromFirestore = useCallback(async (currentUser: User): Promise<UserClaims> => {
     console.log("[AuthContext] 🔍 جلب بيانات المستخدم:", currentUser.uid);
 
-    // تشخيص الـ Token
-    try {
-      const idTokenResult = await currentUser.getIdTokenResult();
-      console.log("[AuthContext] 🔑 Firebase Token Claims:", idTokenResult.claims);
-      console.log("[AuthContext] 🔑 Token Role:", idTokenResult.claims.role);
-      console.log("[AuthContext] 🔑 Token AccountType:", idTokenResult.claims.accountType);
-      console.log("[AuthContext] 🔑 Token isIndependent:", idTokenResult.claims.isIndependent);
-    } catch (tokenError) {
-      console.error("[AuthContext] ❌ خطأ في جلب Token:", tokenError);
-    }
+    // Force refresh ID token to get latest claims
+    const idTokenResult = await currentUser.getIdTokenResult(true);
+    const claimsFromToken = idTokenResult.claims as UserClaims;
+    console.log("[AuthContext] 🔑 Firebase Token Claims (Refreshed):", claimsFromToken);
 
     try {
-      // 1️⃣ جلب بيانات المستخدم الأساسية من Firestore
       const userDocRef = doc(db, 'users', currentUser.uid);
       const userDocSnap = await getDoc(userDocRef);
 
       if (!userDocSnap.exists()) {
-        console.log("[AuthContext] 🆕 مستخدم جديد - انتظار إنشاء الوثيقة عبر Cloud Function");
-        console.log("[AuthContext] 📝 createUserDocument Cloud Function ستنشئ الوثيقة تلقائياً");
+        console.log("[AuthContext] 🆕 مستخدم جديد - الوثيقة غير موجودة، الاعتماد على Token Claims أو البيانات الافتراضية");
 
-        // محاولة انتظار وإعادة المحاولة عدة مرات
-        let retryCount = 0;
-        const maxRetries = 5;
-        const retryDelay = 2000; // 2 ثانية بين كل محاولة
-
-        while (retryCount < maxRetries) {
-          console.log(`[AuthContext] ⏳ محاولة ${retryCount + 1}/${maxRetries} - انتظار ${retryDelay/1000} ثانية...`);
-          await new Promise(resolve => setTimeout(resolve, retryDelay));
-
-          try {
-            const retryUserDocSnap = await getDoc(userDocRef);
-
-            if (retryUserDocSnap.exists()) {
-              console.log(`[AuthContext] ✅ تم العثور على الوثيقة في المحاولة ${retryCount + 1}`);
-              const userData = retryUserDocSnap.data();
-
-              return {
-                accountType: userData.accountType || 'individual',
-                role: userData.role || 'isIndependent',
-                isSystemOwner: userData.isSystemOwner || false,
-                isSystemAdmin: userData.isSystemAdmin || false,
-                isOrgOwner: userData.isOrgOwner || false,
-                isOrgAdmin: userData.isOrgAdmin || false,
-                isOrgSupervisor: userData.isOrgSupervisor || false,
-                isOrgEngineer: userData.isOrgEngineer || false,
-                isOrgTechnician: userData.isOrgTechnician || false,
-                isOrgAssistant: userData.isOrgAssistant || false,
-                isIndependent: userData.isIndependent || true,
-                customPermissions: userData.customPermissions || [],
-                departmentId: userData.departmentId || null,
-                organizationId: userData.organizationId || null
-              };
-            }
-
-            retryCount++;
-          } catch (retryError) {
-            console.error(`[AuthContext] ❌ خطأ في المحاولة ${retryCount + 1}:`, retryError);
-            retryCount++;
-          }
-        }
-
-        console.log("[AuthContext] ⚠️ فشل في العثور على الوثيقة بعد جميع المحاولات");
-
-        // التحقق من Firebase Auth Custom Claims أولاً قبل استخدام البيانات الافتراضية
-        try {
-          const idTokenResult = await currentUser.getIdTokenResult(true); // force refresh
-          const claims = idTokenResult.claims as any;
-
-          if (claims.accountType && claims.role) {
-            console.log("[AuthContext] 🔄 استخدام البيانات من Custom Claims:", claims);
+        if (claimsFromToken.accountType && claimsFromToken.role) {
+            console.log("[AuthContext] 🔄 استخدام البيانات من Custom Claims (مباشرة بعد التحديث):", claimsFromToken);
             return {
-              accountType: claims.accountType as SystemType,
-              role: claims.role as UserRole,
-              organizationId: (claims.organizationId as string) || undefined,
-              organizationName: (claims.organizationName as string) || undefined,
-              departmentId: (claims.departmentId as string) || undefined,
-              isSystemOwner: Boolean(claims.isSystemOwner),
-              isSystemAdmin: Boolean(claims.isSystemAdmin),
-              isOrgOwner: Boolean(claims.isOrgOwner),
-              isOrgAdmin: Boolean(claims.isOrgAdmin),
-              isOrgSupervisor: Boolean(claims.isOrgSupervisor),
-              isOrgEngineer: Boolean(claims.isOrgEngineer),
-              isOrgTechnician: Boolean(claims.isOrgTechnician),
-              isOrgAssistant: Boolean(claims.isOrgAssistant),
-              isIndependent: Boolean(claims.isIndependent),
-              customPermissions: (claims.customPermissions as any) || []
+              accountType: claimsFromToken.accountType,
+              role: claimsFromToken.role,
+              organizationId: claimsFromToken.organizationId,
+              organizationName: claimsFromToken.organizationName,
+              departmentId: claimsFromToken.departmentId,
+              isSystemOwner: !!claimsFromToken.isSystemOwner,
+              isSystemAdmin: !!claimsFromToken.isSystemAdmin,
+              isOrgOwner: !!claimsFromToken.isOrgOwner,
+              isOrgAdmin: !!claimsFromToken.isOrgAdmin,
+              isOrgSupervisor: !!claimsFromToken.isOrgSupervisor,
+              isOrgEngineer: !!claimsFromToken.isOrgEngineer,
+              isOrgTechnician: !!claimsFromToken.isOrgTechnician,
+              isOrgAssistant: !!claimsFromToken.isOrgAssistant,
+              isIndependent: !!claimsFromToken.isIndependent,
+              customPermissions: claimsFromToken.customPermissions || []
             };
-          }
-        } catch (claimsError) {
-          console.error("[AuthContext] خطأ في جلب Custom Claims:", claimsError);
         }
 
-        console.log("[AuthContext] استخدام البيانات الافتراضية للمستخدم الجديد");
-        // نعيد البيانات الافتراضية للمستخدم الجديد
+        console.log("[AuthContext] استخدام البيانات الافتراضية للمستخدم الجديد (الوثيقة لم تنشأ بعد)");
         return {
           accountType: 'individual',
           role: 'isIndependent',
@@ -181,190 +121,79 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const userData = userDocSnap.data() as any;
-      console.log("[AuthContext] ✅ بيانات المستخدم الأساسية:", userData);
+      console.log("[AuthContext] ✅ بيانات المستخدم الأساسية من Firestore:", userData);
 
-      // 2️⃣ تحديد نوع الحساب أولاً
-      const accountType = userData.accountType || 'individual';
+      const accountType = claimsFromToken.accountType || userData.accountType || 'individual';
+      let role = claimsFromToken.role || userData.role;
 
-      console.log("[AuthContext] 🎯 الخطوة 1: تحديد نوع الحساب");
-      console.log("  - userData.accountType:", userData.accountType);
-      console.log("  - نوع الحساب المحدد:", accountType);
+      // Ensure role consistency
+      const isSystemOwner = !!claimsFromToken.isSystemOwner || !!userData.isSystemOwner;
+      const isSystemAdmin = !!claimsFromToken.isSystemAdmin || !!userData.isSystemAdmin;
+      const isOrgOwner = !!claimsFromToken.isOrgOwner || !!userData.isOrgOwner;
+      const isOrgAdmin = !!claimsFromToken.isOrgAdmin || !!userData.isOrgAdmin;
+      const isOrgSupervisor = !!claimsFromToken.isOrgSupervisor || !!userData.isOrgSupervisor;
+      const isOrgEngineer = !!claimsFromToken.isOrgEngineer || !!userData.isOrgEngineer;
+      const isOrgTechnician = !!claimsFromToken.isOrgTechnician || !!userData.isOrgTechnician;
+      const isOrgAssistant = !!claimsFromToken.isOrgAssistant || !!userData.isOrgAssistant;
+      const isIndependent = !!claimsFromToken.isIndependent || !!userData.isIndependent;
 
-      if (accountType === 'individual') {
-        // حساب فردي - النمط الجديد فقط
-        console.log("[AuthContext] 👤 معالجة حساب فردي");
-
-        const individualClaims = {
-          accountType: 'individual' as SystemType,
-          role: userData.role || 'isIndependent',
-          isSystemOwner: userData.isSystemOwner || false,
-          isSystemAdmin: userData.isSystemAdmin || false,
-          isOrgOwner: false,
-          isOrgAdmin: false,
-          isOrgSupervisor: false,
-          isOrgEngineer: false,
-          isOrgTechnician: false,
-          isOrgAssistant: false,
-          isIndependent: (userData.role || 'isIndependent') === 'isIndependent',
-          customPermissions: userData.customPermissions || [],
-          departmentId: userData.departmentId
-        };
-
-        console.log("[AuthContext] ✅ البيانات النهائية للحساب الفردي:", individualClaims);
-        return individualClaims;
-
-      } else if (accountType === 'organization') {
-        // 🏢 حساب مؤسسة
-        console.log("[AuthContext] 🏢 الخطوة 2: معالجة حساب مؤسسة");
-
-        const organizationId = userData.organizationId;
-        console.log("  - userData.organizationId:", organizationId);
-
-        if (!organizationId) {
-          console.error("[AuthContext] ❌ حساب مؤسسة بدون معرف مؤسسة!");
-          return { accountType: 'individual', role: 'isIndependent' };
-        }
-
-        console.log("[AuthContext] 🎯 الخطوة 3: جلب بيانات المؤسسة");
-
-        // جلب بيانات المؤسسة
-        const orgDocRef = doc(db, 'organizations', organizationId);
-        const orgDocSnap = await getDoc(orgDocRef);
-
-        if (!orgDocSnap.exists()) {
-          console.error("[AuthContext] ❌ المؤسسة غير موجودة:", organizationId);
-          return { accountType: 'individual', role: 'isIndependent' };
-        }
-
-        const orgData = orgDocSnap.data() as any;
-        console.log("[AuthContext] 🏢 بيانات المؤسسة:", orgData);
-
-        console.log("[AuthContext] 🎯 الخطوة 4: تحديد دور المستخدم في المؤسسة");
-
-        // التحقق من دور المستخدم في المؤسسة
-        let userRole: UserRole = userData.role || 'assistant';
-        let isOwner = false;
-        let isAdmin = false;
-        let userDepartmentId = userData.departmentId;
-
-        console.log("  - userData.role (الدور الأولي):", userData.role);
-        console.log("  - userRole (الدور المحدد):", userRole);
-
-        // التحقق من الملكية
-        console.log("[AuthContext] 🔍 الخطوة 5: فحص ملكية المؤسسة:");
-        console.log("  - orgData.ownerId:", orgData.ownerId);
-        console.log("  - orgData.createdBy:", orgData.createdBy);
-        console.log("  - currentUser.uid:", currentUser.uid);
-        console.log("  - ownerId match:", orgData.ownerId === currentUser.uid);
-        console.log("  - createdBy match:", orgData.createdBy === currentUser.uid);
-
-        if (orgData.ownerId === currentUser.uid || orgData.createdBy === currentUser.uid) {
-          isOwner = true;
-          userRole = 'isOrgOwner';
-          console.log("[AuthContext] 👑 المستخدم مالك المؤسسة");
-        } else {
-          // التحقق من العضوية
-          console.log("[AuthContext] 🔍 الخطوة 6: فحص العضوية في المؤسسة...");
-          const memberDocRef = doc(db, 'organizations', organizationId, 'members', currentUser.uid);
-          const memberDocSnap = await getDoc(memberDocRef);
-
-          console.log("  - memberDocSnap.exists():", memberDocSnap.exists());
-
-          if (memberDocSnap.exists()) {
-            const memberData = memberDocSnap.data() as any;
-            console.log("  - memberData:", memberData);
-            userRole = memberData.role || userData.role || 'assistant';
-
-            // تحديث departmentId من memberData
-            userDepartmentId = memberData.departmentId || userData.departmentId;
-
-            // تحديد الأدوار بناءً على الدور المحفوظ
-            isAdmin = userRole === 'isOrgAdmin';
-
-            // التأكد من أن الدور صحيح للمؤسسات
-            const validOrgRoles: UserRole[] = ['isOrgOwner', 'isOrgAdmin', 'isOrgSupervisor', 'isOrgEngineer', 'isOrgTechnician', 'isOrgAssistant'];
-            if (!validOrgRoles.includes(userRole as UserRole)) {
-              userRole = 'isOrgAssistant'; // الدور الافتراضي للمؤسسات
-            }
-
-            console.log("[AuthContext] 👥 المستخدم عضو في المؤسسة، الدور:", userRole);
-          } else {
-            console.log("[AuthContext] ⚠️ المستخدم ليس عضو في المؤسسة");
-            console.log("  - userData.role:", userData.role);
-            console.log("  - سيتم استخدام الدور من userData أو assistant");
-
-            // تطبيق نفس منطق التوافق مع النظام القديم
-            userRole = userData.role || 'isOrgAssistant';
-            if (userData.role === 'isOrgOwner'  && !isOwner) {
-              userRole = 'isOrgAdmin';
-            } else if (userData.role === 'isIndependent') {
-              userRole = 'isOrgAdmin';
-            }
-
-            // التأكد من أن الدور صحيح
-            const validOrgRoles: UserRole[] = ['isOrgOwner', 'isOrgAdmin', 'isOrgSupervisor', 'isOrgEngineer', 'isOrgTechnician', 'isOrgAssistant'];
-            if (!validOrgRoles.includes(userRole as UserRole)) {
-              userRole = 'isOrgAssistant';
-            }
-          }
-        }
+      // Prioritize specific roles from claims/Firestore
+      if (isSystemOwner) role = 'isSystemOwner';
+      else if (isSystemAdmin) role = 'isSystemAdmin';
+      else if (isOrgOwner) role = 'isOrgOwner';
+      else if (isOrgAdmin) role = 'isOrgAdmin';
+      else if (isOrgSupervisor) role = 'isOrgSupervisor';
+      else if (isOrgEngineer) role = 'isOrgEngineer';
+      else if (isOrgTechnician) role = 'isOrgTechnician';
+      else if (isOrgAssistant) role = 'isOrgAssistant';
+      else if (isIndependent) role = 'isIndependent';
+      else role = accountType === 'individual' ? 'isIndependent' : 'isOrgAssistant';
 
 
-
-        const finalClaims = {
-          accountType: 'organization' as SystemType,
-          role: userRole,
-          organizationId: organizationId,
-          organizationName: orgData.name || 'مؤسسة',
-          isSystemOwner: userData.isSystemOwner || false,
-          isSystemAdmin: userData.isSystemAdmin || false,
-          isOrgOwner: isOwner,
-          isOrgAdmin: isAdmin,
-          isOrgSupervisor: userRole === 'isOrgSupervisor',
-          isOrgEngineer: userRole === 'isOrgEngineer',
-          isOrgTechnician: userRole === 'isOrgTechnician',
-          isOrgAssistant: userRole === 'isOrgAssistant',
-          isIndependent: false,
-          customPermissions: userData.customPermissions || [],
-          departmentId: userDepartmentId
-        };
-
-        console.log("[AuthContext] ✅ البيانات النهائية للمؤسسة:");
-        console.log("  - نوع الحساب:", finalClaims.accountType);
-        console.log("  - الدور:", finalClaims.role);
-        console.log("  - معرف المؤسسة:", finalClaims.organizationId);
-        console.log("  - اسم المؤسسة:", finalClaims.organizationName);
-        console.log("  - معرف القسم:", finalClaims.departmentId);
-        console.log("  - مالك النظام:", finalClaims.isSystemOwner);
-        console.log("  - أدمن النظام:", finalClaims.isSystemAdmin);
-        console.log("  - مالك المؤسسة:", finalClaims.isOrgOwner);
-        console.log("  - أدمن المؤسسة:", finalClaims.isOrgAdmin);
-        console.log("  - مشرف المؤسسة:", finalClaims.isOrgSupervisor);
-        console.log("  - مهندس المؤسسة:", finalClaims.isOrgEngineer);
-        console.log("  - فني المؤسسة:", finalClaims.isOrgTechnician);
-        console.log("  - مساعد المؤسسة:", finalClaims.isOrgAssistant);
-
-        // ملخص التدفق
-        console.log("[AuthContext] 📊 ملخص التدفق:");
-        console.log("  1. نوع الحساب: organization ✅");
-        console.log("  2. معرف المؤسسة:", organizationId, "✅");
-        console.log("  3. بيانات المؤسسة: موجودة ✅");
-        console.log("  4. فحص الملكية:", isOwner ? "مالك ✅" : "ليس مالك ❌");
-        console.log("  5. فحص العضوية:", !isOwner ? "تم الفحص" : "تم تخطيه");
-        console.log("  6. الدور النهائي:", finalClaims.role);
-
-        return finalClaims;
-      }
-
-      // حالة افتراضية
-      return {
-        accountType: 'individual',
-        role: 'isIndependent'
+      const finalClaimsResult: UserClaims = {
+          accountType: accountType as SystemType,
+          role: role as UserRole,
+          organizationId: claimsFromToken.organizationId || userData.organizationId || undefined,
+          organizationName: claimsFromToken.organizationName || userData.organizationName || (accountType === 'organization' ? 'مؤسسة' : undefined),
+          departmentId: claimsFromToken.departmentId || userData.departmentId || undefined,
+          isSystemOwner,
+          isSystemAdmin,
+          isOrgOwner,
+          isOrgAdmin,
+          isOrgSupervisor,
+          isOrgEngineer,
+          isOrgTechnician,
+          isOrgAssistant,
+          isIndependent,
+          customPermissions: claimsFromToken.customPermissions || userData.customPermissions || []
       };
+       console.log("[AuthContext] ✅ البيانات النهائية المجمعة:", finalClaimsResult);
+       return finalClaimsResult;
 
     } catch (error) {
       console.error("[AuthContext] ❌ خطأ في جلب بيانات المستخدم:", error);
-
+      // Fallback to token claims if Firestore read fails or is problematic
+      if (claimsFromToken.accountType && claimsFromToken.role) {
+        console.warn("[AuthContext] Fallback to token claims due to Firestore error.");
+        return {
+            accountType: claimsFromToken.accountType,
+            role: claimsFromToken.role,
+            organizationId: claimsFromToken.organizationId,
+            organizationName: claimsFromToken.organizationName,
+            departmentId: claimsFromToken.departmentId,
+            isSystemOwner: !!claimsFromToken.isSystemOwner,
+            isSystemAdmin: !!claimsFromToken.isSystemAdmin,
+            isOrgOwner: !!claimsFromToken.isOrgOwner,
+            isOrgAdmin: !!claimsFromToken.isOrgAdmin,
+            isOrgSupervisor: !!claimsFromToken.isOrgSupervisor,
+            isOrgEngineer: !!claimsFromToken.isOrgEngineer,
+            isOrgTechnician: !!claimsFromToken.isOrgTechnician,
+            isOrgAssistant: !!claimsFromToken.isOrgAssistant,
+            isIndependent: !!claimsFromToken.isIndependent,
+            customPermissions: claimsFromToken.customPermissions || []
+        };
+      }
+      // Final fallback
       return {
         accountType: 'individual',
         role: 'isIndependent'
@@ -372,7 +201,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const refreshUserData = useCallback(async (forceRefresh = true) => { // Default to true for explicit calls
+  const refreshUserData = useCallback(async (forceRefresh = true) => {
     console.log("[AuthContext] refreshUserData called, forceRefresh:", forceRefresh);
     if (!auth.currentUser) {
       console.log("[AuthContext] No current user in auth, skipping refresh.");
@@ -382,21 +211,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const now = Date.now();
-    const minRefreshInterval = forceRefresh ? 0 : 30000; // 30 seconds for non-forced refresh
+    const minRefreshInterval = forceRefresh ? 0 : 30000;
 
     if (!forceRefresh && (now - lastRefreshTimeRef.current < minRefreshInterval)) {
       console.log("[AuthContext] Skipping refresh, too soon or not forced.");
       return;
     }
-    setLoading(true); // Indicate loading during refresh
+    if (!loading) setLoading(true);
     try {
       lastRefreshTimeRef.current = now;
       console.log("[AuthContext] 🔄 تحديث بيانات المستخدم...");
 
-      await auth.currentUser.reload(); // Reload user data from Firebase Auth
+      await auth.currentUser.reload();
       const finalProcessedClaims = await getUserDataFromFirestore(auth.currentUser);
 
-      setUser(auth.currentUser);
+      setUser(auth.currentUser); // Update user object as well
       setUserClaims(finalProcessedClaims);
       console.log("[AuthContext] ✅ تم تحديث بيانات المستخدم:", finalProcessedClaims);
     } catch (error) {
@@ -406,9 +235,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         await auth.signOut();
       }
     } finally {
-      setLoading(false); // Stop loading after refresh
+      if (loading) setLoading(false);
     }
-  }, [getUserDataFromFirestore]);
+  }, [getUserDataFromFirestore, loading]); // Added loading to dependencies
 
   useEffect(() => {
     console.log("[AuthContext] Setting up auth state listener.");
@@ -420,17 +249,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       isProcessingAuthStateRef.current = true;
       console.log("[AuthContext] Auth state changed, user:", currentUser?.uid, "Current loading state:", loading);
 
-      // إلغاء جميع Firestore listeners فوراً عند تغيير حالة المصادقة
-      firestoreListenerManager.removeAllListeners();
       if (firestoreListener) {
-        console.log("[AuthContext] Cleaning up existing Firestore listener due to auth state change.");
+        console.log("[AuthContext] Cleaning up existing Firestore listener for current user doc due to auth state change.");
         firestoreListener();
         setFirestoreListener(null);
       }
+      // Global listeners are now removed only during explicit sign-out in useFirebaseAuth.ts
 
-      // Always set loading true at the beginning of auth state change processing
-      // This ensures that if a user logs out and then logs in quickly,
-      // the loading state is correctly managed.
       if(!loading) setLoading(true);
 
       if (currentUser) {
@@ -442,37 +267,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUserClaims(finalProcessedClaims);
           console.log("[AuthContext] ✅ تم تعيين بيانات المستخدم:", finalProcessedClaims);
 
-          // Routing logic based on final processed claims
-          const currentPath = pathname || '/'; // Use pathname from usePathname with fallback
+          const currentPath = pathname || '/';
           console.log("[AuthContext] 🔍 ROUTING DEBUG - Current path:", currentPath);
           console.log("[AuthContext] 🔍 ROUTING DEBUG - Account type:", finalProcessedClaims.accountType);
-          console.log("[AuthContext] 🔍 ROUTING DEBUG - Organization ID:", finalProcessedClaims.organizationId);
-          console.log("[AuthContext] 🔍 ROUTING DEBUG - Role:", finalProcessedClaims.role);
-          console.log("[AuthContext] 🔍 ROUTING DEBUG - Department ID:", finalProcessedClaims.departmentId);
 
           if (finalProcessedClaims.accountType === 'organization' && finalProcessedClaims.organizationId) {
-            // تحديد الأدوار
             const isSystemOwner = finalProcessedClaims.isSystemOwner === true;
             const isSystemAdmin = finalProcessedClaims.isSystemAdmin === true;
             const isOrgOwner = finalProcessedClaims.isOrgOwner === true;
             const isOrgAdmin = finalProcessedClaims.isOrgAdmin === true;
-            const isOrgSupervisor = finalProcessedClaims.isOrgSupervisor === true;
-            const isOrgEngineer = finalProcessedClaims.isOrgEngineer === true;
-            const isOrgTechnician = finalProcessedClaims.isOrgTechnician === true;
-            const isOrgAssistant = finalProcessedClaims.isOrgAssistant === true;
-
-            // الأدوار العليا التي يمكنها الوصول للوحة الإدارة
+            const hasFullAccess = (isOrgOwner || isOrgAdmin) && !finalProcessedClaims.departmentId;
+            const isDepartmentMember = finalProcessedClaims.departmentId && !hasFullAccess;
             const canAccessDashboard = isSystemOwner || isSystemAdmin || isOrgOwner || isOrgAdmin;
 
-            // أعضاء الأقسام (باستثناء الأدوار العليا بدون قسم)
-            const hasFullAccess = (isOrgOwner || isOrgAdmin) && !finalProcessedClaims.departmentId;
-            const isDepartmentMember = finalProcessedClaims.departmentId &&
-              (isOrgSupervisor || isOrgEngineer || isOrgTechnician || isOrgAssistant ||
-               ((isOrgOwner || isOrgAdmin) && finalProcessedClaims.departmentId)) &&
-              !hasFullAccess;
-
             if (!currentPath.startsWith('/org')) {
-              // تحديد المسار المناسب بناءً على الدور
               if (isDepartmentMember && finalProcessedClaims.departmentId) {
                 console.log("[AuthContext] ✅ Redirecting department member to their department page:", `/org/departments/${finalProcessedClaims.departmentId}`);
                 router.replace(`/org/departments/${finalProcessedClaims.departmentId}`);
@@ -480,39 +288,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 console.log("[AuthContext] ✅ Redirecting to /org dashboard for high-level user.");
                 router.replace('/org');
               } else {
-                // المستخدمون ذوو الأدوار المنخفضة بدون قسم يذهبون مباشرة للمهام
-                const isLowRoleWithoutDepartment = !finalProcessedClaims.departmentId &&
+                 const isLowRoleWithoutDepartment = !finalProcessedClaims.departmentId &&
                   (finalProcessedClaims.isOrgAssistant || finalProcessedClaims.isOrgTechnician ||
                    finalProcessedClaims.isOrgEngineer || finalProcessedClaims.isOrgSupervisor);
-
                 if (isLowRoleWithoutDepartment) {
-                  console.log("[AuthContext] ✅ Redirecting low-role user without department directly to tasks page.");
                   router.replace('/org/tasks');
                 } else {
-                  console.log("[AuthContext] ✅ Redirecting to /org for organization user.");
                   router.replace('/org');
                 }
               }
-            } else {
-              console.log("[AuthContext] ✅ Organization user already on /org path, no redirect needed.");
             }
           } else if (finalProcessedClaims.accountType === 'individual') {
-            // التحقق من المسارات المخصصة للمؤسسات فقط (وليس /organizations)
             if (currentPath.startsWith('/org/') || currentPath === '/org') {
               console.log("[AuthContext] ✅ Redirecting to / for individual user from /org path.");
               router.replace('/');
-            } else {
-              console.log("[AuthContext] ✅ Individual user not on /org path, no redirect needed.");
             }
           } else {
-            // This case should ideally not happen if determineAndSetAccountType ensures an accountType
-            console.warn("[AuthContext] ⚠️ Account type undetermined. Current path:", currentPath);
-            console.warn("[AuthContext] ⚠️ Claims:", finalProcessedClaims);
-            if (currentPath.startsWith('/org/') || currentPath === '/org') {
-               console.log("[AuthContext] ❌ FALLBACK REDIRECT: Redirecting undetermined user from /org to /");
-               router.replace('/'); // Fallback redirect if stuck on org path
-            } else {
-               console.log("[AuthContext] ⚠️ Undetermined user not on /org path, no redirect.");
+             console.warn("[AuthContext] ⚠️ Account type undetermined. Current path:", currentPath);
+             if (currentPath.startsWith('/org/') || currentPath === '/org') {
+               router.replace('/');
             }
           }
         } catch (error) {
@@ -521,7 +315,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUserClaims(null);
           if ((error as any).code === 'auth/user-token-expired' || (error as any).code === 'auth/id-token-revoked' || (error as any).code === 'auth/user-not-found') {
              console.warn("[AuthContext] Critical auth error on user, signing out.");
-             await auth.signOut(); // This will re-trigger onAuthStateChanged
+             await auth.signOut();
           }
         } finally {
           console.log("[AuthContext] Finished processing authenticated user. Setting loading to false.");
@@ -532,100 +326,82 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log("[AuthContext] No user authenticated, clearing state. Setting loading to false.");
         setUser(null);
         setUserClaims(null);
-        setLoading(false); // No user, so not loading
+        setLoading(false);
         isProcessingAuthStateRef.current = false;
-        // No need to redirect to /login here if already on /login or /signup, etc.
-        // ProtectedRoute component will handle redirection for protected pages.
       }
     });
 
     return () => {
       console.log("[AuthContext] Cleaning up auth state listener.");
       unsubscribeAuth();
-
-      // إلغاء جميع Firestore listeners
-      firestoreListenerManager.removeAllListeners();
-
       if (firestoreListener) {
-        console.log("[AuthContext] Cleaning up Firestore listener.");
+        console.log("[AuthContext] Cleaning up Firestore listener for user doc.");
         firestoreListener();
         setFirestoreListener(null);
       }
-      isProcessingAuthStateRef.current = false; // Reset on cleanup
+      isProcessingAuthStateRef.current = false;
     };
-  }, [getUserDataFromFirestore, router, pathname]); // Added pathname
+  }, [getUserDataFromFirestore, router, pathname]);
 
   useEffect(() => {
     if (firestoreListener) {
-      firestoreListener(); // Clean up previous listener
+      firestoreListener(); // Clean up previous listener for user doc
       setFirestoreListener(null);
     }
 
     if (user && userClaims) {
-      let docPath: string | null = null;
-      if (userClaims.accountType === 'organization' && userClaims.organizationId) {
-        docPath = `organizations/${userClaims.organizationId}/members/${user.uid}`;
-      } else if (userClaims.accountType === 'individual') {
-        docPath = `users/${user.uid}`;
-      } else if (userClaims.role) { // Fallback to 'users' collection if role exists but type is unclear
-        docPath = `users/${user.uid}`;
-      }
+      let docPath: string | null = `users/${user.uid}`; // Always listen to the main user document
 
-      if (docPath) {
-        console.log("[AuthContext] Setting up Firestore listener for path:", docPath);
-        const userDocRef = doc(db, docPath);
-        const unsubscribeFirestore = onSnapshot(userDocRef, async (docSnapshot) => {
-          console.log("[AuthContext] Firestore snapshot for", docPath, "exists:", docSnapshot.exists());
-          if (docSnapshot.exists()) {
-            const firestoreData = docSnapshot.data() as any;
-            // Check if relevant data (like role) changed in Firestore
-            if (firestoreData.role && userClaims.role !== firestoreData.role) {
-              console.log("[AuthContext] Role changed in Firestore for path", docPath, "forcing claims refresh.");
-              await refreshUserData(true);
-            }
-          } else {
-            // If the doc doesn't exist (e.g., user removed from org), claims might be stale.
-            console.log("[AuthContext] User document at", docPath, "does not exist. Forcing claims refresh.");
+      console.log("[AuthContext] Setting up Firestore listener for user document:", docPath);
+      const userDocRef = doc(db, docPath);
+      const unsubscribeFirestore = onSnapshot(userDocRef, async (docSnapshot) => {
+        console.log("[AuthContext] Firestore snapshot for", docPath, "exists:", docSnapshot.exists());
+        if (docSnapshot.exists()) {
+          const firestoreData = docSnapshot.data() as any;
+          let needsRefresh = false;
+          if (userClaims.role !== firestoreData.role) {
+            console.log(`[AuthContext] Firestore role ('${firestoreData.role}') differs from claims role ('${userClaims.role}').`);
+            needsRefresh = true;
+          }
+          if (userClaims.organizationId !== firestoreData.organizationId) {
+            console.log(`[AuthContext] Firestore organizationId ('${firestoreData.organizationId}') differs from claims organizationId ('${userClaims.organizationId}').`);
+            needsRefresh = true;
+          }
+          if (userClaims.departmentId !== firestoreData.departmentId) {
+            console.log(`[AuthContext] Firestore departmentId ('${firestoreData.departmentId}') differs from claims departmentId ('${userClaims.departmentId}').`);
+            needsRefresh = true;
+          }
+          const firestoreCustomPermissions = firestoreData.customPermissions || [];
+          const claimsCustomPermissions = userClaims.customPermissions || [];
+          if (JSON.stringify(firestoreCustomPermissions.sort()) !== JSON.stringify(claimsCustomPermissions.sort())) {
+            console.log("[AuthContext] Firestore customPermissions differ from claims customPermissions.");
+            needsRefresh = true;
+          }
+
+          if (needsRefresh) {
+            console.log("[AuthContext] Firestore data for", docPath, "differs from current claims, forcing claims refresh.");
             await refreshUserData(true);
           }
-        }, (error: any) => {
-          const isPermissionError = handleFirestoreError(error, 'AuthContext');
-
-          if (isPermissionError) {
-            // إلغاء listener إذا كان الخطأ بسبب عدم وجود مصادقة
-            if (!auth.currentUser) {
-              console.log("[AuthContext] No authenticated user, cleaning up Firestore listener.");
-              if (firestoreListener) {
-                firestoreListener();
-                setFirestoreListener(null);
-              }
-              return;
-            }
-
-            if (docPath?.startsWith('organizations/')) {
-              console.warn(
-                `[AuthContext] Firestore permission denied for ${docPath}.
-                This user (UID: ${user?.uid}) may not have permission to read their own member document at this path.
-                Please check your Firestore security rules.
-                Example rule:
-                match /organizations/{orgId}/members/{memberId} {
-                  allow read: if request.auth.uid == memberId;
-                }
-                Real-time role updates from this path might not work until rules are fixed.`
-              );
-            }
+        } else {
+          console.log("[AuthContext] User document at", docPath, "does not exist. Forcing claims refresh (might be new user or data issue).");
+          await refreshUserData(true);
+        }
+      }, (error: any) => {
+        const isPermissionError = handleFirestoreError(error, 'AuthContext-UserDoc');
+        if (isPermissionError && !auth.currentUser) {
+          console.log("[AuthContext] No authenticated user for user doc listener, cleaning up.");
+          if (firestoreListener) {
+            firestoreListener();
+            setFirestoreListener(null);
           }
-        });
-        setFirestoreListener(() => unsubscribeFirestore);
-      } else {
-        console.log("[AuthContext] No valid docPath for Firestore listener, userClaims:", userClaims);
-      }
+        }
+      });
+      setFirestoreListener(() => unsubscribeFirestore);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, userClaims?.accountType, userClaims?.organizationId, userClaims?.role]); // Role is important here if it changes
+  }, [user?.uid, userClaims?.role, userClaims?.organizationId, userClaims?.departmentId, JSON.stringify(userClaims?.customPermissions)]);
 
-  // Render loading spinner only if truly loading initial auth state.
-  // The children (layouts/pages) should handle their own loading states for subsequent data fetching.
+
   if (loading && !user && pathname !== '/login' && pathname !== '/signup' && pathname !== '/reset-password') {
     console.log("[AuthContext] Displaying global loading spinner. Loading:", loading, "User:", !!user, "Path:", pathname);
     return (
