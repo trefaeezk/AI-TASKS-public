@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -164,60 +165,24 @@ export function AssignTaskToMembersDialog({ task, onTaskAssigned }: AssignTaskTo
     setLoading(true);
     try {
       if (assignMode === 'whole-task') {
-        // إنشاء مهمة واحدة مُسندة لجميع الأعضاء المحددين
-
-        // إنشاء نسخة من نقاط التتبع للمهمة الفرعية
-        const subtaskMilestones = task.milestones
-          ? task.milestones.map(milestone => ({
-              id: uuidv4(),
-              description: milestone.description,
-              completed: false,
-              weight: milestone.weight,
-              dueDate: milestone.dueDate instanceof Date
-                ? Timestamp.fromDate(milestone.dueDate)
-                : null
-            }))
-          : null;
-
-        // إنشاء بيانات المهمة الفرعية الواحدة مع تعيين متعدد الأشخاص
-        const subtaskData = {
-          description: task.description,
-          userId: user.uid,
-          status: 'pending',
-          details: task.details || null,
-          startDate: task.startDate ? Timestamp.fromDate(task.startDate) : null,
-          dueDate: task.dueDate ? Timestamp.fromDate(task.dueDate) : null,
-          durationValue: task.durationValue || null,
-          durationUnit: task.durationUnit || null,
-          priority: task.priority || null,
-          priorityReason: task.priorityReason || null,
-          taskCategoryName: task.taskCategoryName || null,
-          milestones: subtaskMilestones,
-
-          // حقول سياق المهمة
-          taskContext: 'individual',
-          organizationId: task.organizationId || null,
-          departmentId: task.departmentId || null,
-          assignedToUserId: null, // لا نستخدم هذا الحقل للتعيين المتعدد
-          assignedToUserIds: selectedMembers, // تعيين جميع الأعضاء المحددين
-          parentTaskId: task.id,
-          createdAt: Timestamp.now(),
-          updatedAt: Timestamp.now()
-        };
-
-        // إضافة المهمة الفرعية الواحدة إلى قاعدة البيانات
-        const subtaskRef = doc(collection(db, 'tasks'));
-        await setDoc(subtaskRef, subtaskData);
-      } else {
-        // تعيين نقاط التتبع للأعضاء المحددين
+        // Directly update the original task instead of creating a sub-task
         const taskRef = doc(db, 'tasks', task.id);
-        const taskDoc = await getDoc(taskRef);
+        await updateDoc(taskRef, {
+          assignedToUserIds: selectedMembers,
+          assignedToUserId: null, // Clear single assignee if multiple selected
+          // taskContext: 'individual', // Set context if assigning to individuals from a department task
+          // Keep task.departmentId if it's a department task being assigned to its members
+          updatedAt: Timestamp.now(),
+        });
+      } else { // assignMode === 'milestones'
+        const taskRef = doc(db, 'tasks', task.id);
+        const taskDocSnap = await getDoc(taskRef); 
         
-        if (!taskDoc.exists()) {
+        if (!taskDocSnap.exists()) { 
           throw new Error('المهمة غير موجودة');
         }
         
-        const taskData = taskDoc.data();
+        const taskData = taskDocSnap.data(); 
         const milestones = taskData.milestones || [];
         
         // تحديث معلومات التعيين لكل نقطة تتبع
@@ -420,3 +385,5 @@ export function AssignTaskToMembersDialog({ task, onTaskAssigned }: AssignTaskTo
     </Dialog>
   );
 }
+    
+    
