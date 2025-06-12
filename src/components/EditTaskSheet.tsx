@@ -54,10 +54,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
   const { categories: userCategories, loading: categoriesLoading, addCategory, deleteCategory, editCategory, getCategoryColor } = useTaskCategories(user.uid);
   const { userClaims } = useAuth(); // Get userClaims to determine context for new tasks
 
-  // تحديد الأدوار المتدنية التي لا يمكنها إسناد مهام للآخرين أو تغيير مستوى المهمة
   const isLowLevelRole = userClaims?.isOrgEngineer || userClaims?.isOrgTechnician || userClaims?.isOrgAssistant;
-
-  // إخفاء خيارات الإسناد ومستوى المهمة للأدوار المتدنية
   const canAssignTasks = !isLowLevelRole;
 
   const [description, setDescription] = useState('');
@@ -91,11 +88,8 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
     assignedToUserId: undefined
   });
 
-  // This state holds the editing USER's organizationId, if any.
-  // It's used to fetch members for assignment IF the task is an org task.
   const [editingUserOrganizationId, setEditingUserOrganizationId] = useState<string | undefined>(undefined);
 
-  // OKR fields
   const [objectives, setObjectives] = useState<{id: string, title: string, keyResults: {id: string, title: string}[]}[]>([]);
   const [selectedObjectiveId, setSelectedObjectiveId] = useState<string | undefined>(undefined);
   const [selectedKeyResultId, setSelectedKeyResultId] = useState<string | undefined>(undefined);
@@ -105,7 +99,6 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
   const [isSuggestingMilestones, setIsSuggestingMilestones] = useState(false);
   const [isUpdatingTask, setIsUpdatingTask] = useState(false);
 
-  // Effect to get editing user's organization ID from user claims
   useEffect(() => {
     if (userClaims?.organizationId) {
       setEditingUserOrganizationId(userClaims.organizationId);
@@ -114,7 +107,6 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
     }
   }, [userClaims]);
 
-  // جلب أعضاء المؤسسة (إذا كانت المهمة تنتمي لمؤسسة)
   useEffect(() => {
     if (isOpen && user && task?.organizationId) {
       const fetchOrganizationMembers = async () => {
@@ -145,11 +137,10 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
       };
       fetchOrganizationMembers();
     } else {
-      setOrganizationMembers([]); // Clear members if not an org task or sheet is closed
+      setOrganizationMembers([]);
     }
   }, [isOpen, user, task?.organizationId]);
 
-  // جلب الأهداف والنتائج الرئيسية (إذا كانت المهمة تنتمي لمؤسسة)
   useEffect(() => {
     if (isOpen && user && task?.organizationId) {
       const fetchObjectives = async () => {
@@ -157,7 +148,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
           setLoadingObjectives(true);
           const objectivesQuery = query(
             collection(db, 'objectives'),
-            where('organizationId', '==', task.organizationId), // Use task's org ID
+            where('organizationId', '==', task.organizationId),
             where('status', '!=', 'completed')
           );
           const objectivesSnapshot = await getDocs(objectivesQuery);
@@ -183,7 +174,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
       };
       fetchObjectives();
     } else {
-      setObjectives([]); // Clear objectives if not an org task or sheet is closed
+      setObjectives([]);
       setSelectedObjectiveId(undefined);
       setSelectedKeyResultId(undefined);
     }
@@ -202,22 +193,20 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
       setPriority(task.priority ?? 3);
       setTaskCategoryName(task.taskCategoryName);
 
-      // Initialize taskContext based on the task being edited
-      if (task.organizationId) { // If it's an organizational task
+      if (task.organizationId) {
         setTaskContext({
-          taskContext: task.taskContext || 'individual', // Default to individual if not set
+          taskContext: task.taskContext || 'individual',
           departmentId: task.departmentId,
           assignedToUserId: task.assignedToUserId,
         });
-      } else { // If it's a purely individual task
+      } else {
         setTaskContext({
           taskContext: 'individual',
           departmentId: undefined,
-          assignedToUserId: task.assignedToUserId || user.uid, // Assign to task's user or current user
+          assignedToUserId: task.assignedToUserId || user.uid,
         });
       }
 
-      // Initialize OKR fields based on the task
       setSelectedObjectiveId(task.objectiveId);
       setSelectedKeyResultId(task.keyResultId);
 
@@ -363,10 +352,18 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
            completed: !!m.completed,
            weight: typeof m.weight === 'number' ? m.weight : 0,
            dueDate: m.dueDate instanceof Date && !isNaN(m.dueDate.getTime()) ? Timestamp.fromDate(m.dueDate) : null,
+           assignedToUserId: m.assignedToUserId || null
        }));
     const milestonesToSave = cleanMilestonesToSave.length > 0 ? cleanMilestonesToSave : null;
 
-    const updatedData: Partial<Omit<TaskFirestoreData, 'userId' | 'status' | 'priorityReason'>> & { updatedAt: Timestamp } = {
+    // Preserve the original status unless it's calculated from milestones
+    let newStatus = task.status;
+    if (milestonesToSave) {
+      newStatus = calculateTaskStatusFromMilestones(cleanMilestonesToSave, task.status);
+    }
+
+
+    const updatedData: Partial<Omit<TaskFirestoreData, 'userId'>> & { updatedAt: Timestamp; status?: TaskStatus } = {
         description: trimmedDescription,
         details: details.trim() || null,
         startDate: startTimestamp,
@@ -378,21 +375,23 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
         milestones: milestonesToSave,
         updatedAt: Timestamp.now(),
     };
+     if (newStatus !== task.status) {
+        updatedData.status = newStatus;
+    }
 
-    // If the original task was an organizational task, maintain its organizational context
-    // unless explicitly changed by the user (which is handled by TaskContextSelector)
+
     if (task.organizationId) {
-        updatedData.taskContext = taskContext.taskContext || task.taskContext || 'individual'; // Keep original context if new one is undefined
-        updatedData.organizationId = task.organizationId; // Keep original org ID
+        updatedData.taskContext = taskContext.taskContext || task.taskContext || 'individual';
+        updatedData.organizationId = task.organizationId;
         updatedData.departmentId = updatedData.taskContext === 'department' ? taskContext.departmentId || task.departmentId || null : null;
         updatedData.assignedToUserId = updatedData.taskContext === 'individual' ? taskContext.assignedToUserId || task.assignedToUserId || null : null;
         updatedData.objectiveId = selectedObjectiveId || null;
         updatedData.keyResultId = selectedKeyResultId || null;
-    } else { // If it was an individual task, ensure it remains so
+    } else {
         updatedData.taskContext = 'individual';
         updatedData.organizationId = null;
         updatedData.departmentId = null;
-        updatedData.assignedToUserId = user.uid; // Individual tasks are for the current user
+        updatedData.assignedToUserId = user.uid;
         updatedData.objectiveId = null;
         updatedData.keyResultId = null;
     }
@@ -400,30 +399,29 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
     try {
         await updateDoc(taskDocRef, updatedData);
 
-        // تحديث المهام المرتبطة بعد تحديث المهمة
-        try {
-          // إذا كانت هذه مهمة فرعية، حدث المهمة الأم
-          if (task.parentTaskId) {
+        if (task.parentTaskId) {
+          try {
             await updateParentTaskComprehensive(task.parentTaskId);
-            console.log(`Updated parent task ${task.parentTaskId} after editing subtask ${task.id}`);
+            console.log(`EditTaskSheet: Updated parent task ${task.parentTaskId} after editing subtask ${task.id}`);
+          } catch (parentError) {
+            console.error(`EditTaskSheet: Error updating parent task ${task.parentTaskId}:`, parentError);
+            toast({
+              title: 'خطأ في تحديث المهمة الأم',
+              description: 'حدث خطأ أثناء تحديث بيانات المهمة الرئيسية.',
+              variant: 'destructive',
+            });
           }
-
-          // إذا كانت هذه مهمة أم، حدث المهام الفرعية
-          // تحقق من تغيير الحالة بناءً على نقاط التتبع الجديدة
-          const newTaskStatus = calculateTaskStatusFromMilestones(
-            validMilestones,
-            task.status
-          );
-
-          if (newTaskStatus !== task.status) {
-            await updateSubtasksFromParent(task.id, newTaskStatus);
-            console.log(`Updated subtasks for parent task ${task.id} due to status change from ${task.status} to ${newTaskStatus}`);
-          }
-
-        } catch (updateError) {
-          console.error('Error updating related tasks:', updateError);
-          // لا نوقف العملية إذا فشل تحديث المهام المرتبطة
         }
+
+        if (updatedData.status && updatedData.status !== task.status) {
+          try {
+            await updateSubtasksFromParent(task.id, updatedData.status as TaskStatus);
+            console.log(`Updated subtasks for parent task ${task.id} due to status change from ${task.status} to ${updatedData.status}`);
+          } catch (subtaskError) {
+            console.error('Error updating subtasks from parent status change:', subtaskError);
+          }
+        }
+
 
         toast({
             title: 'تم تحديث المهمة',
@@ -504,7 +502,6 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                     />
                 </div>
 
-                {/* مستوى المهمة - يظهر للجميع */}
                 <Separator />
                 <div className="space-y-4">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2">مستوى المهمة</h3>
@@ -512,11 +509,9 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                     value={taskContext}
                     onChange={setTaskContext}
                     userClaims={userClaims}
-                    disabled={isUpdatingTask || !canAssignTasks} // تعطيل للأدوار المتدنية
+                    disabled={isUpdatingTask || !canAssignTasks}
                   />
                 </div>
-
-                {/* رسالة للأدوار المتدنية */}
                 {!canAssignTasks && (
                   <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md">
                     <UserIcon className="inline ml-1 h-4 w-4" />
@@ -667,7 +662,6 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                 </div>
 
                  <Separator />
-                 {/* Show OKR section only if the task being edited is an organizational task */}
                  {task.organizationId && (
                    <>
                      <div className="space-y-4">
@@ -823,6 +817,7 @@ export function EditTaskSheet({ user, task, isOpen, onOpenChange, onTaskUpdated 
                              taskDetails={details}
                              initialMilestones={currentMilestones}
                              onMilestonesChange={handleMilestonesChange}
+                             parentTaskStatus={task.status}
                          />
                      </div>
                  </div>

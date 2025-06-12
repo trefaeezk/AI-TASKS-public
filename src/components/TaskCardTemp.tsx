@@ -36,6 +36,7 @@ import { CompactAssigneesList } from './CompactAssigneesList';
 import { useAuth } from '@/context/AuthContext';
 import { ReopenTaskDialog } from './ReopenTaskDialog';
 import { useDebounce } from '@/hooks/useDebounce';
+import { categoryInfo, TaskCategory } from '@/context/TaskPageContext'; // Added TaskCategory import
 
 interface TaskCardTempProps {
   task: TaskType;
@@ -108,7 +109,6 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
   const { toast } = useToast();
   const { user, userClaims } = useAuth();
 
-  // دالة لتحديد الخيارات المتاحة حسب الفئة الحالية فقط
   const getAvailableActions = () => {
     const actions = {
       canComplete: false,
@@ -119,107 +119,75 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
       canCancel: false
     };
 
-    // فحص الصلاحيات أولاً
     const canModifyTask = () => {
-      // مالك المؤسسة وأدمن المؤسسة يمكنهم تعديل جميع المهام
       if (userClaims?.isOrgOwner || userClaims?.isOrgAdmin) {
         return true;
       }
-
-      // المهندس والمشرف يمكنهم تعديل مهام قسمهم والمهام المُسندة إليهم
       if (userClaims?.isOrgEngineer || userClaims?.isOrgSupervisor) {
-        // يمكنهم تعديل مهام قسمهم
         if (task.departmentId === userClaims?.departmentId) {
           return true;
         }
-        // أو المهام المُسندة إليهم شخصياً
         if (task.assignedToUserId === user?.uid ||
             (task.assignedToUserIds && user?.uid && task.assignedToUserIds.includes(user.uid))) {
           return true;
         }
-        // أو المهام التي أنشأوها
         if (task.userId === user?.uid || task.createdBy === user?.uid) {
           return true;
         }
         return false;
       }
-
-      // الفني والمساعد الفني يمكنهم تعديل المهام المُسندة إليهم فقط
       if (userClaims?.isOrgTechnician || userClaims?.isOrgAssistant) {
         return task.assignedToUserId === user?.uid ||
                (task.assignedToUserIds && user?.uid && task.assignedToUserIds.includes(user.uid)) ||
                (task.userId === user?.uid || task.createdBy === user?.uid);
       }
-
+      // For individual tasks, or if no specific org role matches
+      if (task.userId === user?.uid || task.createdBy === user?.uid || task.assignedToUserId === user?.uid || (task.assignedToUserIds && user?.uid && task.assignedToUserIds.includes(user.uid))) {
+        return true;
+      }
       return false;
     };
 
-    // إذا لم يكن للمستخدم صلاحية تعديل المهمة، لا توجد إجراءات متاحة
     if (!canModifyTask()) {
-      console.log(`[PERMISSIONS] User ${userClaims?.uid} cannot modify task ${task.id}`, {
-        userRole: {
-          isOrgOwner: userClaims?.isOrgOwner,
-          isOrgAdmin: userClaims?.isOrgAdmin,
-          isOrgEngineer: userClaims?.isOrgEngineer,
-          isOrgSupervisor: userClaims?.isOrgSupervisor,
-          isOrgTechnician: userClaims?.isOrgTechnician,
-          isOrgAssistant: userClaims?.isOrgAssistant
-        },
-        taskInfo: {
-          departmentId: task.departmentId,
-          assignedToUserId: task.assignedToUserId,
-          assignedToUserIds: task.assignedToUserIds,
-          userId: task.userId,
-          createdBy: task.createdBy
-        },
-        userInfo: {
-          uid: user?.uid,
-          departmentId: userClaims?.departmentId
-        }
-      });
       return actions;
     }
 
-    // منطق حسب الفئة الحالية
     switch (currentCategory) {
       case 'completed':
-        // في فئة المكتملة: إعادة فتح فقط
         actions.canReopen = true;
         break;
-
       case 'cancelled':
-        // في فئة الملغية: إعادة تشغيل فقط
         actions.canRestart = true;
         break;
-
       case 'hold':
-        // في فئة المعلقة: إكمال + إعادة تفعيل + إلغاء
         actions.canComplete = true;
         actions.canActivate = true;
         actions.canCancel = true;
         break;
-
       case 'today':
       case 'upcoming':
       case 'scheduled':
       case 'overdue':
       default:
-        // في الفئات النشطة: إكمال + تعليق + إلغاء
-        actions.canComplete = true;
-        actions.canHold = true;
-        actions.canCancel = true;
+        if (task.status === 'pending' || task.status === 'in-progress') {
+            actions.canComplete = true;
+            actions.canHold = true;
+            actions.canCancel = true;
+        } else if (task.status === 'hold') {
+            actions.canComplete = true;
+            actions.canActivate = true;
+            actions.canCancel = true;
+        } else if (task.status === 'completed') {
+            actions.canReopen = true;
+        } else if (task.status === 'cancelled') {
+            actions.canRestart = true;
+        }
         break;
     }
-
-    console.log(`[PERMISSIONS] Available actions for task ${task.id}:`, actions);
     return actions;
   };
 
   const availableActions = getAvailableActions();
-
-
-
-  // تم استبدال منطق جلب اسم المكلف بمكون TaskAssignees
 
   const {
       attributes,
@@ -276,14 +244,8 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
   const priority = task.priority;
   const priorityClass = priority ? `priority-${priority}` : '';
   const priorityTextMap: Record<PriorityLevel, string> = {
-    1: 'الأعلى',
-    2: 'عالية',
-    3: 'متوسطة',
-    4: 'منخفضة',
-    5: 'الأدنى',
-    'high': 'عالية',
-    'medium': 'متوسطة',
-    'low': 'منخفضة'
+    1: 'الأعلى', 2: 'عالية', 3: 'متوسطة', 4: 'منخفضة', 5: 'الأدنى',
+    'high': 'عالية', 'medium': 'متوسطة', 'low': 'منخفضة'
   };
   const priorityText = priority ? priorityTextMap[priority] : 'غير محددة';
 
@@ -291,58 +253,90 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
     if (isCompleted) return 'border-status-completed';
     if (isCancelled) return 'border-destructive';
     if (isOverdue) return 'border-status-urgent';
-
-    switch (priority) {
-        case 1: return 'border-[hsl(var(--priority-1))]';
-        case 2: return 'border-[hsl(var(--priority-2))]';
-        case 3: return 'border-[hsl(var(--priority-3))]';
-        case 4: return 'border-[hsl(var(--priority-4))]';
-        case 5: return 'border-[hsl(var(--priority-5))]';
-        default: return 'border-border';
+    if (typeof priority === 'number') {
+        return `border-[hsl(var(--priority-${priority}))]`;
+    } else if (typeof priority === 'string') {
+        if (priority === 'high') return 'border-[hsl(var(--priority-1))]';
+        if (priority === 'medium') return 'border-[hsl(var(--priority-3))]';
+        if (priority === 'low') return 'border-[hsl(var(--priority-5))]';
     }
+    return 'border-border';
   };
 
-  const handleStatusChangeLocal = async (e: React.MouseEvent, newStatus: TaskStatus) => {
-     e.stopPropagation();
-
-    // إذا كانت إعادة فتح (من مكتملة أو ملغية إلى معلقة)، اعرض الحوار
-    if (newStatus === 'pending' && (task.status === 'completed' || task.status === 'cancelled')) {
-      setIsReopenDialogOpen(true);
-      return;
-    }
-
-    // للحالات الأخرى، نفذ التغيير مباشرة
-    await executeStatusChange(newStatus);
-  };
-
-  const executeStatusChange = async (newStatus: TaskStatus, resetMilestones: boolean = false) => {
+  const executeStatusChange = async (newStatus: TaskStatus, resetMiles: boolean = false) => {
     if (task?.id && onStatusChange) {
-      onStatusChange(task.id, newStatus);
+      const originalStatus = task.status; // Save original status for potential revert
+      onStatusChange(task.id, newStatus); // Optimistic update
 
-      // إذا كانت إعادة فتح وطُلب إعادة تعيين نقاط التتبع
-      if (newStatus === 'pending' && (task.status === 'completed' || task.status === 'cancelled') && resetMilestones) {
+      if (newStatus === 'pending' && (originalStatus === 'completed' || originalStatus === 'cancelled') && resetMiles) {
         try {
           await resetMilestonesOnReopen(task.id);
           console.log(`Reset milestones for reopened task ${task.id}`);
         } catch (error) {
           console.error('Error resetting milestones on reopen:', error);
+          // Not reverting optimistic update here as the main status change might still succeed
         }
       }
 
-      // تحديث المهام الفرعية إذا كانت هذه مهمة أم (لها مهام فرعية)
+      const taskRef = doc(db, 'tasks', task.id);
       try {
+        await updateDoc(taskRef, {
+          status: newStatus,
+          updatedAt: Timestamp.now()
+        });
+        toast({
+          title: 'تم تحديث الحالة',
+          description: `تم تحديث حالة المهمة "${task.description}" إلى ${categoryInfo[newStatus as TaskCategory]?.title ?? newStatus}.`,
+        });
+
+        if (task.parentTaskId) {
+          try {
+            console.log(`TaskCardTemp: Calling updateParentTaskComprehensive for parent ${task.parentTaskId}`);
+            await updateParentTaskComprehensive(task.parentTaskId);
+            console.log(`TaskCardTemp: Successfully updated parent task ${task.parentTaskId} after status change of subtask ${task.id}`);
+          } catch (parentError) {
+            console.error(`TaskCardTemp: Error updating parent task ${task.parentTaskId}:`, parentError);
+            toast({
+              title: 'خطأ في تحديث المهمة الأم',
+              description: 'حدث خطأ أثناء تحديث بيانات المهمة الرئيسية.',
+              variant: 'destructive',
+            });
+          }
+        }
+
         await updateSubtasksFromParent(task.id, newStatus);
-        console.log(`Updated subtasks for parent task ${task.id} with new status: ${newStatus}`);
+
       } catch (error) {
-        console.error('Error updating subtasks from parent status change:', error);
+        console.error(`TaskCardTemp: Error updating task status for ${task.id} in Firestore:`, error);
+        if (onStatusChange) { // Check if onStatusChange (revert) is defined
+          onStatusChange(task.id, originalStatus); // Revert optimistic update
+        }
+        toast({
+          title: 'خطأ في تحديث حالة المهمة',
+          description: 'حدث خطأ أثناء محاولة تحديث حالة المهمة.',
+          variant: 'destructive',
+        });
       }
     } else {
         console.error("Task ID is missing or onStatusChange not provided.");
     }
   };
 
-  const handleReopenConfirm = (resetMilestones: boolean) => {
-    executeStatusChange('pending', resetMilestones);
+  const handleStatusChangeLocal = async (e: React.MouseEvent, newStatus: TaskStatus) => {
+     e.stopPropagation();
+    if (newStatus === 'pending' && (task.status === 'completed' || task.status === 'cancelled')) {
+      setTaskToReopen(task); // Set task to reopen for the dialog
+      setIsReopenDialogOpen(true);
+      return;
+    }
+    await executeStatusChange(newStatus);
+  };
+
+  const handleReopenConfirm = (resetMilestonesChoice: boolean) => {
+    if (taskToReopen) {
+      executeStatusChange('pending', resetMilestonesChoice);
+      setTaskToReopen(null); // Clear taskToReopen after handling
+    }
   };
 
   const handleEditLocal = (e: React.MouseEvent) => {
@@ -394,14 +388,16 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
                          completed: !!m.completed,
                          weight: typeof m.weight === 'number' ? m.weight : 0,
                          dueDate: firestoreDueDate,
+                         assignedToUserId: m.assignedToUserId || null,
                      };
                  });
              const milestonesToSave = cleanMilestones.length > 0 ? cleanMilestones : null;
 
-             // حساب الحالة الجديدة للمهمة بناءً على نقاط التتبع
-             const newTaskStatus = calculateTaskStatusFromMilestones(cleanMilestones, task.status);
+             const newTaskStatus = calculateTaskStatusFromMilestones(
+               cleanMilestones,
+               task.status
+             );
 
-             // تحديث المهمة بنقاط التتبع المعدلة والحالة الجديدة
              const updateData: any = {
                milestones: milestonesToSave,
                updatedAt: Timestamp.now()
@@ -413,7 +409,6 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
 
              await updateDoc(taskDocRef, updateData);
 
-             // تحديث المهمة الرئيسية إذا كانت هذه مهمة فرعية
              if (task.parentTaskId) {
                try {
                  console.log(`[MILESTONE UPDATE] Updating parent task ${task.parentTaskId} for subtask ${task.id}`);
@@ -426,7 +421,6 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
                console.log(`[MILESTONE UPDATE] Task ${task.id} has no parent task, skipping parent update`);
              }
 
-             // تحديث المهام الفرعية إذا كانت هذه مهمة أم وتغيرت حالتها
              if (newTaskStatus !== task.status) {
                try {
                  await updateSubtasksFromParent(task.id, newTaskStatus);
@@ -449,9 +443,7 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
                variant: 'destructive',
            });
        }
-   }, [task?.id, toast]);
-
-
+   }, [task?.id, task?.status, task?.parentTaskId, task?.description, task?.taskContext, task?.departmentId, task?.organizationId, toast]);
 
   if (!task) {
       console.warn("TaskCardTemp rendered without a task object.");
@@ -470,7 +462,7 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
              {...listeners}
              className={cn(
                  "absolute top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring cursor-grab",
-                 "right-1 z-10"
+                 "right-1 z-10" // Adjusted for RTL
               )}
               aria-label="اسحب لإعادة الترتيب"
               onClick={(e) => e.stopPropagation()}
@@ -478,8 +470,8 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
              <GripVertical className="h-4 w-4" />
          </button>
 
-        <CardHeader className="pb-2 pt-3 px-4 pr-8 flex flex-row items-start justify-between">
-           <div className="flex-1 mr-2 space-y-1 min-w-0">
+        <CardHeader className="pb-2 pt-3 px-4 pr-8 flex flex-row items-start justify-between"> {/* Adjusted padding for RTL handle */}
+           <div className="flex-1 mr-2 space-y-1 min-w-0"> {/* Adjusted margin for RTL handle */}
               <CardTitle className={cn("text-base font-semibold break-words", (isCompleted || isCancelled) && "line-through text-muted-foreground")}>
               {task.description}
               </CardTitle>
@@ -513,7 +505,7 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
                                    </Badge>
                               </TooltipTrigger>
                               <TooltipContent>
-                                  <p>الأولوية: {priority} ({priorityText})</p>
+                                  <p>الأولوية: {priorityText}</p>
                               </TooltipContent>
                           </Tooltip>
                       </TooltipProvider>
@@ -535,47 +527,36 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
                       </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()} >
-                      {/* خيار الإكمال */}
                       {onStatusChange && availableActions.canComplete && (
                           <DropdownMenuItem onClick={(e) => handleStatusChangeLocal(e, 'completed')} className="text-green-700 hover:text-green-800 focus:bg-green-50 hover:bg-green-50 focus:text-green-800 cursor-pointer">
                               <CheckCircle2 className="ml-2 h-4 w-4" />
                               <span>وضع علامة كمكتملة</span>
                           </DropdownMenuItem>
                        )}
-
-                      {/* خيار إعادة الفتح للمهام المكتملة */}
                       {onStatusChange && availableActions.canReopen && (
                           <DropdownMenuItem onClick={(e) => handleStatusChangeLocal(e, 'pending')} className="text-blue-700 hover:text-blue-800 focus:bg-blue-50 hover:bg-blue-50 focus:text-blue-800 cursor-pointer">
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
                               <span>إعادة فتح</span>
                           </DropdownMenuItem>
                       )}
-
-                      {/* خيار إعادة التشغيل للمهام الملغية */}
                       {onStatusChange && availableActions.canRestart && (
                           <DropdownMenuItem onClick={(e) => handleStatusChangeLocal(e, 'pending')} className="text-emerald-700 hover:text-emerald-800 focus:bg-emerald-50 hover:bg-emerald-50 focus:text-emerald-800 cursor-pointer">
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg>
                               <span>إعادة تشغيل المهمة</span>
                           </DropdownMenuItem>
                       )}
-
-                      {/* خيار التعليق للمهام النشطة */}
                       {onStatusChange && availableActions.canHold && (
                           <DropdownMenuItem onClick={(e) => handleStatusChangeLocal(e, 'hold')} className="text-amber-700 hover:text-amber-800 focus:bg-amber-50 hover:bg-amber-50 focus:text-amber-800 cursor-pointer">
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><rect width="6" height="14" x="4" y="5" rx="2"/><rect width="6" height="14" x="14" y="5" rx="2"/></svg>
                               <span>تعليق المهمة</span>
                           </DropdownMenuItem>
                       )}
-
-                      {/* خيار إعادة التفعيل للمهام المعلقة */}
                       {onStatusChange && availableActions.canActivate && (
                           <DropdownMenuItem onClick={(e) => handleStatusChangeLocal(e, 'in-progress')} className="text-indigo-700 hover:text-indigo-800 focus:bg-indigo-50 hover:bg-indigo-50 focus:text-indigo-800 cursor-pointer">
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4"><polygon points="5,3 19,12 5,21"/></svg>
                               <span>إعادة تفعيل المهمة</span>
                           </DropdownMenuItem>
                       )}
-
-                      {/* خيار الإلغاء */}
                       {onStatusChange && availableActions.canCancel && (
                           <>
                               <DropdownMenuSeparator />
@@ -585,7 +566,6 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
                               </DropdownMenuItem>
                           </>
                       )}
-
                        {onStatusChange && (onEdit || onDelete) && <DropdownMenuSeparator />}
                        {onEdit && (
                            <DropdownMenuItem onClick={handleEditLocal} className="cursor-pointer">
@@ -604,7 +584,7 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
            )}
         </CardHeader>
 
-        <CardContent className="space-y-2 pt-0 pb-3 px-4 pr-8 text-sm text-muted-foreground">
+        <CardContent className="space-y-2 pt-0 pb-3 px-4 pr-8 text-sm text-muted-foreground"> {/* Adjusted padding for RTL handle */}
            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs items-center">
               {startDateFormatted && (
                   <span className="flex items-center whitespace-nowrap">
@@ -618,14 +598,12 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
                     الاستحقاق: {dueDateFormatted}
                   </span>
               )}
-
               {durationFormatted && (
                   <span className="flex items-center whitespace-nowrap">
                   <Clock className="h-3 w-3 ml-1" />
                   المدة: {durationFormatted}
                   </span>
               )}
-              {/* عرض المكلفين بالمهمة للمؤسسات فقط */}
               {task.organizationId && (task.assignedToUserId || task.assignedToUserIds) && (
                   <CompactAssigneesList
                     assignedToUserId={task.assignedToUserId}
@@ -703,9 +681,9 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
               </div>
           )}
 
-           {hasMilestones && ( // Always show milestone section if milestones exist
+           {hasMilestones && (
                <div className="pt-2 border-t border-border mt-2">
-                    {!isMilestonesExpanded && !isCompleted && ( // Show progress only if not expanded and task is active
+                    {!isMilestonesExpanded && !isCompleted && (
                         <div className="flex items-center gap-2 mb-1">
                             <Progress value={milestoneProgress} className="h-1.5 flex-1 bg-secondary/20 dark:bg-secondary/30" indicatorClassName="bg-primary" />
                             <span className="text-xs font-medium text-muted-foreground">{milestoneProgress}%</span>
@@ -733,7 +711,7 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
                            taskDetails={task.details}
                            initialMilestones={initialMilestonesForTracker}
                            onMilestonesChange={handleMilestonesChange}
-                           parentTaskStatus={task.status} // Pass parent task status
+                           parentTaskStatus={task.status}
                        />
                    )}
                </div>
@@ -791,7 +769,6 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
         </CardContent>
       </Card>
 
-      {/* حوار إعادة الفتح */}
       <ReopenTaskDialog
         isOpen={isReopenDialogOpen}
         onOpenChange={setIsReopenDialogOpen}
@@ -803,9 +780,7 @@ const TaskCardTempComponent = ({ task, id, onStatusChange, onEdit, onDelete, get
   );
 };
 
-// استخدام React.memo لتجنب إعادة الرسم غير الضرورية
 export const TaskCardTemp = React.memo(TaskCardTempComponent, (prevProps, nextProps) => {
-  // مقارنة مخصصة لتحديد متى يجب إعادة الرسم
   return (
     prevProps.task.id === nextProps.task.id &&
     prevProps.task.status === nextProps.task.status &&
