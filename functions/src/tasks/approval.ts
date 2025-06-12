@@ -160,7 +160,7 @@ export const createTaskWithApproval = createCallableFunction<CreateTaskWithAppro
 
         let finalDepartmentId: string | null = null;
         // Use approvalLevel if requiresApproval is true, otherwise use taskContext from data
-        const effectiveContext = requiresApproval ? approvalLevel : taskContext;
+        const effectiveContext = requiresApproval ? approvalLevel : data.taskContext; // Use data.taskContext
 
         if (effectiveContext === 'department') {
             finalDepartmentId = departmentId || userData?.departmentId || null;
@@ -245,14 +245,12 @@ export const createTaskWithApproval = createCallableFunction<CreateTaskWithAppro
 
         if (requiresApproval) {
             await createApprovalNotifications({ ...taskDataForFirestore, id: taskRef.id }, organizationId);
-            // Removed toast call from here
         } else {
             // If no approval is needed, send assignment notifications directly
             const assignees = taskDataForFirestore.assignedToUserIds || (taskDataForFirestore.assignedToUserId ? [taskDataForFirestore.assignedToUserId] : []);
             if (assignees.length > 0) {
                 await sendTaskAssignmentNotification({ ...taskDataForFirestore, id: taskRef.id }, assignees);
             }
-            // Removed toast call from here
         }
 
 
@@ -607,6 +605,7 @@ export const getPendingApprovalTasksForCurrentUser = createCallableFunction(asyn
     }
 
     const userClaims = auth.token; // Custom claims are available in auth.token
+    let tasks: Task[] = [];
 
     try {
         let tasksQuery: admin.firestore.Query;
@@ -618,6 +617,16 @@ export const getPendingApprovalTasksForCurrentUser = createCallableFunction(asyn
                 .where('requiresApproval', '==', true)
                 .where('organizationId', '==', userClaims.organizationId) // Filter by user's org
                 .orderBy('submittedAt', 'desc');
+
+            const snapshot = await tasksQuery.get();
+            tasks = snapshot.docs.map(doc => {
+                const data = doc.data() as Task;
+                return {
+                    ...data,
+                    id: doc.id,
+                };
+            });
+
         } else if (userClaims.isOrgSupervisor && userClaims.departmentId) {
             // إذا كان مشرف قسم، يرى مهام قسمه فقط التي تتطلب موافقة قسم
             tasksQuery = db.collection('tasks')
@@ -627,17 +636,21 @@ export const getPendingApprovalTasksForCurrentUser = createCallableFunction(asyn
                 .where('approvalLevel', '==', 'department')
                 .where('departmentId', '==', userClaims.departmentId) // Filter by user's dept
                 .orderBy('submittedAt', 'desc');
+
+            const snapshot = await tasksQuery.get();
+            tasks = snapshot.docs.map(doc => {
+                const data = doc.data() as Task;
+                return {
+                    ...data,
+                    id: doc.id,
+                };
+            });
+
         } else {
             // الأدوار الأخرى لا ترى أي مهام للموافقة عبر هذه الدالة
             logFunctionEnd(functionName, { tasks: [] });
             return { tasks: [] };
         }
-
-        const snapshot = await tasksQuery.get();
-        const tasks = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...(doc.data() as Task) // Cast to Task to resolve spread type error
-        }));
 
         logFunctionEnd(functionName, { count: tasks.length });
         return { tasks };
