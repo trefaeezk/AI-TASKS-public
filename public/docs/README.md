@@ -1,59 +1,59 @@
-# 📚 دليل التوثيق الشامل - نظام إدارة المهام
+# 📚 Comprehensive Documentation Guide - Task Management System
 
 ## 🎯 نظرة عامة
 
-مرحباً بك في التوثيق الشامل لنظام إدارة المهام. هذا النظام يوفر حلول متكاملة لإدارة المستخدمين والمؤسسات والمهام مع نظام صلاحيات متقدم.
+Welcome to the comprehensive documentation for the Task Management System. This system provides integrated solutions for managing users, organizations, and tasks with an advanced permissions system.
 
 ---
 
 ## 📋 فهرس التوثيق
 
 ### 🔐 نظام المستخدمين والصلاحيات
-- **[📚 توثيق نظام المستخدمين](./USER_SYSTEM_DOCUMENTATION.md)**
-  - هيكلة الأدوار والصلاحيات
-  - أنواع الحسابات (فردية ومؤسسية)
-  - الصلاحيات التفصيلية لكل دور
-  - هيكل قاعدة البيانات
-  - أمثلة عملية
+- **[📚 User System Documentation](./USER_SYSTEM_DOCUMENTATION.md)**
+  - Role and Permission Structure
+  - Account Types (Individual and Organization)
+  - Detailed Permissions for Each Role
+  - Database Structure
+  - Practical Examples
 
-- **[🔐 دليل الصلاحيات والأمان](./USER_PERMISSIONS_GUIDE.md)**
-  - نظام الصلاحيات المتقدم
-  - التحقق من الصلاحيات (Frontend & Backend)
-  - الصلاحيات المخصصة
-  - أمان النظام وقواعد الحماية
-  - أمثلة برمجية وأكواد جاهزة
+- **[🔐 Permissions and Security Guide](./USER_PERMISSIONS_GUIDE.md)**
+  - Advanced Permissions System
+  - Permission Checking (Frontend & Backend)
+  - Custom Permissions
+  - System Security and Protection Rules
+  - Programming Examples and Ready-to-Use Code
 
 ### 🏢 إدارة المؤسسات
-- **[🏢 دليل إدارة المؤسسات](./ORGANIZATION_MANAGEMENT.md)**
-  - إنشاء وإدارة المؤسسات
-  - إدارة الأعضاء والأدوار
-  - الأقسام والهيكل التنظيمي
-  - سير العمل والعمليات
-  - أمثلة عملية لشركات مختلفة
+- **[🏢 Organization Management Guide](./ORGANIZATION_MANAGEMENT.md)**
+  - Creating and Managing Organizations
+  - Managing Members and Roles
+  - Departments and Organizational Structure
+  - Workflow and Processes
+  - Practical Examples for Different Companies
 
 ### 🔌 التكامل والـ APIs
-- **[🔌 مرجع API](./API_REFERENCE.md)**
-  - جميع APIs المتاحة
-  - المصادقة والتفويض
-  - أمثلة التكامل بلغات مختلفة
-  - معالجة الأخطاء
-  - أكواد جاهزة للاستخدام
+- **[🔌 API Reference](./API_REFERENCE.md)**
+  - All Available APIs
+  - Authentication and Authorization
+  - Integration Examples in Different Languages
+  - Error Handling
+  - Ready-to-Use Code
 
 ---
 
 ## 🚀 البدء السريع
 
 ### 1. **فهم النظام**
-ابدأ بقراءة [توثيق نظام المستخدمين](./USER_SYSTEM_DOCUMENTATION.md) لفهم الهيكل العام والأدوار المختلفة.
+Start by reading the [User System Documentation](./USER_SYSTEM_DOCUMENTATION.md) to understand the general structure and different roles.
 
 ### 2. **إعداد المؤسسة**
-اتبع دليل [إدارة المؤسسات](./ORGANIZATION_MANAGEMENT.md) لإنشاء مؤسستك وتنظيم الفرق.
+Follow the [Organization Management Guide](./ORGANIZATION_MANAGEMENT.md) to create your organization and organize teams.
 
 ### 3. **التكامل التقني**
-استخدم [مرجع API](./API_REFERENCE.md) لتطوير التطبيقات والتكامل مع النظام.
+Use the [API Reference](./API_REFERENCE.md) to develop applications and integrate with the system.
 
 ### 4. **إدارة الصلاحيات**
-راجع [دليل الصلاحيات](./USER_PERMISSIONS_GUIDE.md) لضبط الأمان والتحكم في الوصول.
+Review the [Permissions Guide](./USER_PERMISSIONS_GUIDE.md) to configure security and access control.
 
 ---
 
