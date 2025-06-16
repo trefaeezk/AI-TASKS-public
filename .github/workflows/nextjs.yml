@@ -8,6 +8,7 @@ on:
 
 jobs:
   build-and-test:
+    name: build-and-test   # ✅ هذا السطر يُفعّل الظهور في Rules
     runs-on: ubuntu-latest
 
     steps:
